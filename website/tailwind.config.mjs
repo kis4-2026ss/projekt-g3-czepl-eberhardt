@@ -4,14 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        'w-green':      '#1f3d18',
-        'w-green-dark': '#132810',
-        'w-gold':       '#b87530',
-        'w-gold-light': '#d4943e',
-        'w-cream':      '#faf7f0',
-        'w-linen':      '#ede8dd',
-        'w-stone':      '#8c7a5e',
-        'w-dark':       '#1c160c',
+        'w-green':      '#162a1b',
+        'w-green-dark': '#0b160e',
+        'w-gold':       '#c69c6d',
+        'w-gold-light': '#dcb992',
+        'w-cream':      '#fdfbf7',
+        'w-linen':      '#f2efe9',
+        'w-stone':      '#9c8e7e',
+        'w-dark':       '#1a1816',
       },
       fontFamily: {
         serif: ['"Playfair Display"', 'Georgia', 'serif'],

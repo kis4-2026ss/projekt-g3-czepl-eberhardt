@@ -7,18 +7,22 @@ const [settings, hours] = await Promise.all([getSiteSettings(), getOpeningHours(
 
 <Layout title="Kontakt" description={`Reservierung, Anfahrt und Öffnungszeiten — ${settings.site_name}, ${settings.address_street}, ${settings.address_city}.`}>
   <!-- Header -->
-  <div class="bg-w-green py-16 px-5 lg:px-8">
-    <div class="max-w-7xl mx-auto">
-      <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Wir freuen uns auf Sie</p>
-      <h1 class="font-serif text-4xl sm:text-5xl text-white font-semibold">Kontakt & Anfahrt</h1>
+  <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
+    <img src="/images/hero-faq.png" alt="Kontakt" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
+    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 via-w-dark/30 to-transparent"></div>
+    <div class="max-w-7xl mx-auto relative z-10 fade-up">
+      <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
+        <span class="w-8 h-px bg-w-gold/80"></span>Wir freuen uns auf Sie
+      </p>
+      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">Kontakt & Anfahrt</h1>
     </div>
   </div>
 
-  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-16 grid grid-cols-1 lg:grid-cols-5 gap-10">
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-24 grid grid-cols-1 lg:grid-cols-5 gap-12">
 
     <!-- Contact info + map -->
-    <div class="lg:col-span-2 space-y-6">
-      <div class="bg-white rounded-2xl border border-w-linen shadow-sm p-7 space-y-6">
+    <div class="lg:col-span-2 space-y-8 fade-up">
+      <div class="bg-white rounded-sm border border-w-linen/50 shadow-sm p-10 space-y-8">
         <!-- Address -->
         <div class="flex gap-4">
           <div class="w-10 h-10 rounded-xl bg-w-linen flex items-center justify-center flex-shrink-0">
@@ -81,8 +85,11 @@ const [settings, hours] = await Promise.all([getSiteSettings(), getOpeningHours(
       </div>
 
       <!-- Reservation CTA -->
-      <div class="bg-w-green rounded-2xl p-7 text-white">
-        <h3 class="font-serif text-xl font-semibold mb-2">Tisch reservieren</h3>
+      <div class="bg-w-dark rounded-sm p-10 text-white relative overflow-hidden fade-up delay-100">
+        <div class="absolute -right-4 -bottom-4 opacity-10 text-w-gold">
+          <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+        </div>
+        <h3 class="font-serif text-2xl font-medium mb-3 relative z-10">Tisch reservieren</h3>
         <p class="text-white/65 text-sm leading-relaxed mb-5">
           Für Gruppen ab 4 Personen und am Wochenende empfehlen wir eine Reservierung.
         </p>
@@ -97,10 +104,10 @@ const [settings, hours] = await Promise.all([getSiteSettings(), getOpeningHours(
     </div>
 
     <!-- Opening hours -->
-    <div class="lg:col-span-3">
-      <div class="bg-white rounded-2xl border border-w-linen shadow-sm overflow-hidden">
-        <div class="px-7 py-5 border-b border-w-linen">
-          <h2 class="font-serif text-xl font-semibold text-w-dark">Öffnungszeiten</h2>
+    <div class="lg:col-span-3 fade-up delay-200">
+      <div class="bg-white rounded-sm border border-w-linen/50 shadow-sm overflow-hidden">
+        <div class="px-10 py-8 border-b border-w-linen/50 bg-w-cream/30">
+          <h2 class="font-serif text-2xl font-medium text-w-dark">Öffnungszeiten</h2>
         </div>
         <table class="w-full">
           <tbody>

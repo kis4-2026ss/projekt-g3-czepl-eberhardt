@@ -7,38 +7,42 @@ const faqItems = await getFaq();
 
 <Layout title="FAQ" description="Häufig gestellte Fragen zum Gasthaus Adlerwirt — Reservierung, Barrierefreiheit, Hunde und mehr.">
   <!-- Header -->
-  <div class="bg-w-green py-16 px-5 lg:px-8">
-    <div class="max-w-7xl mx-auto">
-      <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Häufige Fragen</p>
-      <h1 class="font-serif text-4xl sm:text-5xl text-white font-semibold">FAQ</h1>
-      <p class="text-white/60 mt-3 max-w-xl">Alles, was Sie vor dem Besuch wissen möchten.</p>
+  <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
+    <img src="/images/hero-faq.png" alt="FAQ" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
+    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 via-w-dark/30 to-transparent"></div>
+    <div class="max-w-7xl mx-auto relative z-10 fade-up">
+      <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
+        <span class="w-8 h-px bg-w-gold/80"></span>Häufige Fragen
+      </p>
+      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">FAQ</h1>
+      <p class="text-white/80 mt-6 max-w-xl text-lg font-light leading-relaxed fade-up delay-100">Alles, was Sie vor dem Besuch wissen möchten.</p>
     </div>
   </div>
 
   <!-- FAQ accordion -->
-  <section class="max-w-3xl mx-auto px-5 lg:px-8 py-16">
-    <div class="space-y-3">
-      {faqItems.map((item) => (
-        <details class="group bg-white rounded-2xl border border-w-linen shadow-sm overflow-hidden">
-          <summary class="flex items-center justify-between gap-4 px-7 py-5 cursor-pointer list-none select-none hover:bg-w-linen/50 transition-colors">
-            <span class="font-medium text-w-dark text-base">{item.question}</span>
-            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-w-linen flex items-center justify-center text-w-green group-open:rotate-45 transition-transform duration-200">
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 5v14M5 12h14"/>
+  <section class="max-w-3xl mx-auto px-5 lg:px-8 py-24">
+    <div class="space-y-4">
+      {faqItems.map((item, index) => (
+        <details class={`group bg-white rounded-sm border border-w-linen/50 shadow-sm overflow-hidden fade-up delay-${(index % 5) * 100}`}>
+          <summary class="flex items-center justify-between gap-4 px-8 py-6 cursor-pointer list-none select-none hover:bg-w-cream transition-colors">
+            <span class="font-medium text-w-dark text-lg group-hover:text-w-gold transition-colors">{item.question}</span>
+            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-w-cream flex items-center justify-center text-w-gold group-open:rotate-45 transition-transform duration-300">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/>
               </svg>
             </span>
           </summary>
-          <div class="px-7 pb-6">
-            <p class="text-w-stone leading-relaxed text-sm border-t border-w-linen pt-4">{item.answer}</p>
+          <div class="px-8 pb-8 pt-2">
+            <p class="text-w-dark/70 leading-relaxed text-base border-t border-w-linen/50 pt-6">{item.answer}</p>
           </div>
         </details>
       ))}
     </div>
 
-    <div class="mt-12 text-center bg-w-linen rounded-2xl p-8">
-      <p class="text-w-dark font-medium mb-1">Noch Fragen?</p>
-      <p class="text-w-stone text-sm mb-5">Rufen Sie uns einfach an oder schreiben Sie uns eine Nachricht.</p>
-      <a href="/kontakt" class="inline-flex items-center gap-2 px-6 py-3 bg-w-green text-white text-sm font-medium rounded-xl hover:bg-w-green/90 transition-colors">
+    <div class="mt-16 text-center bg-w-cream border border-w-linen/50 rounded-sm p-12 fade-up">
+      <p class="font-serif text-2xl text-w-dark font-medium mb-2">Noch Fragen?</p>
+      <p class="text-w-stone text-base mb-8 font-light">Rufen Sie uns einfach an oder schreiben Sie uns eine Nachricht.</p>
+      <a href="/kontakt" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-w-gold text-white font-medium tracking-wide rounded-sm hover:bg-w-gold-light transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5">
         Zum Kontakt
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>

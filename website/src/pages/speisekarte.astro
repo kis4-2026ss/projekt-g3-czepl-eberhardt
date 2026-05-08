@@ -14,23 +14,27 @@ function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '
 
 <Layout title="Speisekarte">
   <!-- Page header -->
-  <div class="bg-w-green py-16 px-5 lg:px-8">
-    <div class="max-w-7xl mx-auto">
-      <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Was wir anbieten</p>
-      <h1 class="font-serif text-4xl sm:text-5xl text-white font-semibold">Speisekarte</h1>
-      <p class="text-white/60 mt-3 max-w-xl">Saisonal, regional, hausgemacht. Wenn etwas aus ist, ist es aus.</p>
+  <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
+    <img src="/images/hero-speisekarte.png" alt="Speisekarte" class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay" />
+    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 to-transparent"></div>
+    <div class="max-w-7xl mx-auto relative z-10 fade-up">
+      <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
+        <span class="w-8 h-px bg-w-gold/80"></span>Was wir anbieten
+      </p>
+      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">Speisekarte</h1>
+      <p class="text-white/80 mt-6 max-w-xl text-lg font-light leading-relaxed fade-up delay-100">Saisonal, regional, hausgemacht. Wenn etwas aus ist, ist es aus.</p>
     </div>
   </div>
 
   <!-- Sticky category nav -->
-  <nav class="sticky top-16 sm:top-20 z-40 bg-white/95 backdrop-blur-sm border-b border-w-linen shadow-sm">
+  <nav class="sticky top-[64px] sm:top-[80px] z-40 bg-w-cream/90 backdrop-blur-md border-b border-w-linen/50 shadow-sm transition-all">
     <div class="max-w-7xl mx-auto px-5 lg:px-8">
-      <ul class="flex gap-1 overflow-x-auto py-3 scrollbar-hide">
+      <ul class="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
         {byCategory.map(cat => (
           <li>
             <a
               href={`#${slug(cat.name)}`}
-              class="whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium text-w-stone hover:text-w-green hover:bg-w-linen transition-colors block"
+              class="whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-medium text-w-stone border border-transparent hover:border-w-gold/30 hover:text-w-dark hover:bg-white transition-all block"
             >
               {cat.name}
             </a>
@@ -41,30 +45,30 @@ function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '
   </nav>
 
   <!-- Menu sections -->
-  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-12 space-y-16">
-    {byCategory.map(cat => (
-      <section id={slug(cat.name)} class="scroll-mt-36">
-        <div class="mb-8">
-          <h2 class="font-serif text-2xl sm:text-3xl text-w-dark font-semibold">{cat.name}</h2>
-          {cat.description && <p class="text-w-stone text-sm mt-1 italic">{cat.description}</p>}
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-20 space-y-24">
+    {byCategory.map((cat, index) => (
+      <section id={slug(cat.name)} class="scroll-mt-40 fade-up">
+        <div class="mb-10 text-center">
+          <h2 class="font-serif text-3xl sm:text-4xl text-w-dark font-medium">{cat.name}</h2>
+          {cat.description && <p class="text-w-stone text-base mt-3 italic max-w-2xl mx-auto">{cat.description}</p>}
         </div>
 
-        <div class="divide-y divide-w-linen">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
           {cat.items.map(item => (
-            <article class="py-5 flex items-start gap-4 group">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-start justify-between gap-4">
-                  <h3 class="font-medium text-w-dark group-hover:text-w-green transition-colors">{item.name}</h3>
-                  <span class="flex-shrink-0 font-semibold text-w-gold">€{Number(item.price).toFixed(2)}</span>
+            <article class="p-6 bg-white rounded-sm border border-w-linen/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-medium text-w-dark text-lg group-hover:text-w-gold transition-colors">{item.name}</h3>
+                  {item.description && <p class="text-w-stone/90 text-sm mt-2 leading-relaxed">{item.description}</p>}
+                  <div class="flex flex-wrap gap-2 mt-4">
+                    {item.is_vegan       && <span class="text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider bg-w-green/5 text-w-green font-medium">vegan</span>}
+                    {item.is_vegetarian && !item.is_vegan && <span class="text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider bg-w-green/5 text-w-green font-medium">vegetarisch</span>}
+                    {item.allergens?.map(a => (
+                      <span class="text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider bg-w-stone/10 text-w-stone font-medium">{a}</span>
+                    ))}
+                  </div>
                 </div>
-                {item.description && <p class="text-w-stone text-sm mt-1 leading-relaxed">{item.description}</p>}
-                <div class="flex flex-wrap gap-1.5 mt-2">
-                  {item.is_vegan       && <span class="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">vegan</span>}
-                  {item.is_vegetarian && !item.is_vegan && <span class="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">vegetarisch</span>}
-                  {item.allergens?.map(a => (
-                    <span class="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{a}</span>
-                  ))}
-                </div>
+                <span class="flex-shrink-0 font-medium text-w-gold text-lg">€{Number(item.price).toFixed(2)}</span>
               </div>
             </article>
           ))}

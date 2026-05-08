@@ -1,5 +1,15 @@
-const BASE = (import.meta.env.DIRECTUS_URL ?? 'http://localhost:8055').replace(/\/$/, '');
-const TOKEN = import.meta.env.DIRECTUS_TOKEN;
+// process.env is the reliable source inside Docker; import.meta.env can be
+// baked as undefined by Vite when the variable isn't in a .env file.
+const BASE = (
+  import.meta.env.DIRECTUS_URL ??
+  process.env['DIRECTUS_URL'] ??
+  'http://localhost:8055'
+).replace(/\/$/, '');
+
+const TOKEN: string =
+  import.meta.env.DIRECTUS_TOKEN ||
+  process.env['DIRECTUS_TOKEN'] ||
+  '';
 
 async function get<T>(path: string): Promise<T> {
   const headers: Record<string, string> = {};

@@ -20,39 +20,44 @@ function dateRange(ev: typeof events[0]) {
 
 <Layout title="Events" description="Saisonale Highlights, Stammtisch und besondere Abende im Gasthaus Adlerwirt.">
   <!-- Header -->
-  <div class="bg-w-green py-16 px-5 lg:px-8">
-    <div class="max-w-7xl mx-auto">
-      <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Aktuelles & Termine</p>
-      <h1 class="font-serif text-4xl sm:text-5xl text-white font-semibold">Events & Saisonales</h1>
-      <p class="text-white/60 mt-3 max-w-xl">Von der Spargelzeit bis zu den Wildwochen — was uns durch das Jahr begleitet.</p>
+  <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
+    <img src="/images/hero-events.png" alt="Events" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
+    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 via-w-dark/30 to-transparent"></div>
+    <div class="max-w-7xl mx-auto relative z-10 fade-up">
+      <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
+        <span class="w-8 h-px bg-w-gold/80"></span>Aktuelles & Termine
+      </p>
+      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">Events & Saisonales</h1>
+      <p class="text-white/80 mt-6 max-w-xl text-lg font-light leading-relaxed fade-up delay-100">Von der Spargelzeit bis zu den Wildwochen — was uns durch das Jahr begleitet.</p>
     </div>
   </div>
 
   <!-- Events list -->
-  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-16 space-y-8">
+  <div class="max-w-5xl mx-auto px-5 lg:px-8 py-24 space-y-12">
     {events.map((ev, i) => (
-      <article class:list={[
-        'grid grid-cols-1 lg:grid-cols-4 gap-0 rounded-2xl overflow-hidden shadow-sm border border-w-linen',
-        i % 2 === 0 ? '' : '',
-      ]}>
+      <article class={`grid grid-cols-1 md:grid-cols-12 gap-0 bg-white rounded-sm overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-w-linen/50 group fade-up delay-${(i % 3) * 100}`}>
         <!-- Colored sidebar -->
-        <div class="lg:col-span-1 bg-w-green p-8 flex flex-col justify-center">
-          {ev.is_recurring && (
-            <span class="inline-block px-2.5 py-1 rounded-full bg-w-gold/20 text-w-gold text-xs font-semibold mb-4">
-              wiederkehrend
-            </span>
-          )}
-          <p class="font-serif text-white text-xl font-semibold leading-snug">{ev.title}</p>
-          {ev.subtitle && <p class="text-white/60 text-xs mt-2">{ev.subtitle}</p>}
-          {dateRange(ev) && (
-            <p class="text-w-gold text-sm font-medium mt-4">{dateRange(ev)}</p>
-          )}
+        <div class="md:col-span-4 bg-w-dark p-10 flex flex-col justify-center relative overflow-hidden text-w-cream">
+          <div class="absolute inset-0 opacity-[0.03]"
+               style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:16px 16px"></div>
+          <div class="relative z-10">
+            {ev.is_recurring && (
+              <span class="inline-block px-3 py-1 rounded-sm bg-w-gold/10 text-w-gold text-[10px] uppercase tracking-[0.2em] font-semibold mb-6">
+                wiederkehrend
+              </span>
+            )}
+            <p class="font-serif text-3xl font-medium leading-snug mb-2 group-hover:text-w-gold transition-colors">{ev.title}</p>
+            {ev.subtitle && <p class="text-white/60 text-sm font-light mt-1">{ev.subtitle}</p>}
+            {dateRange(ev) && (
+              <p class="text-w-gold text-sm font-medium tracking-wide uppercase mt-8 border-t border-white/10 pt-4">{dateRange(ev)}</p>
+            )}
+          </div>
         </div>
         <!-- Content -->
-        <div class="lg:col-span-3 bg-white p-8 flex items-center">
+        <div class="md:col-span-8 p-10 flex items-center">
           {ev.description
-            ? <div class="prose prose-stone text-sm max-w-none" set:html={md(ev.description)} />
-            : <p class="text-w-stone italic text-sm">Weitere Details folgen.</p>
+            ? <div class="prose prose-stone text-base font-light text-w-dark/80 max-w-none leading-relaxed" set:html={md(ev.description)} />
+            : <p class="text-w-stone/70 italic text-base font-light">Weitere Details folgen in Kürze.</p>
           }
         </div>
       </article>
