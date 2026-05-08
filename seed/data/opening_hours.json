@@ -1,0 +1,9 @@
+[
+  {"weekday": "Montag",     "sort": 1, "closed": false, "open_from": "11:00", "open_to": "23:00", "kitchen_from": "11:30", "kitchen_to": "21:30", "note": ""},
+  {"weekday": "Dienstag",   "sort": 2, "closed": false, "open_from": "11:00", "open_to": "23:00", "kitchen_from": "11:30", "kitchen_to": "21:30", "note": ""},
+  {"weekday": "Mittwoch",   "sort": 3, "closed": false, "open_from": "11:00", "open_to": "23:00", "kitchen_from": "11:30", "kitchen_to": "21:30", "note": ""},
+  {"weekday": "Donnerstag", "sort": 4, "closed": false, "open_from": "11:00", "open_to": "24:00", "kitchen_from": "11:30", "kitchen_to": "21:30", "note": "Stammtischabend"},
+  {"weekday": "Freitag",    "sort": 5, "closed": false, "open_from": "11:00", "open_to": "24:00", "kitchen_from": "11:30", "kitchen_to": "22:00", "note": ""},
+  {"weekday": "Samstag",    "sort": 6, "closed": false, "open_from": "11:00", "open_to": "24:00", "kitchen_from": "11:30", "kitchen_to": "22:00", "note": ""},
+  {"weekday": "Sonntag",    "sort": 7, "closed": true,  "open_from": "",      "open_to": "",      "kitchen_from": "",      "kitchen_to": "",      "note": "Ruhetag — wir sind bei der Familie."}
+]

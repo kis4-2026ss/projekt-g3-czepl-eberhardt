@@ -1,0 +1,163 @@
+{
+  "collections": [
+    {
+      "collection": "site_settings",
+      "is_singleton": true,
+      "icon": "language",
+      "note": "Globale Webseiten-Einstellungen",
+      "fields": [
+        {"field": "site_name", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "tagline", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "contact_email", "type": "string", "meta": {"interface": "input", "width": "half", "options": {"iconLeft": "mail"}}},
+        {"field": "contact_phone", "type": "string", "meta": {"interface": "input", "width": "half", "options": {"iconLeft": "phone"}}},
+        {"field": "address_street", "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "address_zip", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "address_city", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "google_maps_url", "type": "string", "meta": {"interface": "input", "width": "full", "options": {"iconLeft": "map"}}},
+        {"field": "instagram_url", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "facebook_url", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_note", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "hero",
+      "is_singleton": true,
+      "icon": "view_carousel",
+      "note": "Inhalt der Hero-Sektion auf der Startseite",
+      "fields": [
+        {"field": "eyebrow", "type": "string", "meta": {"interface": "input", "width": "full", "note": "Kleine Zeile über der Headline"}},
+        {"field": "headline", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "full"}},
+        {"field": "subheadline", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "cta_primary_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "cta_primary_link", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "cta_secondary_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "cta_secondary_link", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "image_alt", "type": "string", "meta": {"interface": "input", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "about",
+      "is_singleton": true,
+      "icon": "auto_stories",
+      "note": "Über-uns / Geschichte",
+      "fields": [
+        {"field": "title", "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "subtitle", "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "story", "type": "text", "meta": {"interface": "input-rich-text-md", "width": "full"}},
+        {"field": "philosophy", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "founded_year", "type": "integer", "meta": {"interface": "input", "width": "half"}},
+        {"field": "generations", "type": "integer", "meta": {"interface": "input", "width": "half", "note": "Wirts-Generation"}}
+      ]
+    },
+    {
+      "collection": "opening_hours",
+      "icon": "schedule",
+      "display_template": "{{weekday}} – {{open_from}}–{{open_to}}",
+      "sort_field": "sort",
+      "note": "Öffnungszeiten pro Wochentag",
+      "fields": [
+        {"field": "weekday", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "select-dropdown", "required": true, "options": {"choices": [{"text": "Montag", "value": "Montag"}, {"text": "Dienstag", "value": "Dienstag"}, {"text": "Mittwoch", "value": "Mittwoch"}, {"text": "Donnerstag", "value": "Donnerstag"}, {"text": "Freitag", "value": "Freitag"}, {"text": "Samstag", "value": "Samstag"}, {"text": "Sonntag", "value": "Sonntag"}]}}},
+        {"field": "sort", "type": "integer", "meta": {"interface": "input", "hidden": true}},
+        {"field": "closed", "type": "boolean", "schema": {"default_value": false}, "meta": {"interface": "boolean", "width": "half", "note": "Ruhetag"}},
+        {"field": "open_from", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "open_to", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "kitchen_from", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "kitchen_to", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "note", "type": "string", "meta": {"interface": "input", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "team",
+      "icon": "groups",
+      "display_template": "{{first_name}} {{last_name}} – {{role}}",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "first_name", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "last_name", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "role", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "sort", "type": "integer", "meta": {"interface": "input", "hidden": true}},
+        {"field": "bio", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "testimonials",
+      "icon": "format_quote",
+      "display_template": "{{author}} – {{rating}}★",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "author", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "location", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "rating", "type": "integer", "schema": {"default_value": 5}, "meta": {"interface": "select-dropdown", "options": {"choices": [{"text": "★", "value": 1}, {"text": "★★", "value": 2}, {"text": "★★★", "value": 3}, {"text": "★★★★", "value": 4}, {"text": "★★★★★", "value": 5}]}, "width": "half"}},
+        {"field": "sort", "type": "integer", "meta": {"interface": "input", "hidden": true}},
+        {"field": "quote", "type": "text", "schema": {"is_nullable": false}, "meta": {"interface": "input-multiline", "required": true, "width": "full"}},
+        {"field": "published_on", "type": "date", "meta": {"interface": "datetime", "width": "half"}}
+      ]
+    },
+    {
+      "collection": "events",
+      "icon": "celebration",
+      "display_template": "{{title}} ({{starts_on}})",
+      "sort_field": "starts_on",
+      "fields": [
+        {"field": "title", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "full"}},
+        {"field": "subtitle", "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "description", "type": "text", "meta": {"interface": "input-rich-text-md", "width": "full"}},
+        {"field": "starts_on", "type": "date", "meta": {"interface": "datetime", "width": "half"}},
+        {"field": "ends_on", "type": "date", "meta": {"interface": "datetime", "width": "half"}},
+        {"field": "is_recurring", "type": "boolean", "schema": {"default_value": false}, "meta": {"interface": "boolean", "width": "half"}},
+        {"field": "recurrence_note", "type": "string", "meta": {"interface": "input", "width": "half"}}
+      ]
+    },
+    {
+      "collection": "faq",
+      "icon": "help",
+      "display_template": "{{question}}",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "question", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "full"}},
+        {"field": "sort", "type": "integer", "meta": {"interface": "input", "hidden": true}},
+        {"field": "answer", "type": "text", "schema": {"is_nullable": false}, "meta": {"interface": "input-rich-text-md", "required": true, "width": "full"}}
+      ]
+    },
+    {
+      "collection": "tables",
+      "icon": "table_restaurant",
+      "display_template": "Tisch {{number}} ({{seats}} Plätze)",
+      "fields": [
+        {"field": "number", "type": "integer", "schema": {"is_nullable": false, "is_unique": true}, "meta": {"interface": "input", "required": true}},
+        {"field": "seats", "type": "integer", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true}},
+        {"field": "location", "type": "string", "meta": {"interface": "select-dropdown", "options": {"choices": [{"text": "Innen", "value": "indoor"}, {"text": "Terrasse", "value": "terrace"}, {"text": "Stüberl", "value": "stueberl"}]}}}
+      ]
+    },
+    {
+      "collection": "categories",
+      "icon": "restaurant_menu",
+      "display_template": "{{name}}",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "name", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "full"}},
+        {"field": "sort", "type": "integer", "meta": {"interface": "input", "hidden": true}},
+        {"field": "description", "type": "text", "meta": {"interface": "input-multiline"}}
+      ]
+    },
+    {
+      "collection": "menu_items",
+      "icon": "lunch_dining",
+      "display_template": "{{name}} – €{{price}}",
+      "fields": [
+        {"field": "name", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "full"}},
+        {"field": "description", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "price", "type": "decimal", "schema": {"numeric_precision": 10, "numeric_scale": 2, "is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "is_vegetarian", "type": "boolean", "schema": {"default_value": false}, "meta": {"interface": "boolean", "width": "half"}},
+        {"field": "is_vegan", "type": "boolean", "schema": {"default_value": false}, "meta": {"interface": "boolean", "width": "half"}},
+        {"field": "available", "type": "boolean", "schema": {"default_value": true}, "meta": {"interface": "boolean", "width": "half"}},
+        {"field": "is_featured", "type": "boolean", "schema": {"default_value": false}, "meta": {"interface": "boolean", "width": "half", "note": "Empfehlung des Hauses"}},
+        {"field": "allergens", "type": "json", "meta": {"interface": "tags", "options": {"presets": ["Gluten", "Laktose", "Eier", "Nüsse", "Sellerie", "Senf", "Fisch", "Soja"]}}},
+        {"field": "category", "type": "integer", "schema": {}, "meta": {"interface": "select-dropdown-m2o", "special": ["m2o"], "options": {"template": "{{name}}"}, "width": "full"}}
+      ]
+    }
+  ],
+  "relations": [
+    {"collection": "menu_items", "field": "category", "related_collection": "categories"}
+  ]
+}

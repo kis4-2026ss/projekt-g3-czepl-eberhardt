@@ -1,0 +1,10 @@
+[
+  {"number": 1, "seats": 2, "location": "indoor"},
+  {"number": 2, "seats": 4, "location": "indoor"},
+  {"number": 3, "seats": 4, "location": "indoor"},
+  {"number": 4, "seats": 6, "location": "indoor"},
+  {"number": 5, "seats": 8, "location": "stueberl"},
+  {"number": 6, "seats": 4, "location": "terrace"},
+  {"number": 7, "seats": 4, "location": "terrace"},
+  {"number": 8, "seats": 2, "location": "terrace"}
+]

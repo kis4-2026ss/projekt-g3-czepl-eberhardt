@@ -1,0 +1,7 @@
+[
+  {"slug": "vorspeisen",   "name": "Vorspeisen",   "sort": 1, "description": "Kleine Köstlichkeiten zum Auftakt"},
+  {"slug": "suppen",       "name": "Suppen",       "sort": 2, "description": "Heißes aus dem Kupferkessel"},
+  {"slug": "hauptspeisen", "name": "Hauptspeisen", "sort": 3, "description": "Klassiker der österreichischen Wirtshausküche"},
+  {"slug": "desserts",     "name": "Desserts",     "sort": 4, "description": "Süßer Abschluss"},
+  {"slug": "getraenke",    "name": "Getränke",     "sort": 5, "description": "Bier vom Fass, Wein aus der Region"}
+]

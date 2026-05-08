@@ -1,0 +1,38 @@
+[
+  {
+    "title": "Spargelzeit",
+    "subtitle": "Mai 2026",
+    "description": "Frischer Marchfeldspargel — gebraten, in Sauce Hollandaise, im Risotto und natürlich klassisch mit Schinken. Solange die Saison geht.",
+    "starts_on": "2026-05-01",
+    "ends_on": "2026-06-15",
+    "is_recurring": false,
+    "recurrence_note": ""
+  },
+  {
+    "title": "Wildwochen",
+    "subtitle": "Hirsch, Reh, Wildschwein aus dem Mühlviertel",
+    "description": "Vier Wochen lang stehen Wildgerichte aus heimischer Jagd auf der Karte. Mit Erdäpfelknödel, Rotkraut und Preiselbeeren — wie es sich gehört.",
+    "starts_on": "2026-10-05",
+    "ends_on": "2026-11-02",
+    "is_recurring": true,
+    "recurrence_note": "Jährlich im Oktober"
+  },
+  {
+    "title": "Stammtisch",
+    "subtitle": "Jeden Donnerstag ab 19:00",
+    "description": "Eckltisch, Karten, Bier vom Fass. Neue Gesichter immer willkommen — einfach dazusetzen.",
+    "starts_on": "2026-05-14",
+    "ends_on": null,
+    "is_recurring": true,
+    "recurrence_note": "Wöchentlich, donnerstags"
+  },
+  {
+    "title": "Adventbrunch",
+    "subtitle": "Adventsonntage",
+    "description": "An allen vier Adventsonntagen öffnen wir ausnahmsweise — von 10 bis 14 Uhr mit Brunch-Buffet, Punsch und Lebkuchen. Reservierung dringend empfohlen.",
+    "starts_on": "2026-11-29",
+    "ends_on": "2026-12-20",
+    "is_recurring": true,
+    "recurrence_note": "Vier Sonntage im Advent"
+  }
+]

@@ -1,0 +1,37 @@
+[
+  {
+    "question": "Brauchen wir eine Reservierung?",
+    "sort": 1,
+    "answer": "Unter der Woche meistens nicht — am Wochenende und für Gruppen ab 4 Personen empfehlen wir es dringend. Reservieren geht telefonisch, per Mail oder über das Formular auf unserer Webseite."
+  },
+  {
+    "question": "Habt ihr vegetarische und vegane Speisen?",
+    "sort": 2,
+    "answer": "Ja. Wir haben mindestens drei vegetarische Hauptspeisen ständig auf der Karte (Käsespätzle, Schwammerlgulasch, Topfenknödel). Vegan ist auf Anfrage möglich — sagt einfach beim Reservieren Bescheid."
+  },
+  {
+    "question": "Ist das Lokal barrierefrei?",
+    "sort": 3,
+    "answer": "Der Hauptgastraum und das WC sind barrierefrei zugänglich. Das Stüberl im ersten Stock leider nicht — Treppe ohne Lift. Bei Reservierung weisen wir euch automatisch dem Hauptraum zu."
+  },
+  {
+    "question": "Bietet ihr Catering oder Räume für Feiern an?",
+    "sort": 4,
+    "answer": "Ja, das Stüberl fasst bis zu 40 Personen und kann für Geburtstage, Hochzeiten oder Firmenfeiern reserviert werden. Catering machen wir im Umkreis von 30km. Für Angebote ruft uns einfach an."
+  },
+  {
+    "question": "Kann man bei euch auch nur etwas trinken kommen?",
+    "sort": 5,
+    "answer": "Selbstverständlich. Wir sind ein Wirtshaus, kein Restaurant — der Schanigarten und der Stammtisch stehen jedem offen, der ein Bier oder einen Kaffee möchte."
+  },
+  {
+    "question": "Akzeptiert ihr Kreditkarten?",
+    "sort": 6,
+    "answer": "Ja, wir nehmen Bankomat, Visa, Mastercard und Apple/Google Pay. Bargeld natürlich auch — der Wirt hat noch nie nein gesagt."
+  },
+  {
+    "question": "Sind Hunde erlaubt?",
+    "sort": 7,
+    "answer": "Brave Hunde sind im Gastraum und am Schanigarten herzlich willkommen — wir haben sogar einen Wassernapf und manchmal eine Wurst hinter der Theke."
+  }
+]

@@ -1,0 +1,26 @@
+[
+  {"category_slug": "vorspeisen", "name": "Beef Tartar",          "description": "Vom heimischen Rind, mit Toast und Butter",            "price": 14.50, "allergens": ["Gluten", "Eier"]},
+  {"category_slug": "vorspeisen", "name": "Käseteller",           "description": "Auswahl regionaler Bergkäse mit Trauben und Walnüssen", "price": 9.80,  "is_vegetarian": true, "allergens": ["Laktose", "Nüsse"]},
+  {"category_slug": "vorspeisen", "name": "Bauernsalat",          "description": "Blattsalate mit Speck, Ei und Kürbiskernöl",            "price": 8.50,  "allergens": ["Eier"]},
+
+  {"category_slug": "suppen", "name": "Frittatensuppe",      "description": "Klare Rindsuppe mit Pfannkuchenstreifen",                "price": 5.20, "allergens": ["Gluten", "Eier"]},
+  {"category_slug": "suppen", "name": "Leberknödelsuppe",    "description": "Hausgemachter Leberknödel in kräftiger Rindsuppe",       "price": 6.80, "allergens": ["Gluten"]},
+  {"category_slug": "suppen", "name": "Kürbiscremesuppe",    "description": "Mit Kürbiskernöl und gerösteten Kürbiskernen",           "price": 6.20, "is_vegetarian": true, "allergens": ["Laktose"]},
+
+  {"category_slug": "hauptspeisen", "name": "Wiener Schnitzel",     "description": "Vom Kalb, mit Petersilkartoffeln und Preiselbeeren",      "price": 19.80, "is_featured": true, "allergens": ["Gluten", "Eier"]},
+  {"category_slug": "hauptspeisen", "name": "Tafelspitz",           "description": "Klassisch mit Apfelkren, Schnittlauchsauce und Rösterdäpfel", "price": 22.50, "is_featured": true, "allergens": ["Eier", "Laktose"]},
+  {"category_slug": "hauptspeisen", "name": "Schweinsbraten",       "description": "Mit Semmelknödel und Sauerkraut",                          "price": 16.80, "allergens": ["Gluten", "Sellerie"]},
+  {"category_slug": "hauptspeisen", "name": "Käsespätzle",          "description": "Mit Bergkäse und Röstzwiebeln",                            "price": 13.20, "is_vegetarian": true, "allergens": ["Gluten", "Laktose", "Eier"]},
+  {"category_slug": "hauptspeisen", "name": "Gebackener Karpfen",   "description": "Aus dem Waldviertel, mit Erdäpfelsalat",                   "price": 18.50, "allergens": ["Gluten", "Senf", "Fisch"]},
+  {"category_slug": "hauptspeisen", "name": "Schwammerlgulasch",    "description": "Mit Eierschwammerln aus dem Mühlviertel und Serviettenknödel", "price": 14.80, "is_vegetarian": true, "allergens": ["Gluten", "Eier", "Laktose"]},
+
+  {"category_slug": "desserts", "name": "Kaiserschmarrn", "description": "Mit Zwetschkenröster und Staubzucker",   "price": 9.80, "is_vegetarian": true, "is_featured": true, "allergens": ["Gluten", "Eier", "Laktose"]},
+  {"category_slug": "desserts", "name": "Apfelstrudel",   "description": "Mit warmer Vanillesauce",               "price": 7.50, "is_vegetarian": true, "allergens": ["Gluten", "Eier", "Laktose"]},
+  {"category_slug": "desserts", "name": "Topfenknödel",   "description": "Mit Brösel und Zwetschkenröster",       "price": 7.20, "is_vegetarian": true, "allergens": ["Gluten", "Laktose", "Eier"]},
+
+  {"category_slug": "getraenke", "name": "Stiegl Bier 0,5l",      "description": "Vom Fass",                              "price": 4.20, "is_vegan": true, "allergens": ["Gluten"]},
+  {"category_slug": "getraenke", "name": "Grüner Veltliner 1/8",  "description": "Aus der Wachau",                        "price": 3.80, "is_vegan": true, "allergens": []},
+  {"category_slug": "getraenke", "name": "Almdudler 0,33l",       "description": "Das österreichische Originalgetränk",  "price": 3.20, "is_vegan": true, "allergens": []},
+  {"category_slug": "getraenke", "name": "Apfelsaft gespritzt",   "description": "Aus Mostviertler Äpfeln",               "price": 3.50, "is_vegan": true, "allergens": []},
+  {"category_slug": "getraenke", "name": "Verlängerter",          "description": "Doppelter Espresso mit heißem Wasser", "price": 3.50, "is_vegan": true, "allergens": []}
+]

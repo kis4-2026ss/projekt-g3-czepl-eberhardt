@@ -1,0 +1,34 @@
+[
+  {
+    "author": "Andreas K.",
+    "location": "Linz",
+    "rating": 5,
+    "sort": 1,
+    "quote": "Das beste Wiener Schnitzel der Stadt — Punkt. Knusprig, nicht fettig, und groß genug, dass es über den Teller hinausragt. So muss das.",
+    "published_on": "2026-04-12"
+  },
+  {
+    "author": "Familie Stocker",
+    "location": "Wels",
+    "rating": 5,
+    "sort": 2,
+    "quote": "Wir feiern unsere Geburtstage seit Jahren beim Adlerwirt. Kinder werden mit Apfelsaft und einem Kartonsticker begrüßt, Oma kriegt ihren Stammtisch — und niemand schaut komisch, wenn die Kleinen unter den Tisch krabbeln.",
+    "published_on": "2026-03-28"
+  },
+  {
+    "author": "Julia M.",
+    "location": "Wien",
+    "rating": 4,
+    "sort": 3,
+    "quote": "Anreise aus Wien hat sich gelohnt. Tafelspitz wie bei meiner Großmutter, dazu ein wunderbarer Veltliner. Einzig: am Sonntag geschlossen — wir mussten umdisponieren.",
+    "published_on": "2026-02-15"
+  },
+  {
+    "author": "Markus R.",
+    "location": "München",
+    "rating": 5,
+    "sort": 4,
+    "quote": "Auf Geschäftsreise empfohlen bekommen, dann mit dem ganzen Team hin. Ein echtes Wirtshaus — kein Touristenkitsch, kein Fusion-Quatsch. Einfach gut.",
+    "published_on": "2026-01-20"
+  }
+]

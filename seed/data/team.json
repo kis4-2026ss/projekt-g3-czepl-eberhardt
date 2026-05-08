@@ -1,0 +1,37 @@
+[
+  {
+    "first_name": "Maria",
+    "last_name": "Adler",
+    "role": "Wirtin & Inhaberin",
+    "sort": 1,
+    "bio": "Vierte Generation. Bei Maria läuft alles zusammen — vom Einkauf am Bauernmarkt bis zum Gespräch mit den Stammgästen am Eckltisch."
+  },
+  {
+    "first_name": "Stefan",
+    "last_name": "Huber",
+    "role": "Küchenchef",
+    "sort": 2,
+    "bio": "Stationen im Steirereck und beim Obauer. Bei uns seit 2018. Verantwortlich für Schnitzel, Sauce und alles dazwischen."
+  },
+  {
+    "first_name": "Lisa",
+    "last_name": "Berger",
+    "role": "Sous-Chef & Patisserie",
+    "sort": 3,
+    "bio": "Mehlspeis-Königin. Wer einmal ihren Topfenstrudel probiert hat, kommt wieder."
+  },
+  {
+    "first_name": "Tobias",
+    "last_name": "Mayr",
+    "role": "Restaurantleiter",
+    "sort": 4,
+    "bio": "Sorgt dafür, dass auch an einem vollen Freitagabend nichts hektisch wird. Kennt jeden Stammgast beim Vornamen."
+  },
+  {
+    "first_name": "Hannah",
+    "last_name": "Pichler",
+    "role": "Sommelière",
+    "sort": 5,
+    "bio": "Spezialisiert auf Weine aus der Wachau und dem Kamptal. Findet auch zum Kaiserschmarrn den passenden Tropfen."
+  }
+]

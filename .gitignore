@@ -1,0 +1,33 @@
+# environment & secrets
+.env
+.env.*
+!.env.example
+
+# docker volumes written to the project directory
+directus/uploads/
+postgres-data/
+
+# python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+
+# node / frontend (if added later)
+node_modules/
+dist/
+.next/
+.nuxt/
+
+# editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
