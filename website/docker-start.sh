@@ -40,5 +40,8 @@ node -e "
 echo "[startup] Installing dependencies..."
 npm install --prefer-offline --silent
 
-echo "[startup] Starting Astro dev server..."
-exec npm run dev
+echo "[startup] Building Astro SSR server..."
+npm run build
+
+echo "[startup] Starting Astro SSR server..."
+exec node ./dist/server/entry.mjs
