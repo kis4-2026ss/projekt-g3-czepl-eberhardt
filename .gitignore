@@ -3,6 +3,12 @@
 .env.*
 !.env.example
 
+# local MCP server config (contains credentials)
+.mcp.json
+settings.local.json
+
+
+
 # docker volumes written to the project directory
 directus/uploads/
 postgres-data/
