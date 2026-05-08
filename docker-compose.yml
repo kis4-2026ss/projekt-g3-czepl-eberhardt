@@ -75,6 +75,20 @@ services:
       ADMIN_PASSWORD: "admin"
     command: sh /app/docker-start.sh
 
+  mcp-server:
+    build: ./mcp-server
+    container_name: directus-mcp-server
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    depends_on:
+      - directus
+    environment:
+      DIRECTUS_URL: "http://directus:8055"
+      DIRECTUS_EMAIL: "admin@gmail.at"
+      DIRECTUS_PASSWORD: "admin"
+      PORT: "3001"
+
   seed:
     image: python:3.12-alpine
     container_name: directus-seed

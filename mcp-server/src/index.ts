@@ -1,11 +1,12 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { DirectusClient } from "./directus.js";
+import http from "node:http";
 
 // ── Client setup ──────────────────────────────────────────────────────────────
 
@@ -187,104 +188,143 @@ function err(message: string) {
   };
 }
 
-// ── Server setup ──────────────────────────────────────────────────────────────
+// ── Server factory ────────────────────────────────────────────────────────────
 
-const server = new Server(
-  { name: "directus-mcp", version: "1.0.0" },
-  { capabilities: { tools: {} } },
-);
+function makeServer(): Server {
+  const server = new Server(
+    { name: "directus-mcp", version: "1.0.0" },
+    { capabilities: { tools: {} } },
+  );
 
-server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args = {} } = request.params;
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args = {} } = request.params;
 
-  try {
-    switch (name) {
-      // ── Introspection ──────────────────────────────────────────────────────
+    try {
+      switch (name) {
+        // ── Introspection ────────────────────────────────────────────────────
 
-      case "list_collections":
-        return ok(await client.listCollections());
+        case "list_collections":
+          return ok(await client.listCollections());
 
-      case "get_collection_fields": {
-        const { collection } = args as { collection: string };
-        return ok(await client.getCollectionFields(collection));
+        case "get_collection_fields": {
+          const { collection } = args as { collection: string };
+          return ok(await client.getCollectionFields(collection));
+        }
+
+        case "get_schema":
+          return ok(await client.getSchema());
+
+        // ── Read ─────────────────────────────────────────────────────────────
+
+        case "read_items": {
+          const { collection, fields, filter, sort, limit, offset, search } = args as {
+            collection: string;
+            fields?: string[];
+            filter?: Record<string, unknown>;
+            sort?: string[];
+            limit?: number;
+            offset?: number;
+            search?: string;
+          };
+          return ok(await client.readItems(collection, { fields, filter, sort, limit, offset, search }));
+        }
+
+        case "read_item": {
+          const { collection, id, fields } = args as {
+            collection: string;
+            id: string | number;
+            fields?: string[];
+          };
+          return ok(await client.readItem(collection, id, fields));
+        }
+
+        case "read_singleton": {
+          const { collection, fields } = args as { collection: string; fields?: string[] };
+          return ok(await client.readSingleton(collection, fields));
+        }
+
+        // ── Write ────────────────────────────────────────────────────────────
+
+        case "create_item": {
+          const { collection, data } = args as {
+            collection: string;
+            data: Record<string, unknown>;
+          };
+          return ok(await client.createItem(collection, data));
+        }
+
+        case "update_item": {
+          const { collection, id, data } = args as {
+            collection: string;
+            id: string | number;
+            data: Record<string, unknown>;
+          };
+          return ok(await client.updateItem(collection, id, data));
+        }
+
+        case "update_singleton": {
+          const { collection, data } = args as {
+            collection: string;
+            data: Record<string, unknown>;
+          };
+          return ok(await client.updateSingleton(collection, data));
+        }
+
+        case "delete_item": {
+          const { collection, id } = args as { collection: string; id: string | number };
+          await client.deleteItem(collection, id);
+          return ok({ success: true, deleted: { collection, id } });
+        }
+
+        default:
+          return err(`Unknown tool: ${name}`);
       }
-
-      case "get_schema":
-        return ok(await client.getSchema());
-
-      // ── Read ───────────────────────────────────────────────────────────────
-
-      case "read_items": {
-        const { collection, fields, filter, sort, limit, offset, search } = args as {
-          collection: string;
-          fields?: string[];
-          filter?: Record<string, unknown>;
-          sort?: string[];
-          limit?: number;
-          offset?: number;
-          search?: string;
-        };
-        return ok(await client.readItems(collection, { fields, filter, sort, limit, offset, search }));
-      }
-
-      case "read_item": {
-        const { collection, id, fields } = args as {
-          collection: string;
-          id: string | number;
-          fields?: string[];
-        };
-        return ok(await client.readItem(collection, id, fields));
-      }
-
-      case "read_singleton": {
-        const { collection, fields } = args as { collection: string; fields?: string[] };
-        return ok(await client.readSingleton(collection, fields));
-      }
-
-      // ── Write ──────────────────────────────────────────────────────────────
-
-      case "create_item": {
-        const { collection, data } = args as {
-          collection: string;
-          data: Record<string, unknown>;
-        };
-        return ok(await client.createItem(collection, data));
-      }
-
-      case "update_item": {
-        const { collection, id, data } = args as {
-          collection: string;
-          id: string | number;
-          data: Record<string, unknown>;
-        };
-        return ok(await client.updateItem(collection, id, data));
-      }
-
-      case "update_singleton": {
-        const { collection, data } = args as {
-          collection: string;
-          data: Record<string, unknown>;
-        };
-        return ok(await client.updateSingleton(collection, data));
-      }
-
-      case "delete_item": {
-        const { collection, id } = args as { collection: string; id: string | number };
-        await client.deleteItem(collection, id);
-        return ok({ success: true, deleted: { collection, id } });
-      }
-
-      default:
-        return err(`Unknown tool: ${name}`);
+    } catch (e) {
+      return err(e instanceof Error ? e.message : String(e));
     }
-  } catch (e) {
-    return err(e instanceof Error ? e.message : String(e));
-  }
+  });
+
+  return server;
+}
+
+// ── HTTP server ───────────────────────────────────────────────────────────────
+
+const PORT = Number(process.env.PORT ?? 3001);
+
+const httpServer = http.createServer();
+
+httpServer.on("request", (req, res) => {
+  void (async () => {
+    if (req.url !== "/mcp") {
+      res.writeHead(404, { "Content-Type": "application/json" })
+        .end(JSON.stringify({ error: "Not found" }));
+      return;
+    }
+
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("end", resolve);
+      req.on("error", reject);
+    });
+    const body = chunks.length
+      ? (JSON.parse(Buffer.concat(chunks).toString()) as unknown)
+      : undefined;
+
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+    const server = makeServer();
+
+    res.on("close", () => transport.close().catch(() => {}));
+    await server.connect(transport);
+    await transport.handleRequest(req, res, body);
+  })().catch((e: unknown) => {
+    process.stderr.write(`Request error: ${e instanceof Error ? e.message : String(e)}\n`);
+    if (!res.headersSent) res.writeHead(500).end();
+  });
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
-
-const transport = new StdioServerTransport();
-await server.connect(transport);
+httpServer.listen(PORT, () => {
+  process.stderr.write(`directus-mcp listening on http://0.0.0.0:${PORT}/mcp\n`);
+});
