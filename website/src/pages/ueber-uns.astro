@@ -1,0 +1,79 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getAbout, getTeam, md } from '../lib/directus';
+
+const [about, team] = await Promise.all([getAbout(), getTeam()]);
+const storyHtml = md(about.story);
+---
+
+<Layout title="Über uns" description={about.subtitle}>
+  <!-- Header -->
+  <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
+    <img src="/images/hero-ueber-uns.png" alt="Über uns" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
+    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 via-w-dark/30 to-transparent"></div>
+    <div class="max-w-7xl mx-auto relative z-10 fade-up">
+      <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
+        <span class="w-8 h-px bg-w-gold/80"></span>Wer wir sind
+      </p>
+      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">{about.title}</h1>
+      <p class="text-white/80 mt-6 max-w-xl text-xl font-serif italic leading-relaxed fade-up delay-100">{about.subtitle}</p>
+    </div>
+  </div>
+
+  <!-- Story -->
+  <section class="py-24 px-5 lg:px-8 bg-w-cream">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-16">
+      <!-- Text -->
+      <div class="lg:col-span-2 fade-up">
+        <div class="prose prose-stone max-w-none text-w-dark/80 leading-relaxed font-light text-lg" set:html={storyHtml} />
+      </div>
+
+      <!-- Sidebar stats + philosophy -->
+      <aside class="space-y-8 fade-up delay-200">
+        <div class="grid grid-cols-2 gap-6">
+          <div class="bg-white rounded-sm border border-w-linen/50 p-8 text-center shadow-sm">
+            <p class="font-serif text-5xl font-medium text-w-gold">{about.founded_year}</p>
+            <p class="text-w-stone text-xs mt-3 tracking-[0.2em] uppercase">gegründet</p>
+          </div>
+          <div class="bg-white rounded-sm border border-w-linen/50 p-8 text-center shadow-sm">
+            <p class="font-serif text-5xl font-medium text-w-gold">{about.generations}.</p>
+            <p class="text-w-stone text-xs mt-3 tracking-[0.2em] uppercase">Generation</p>
+          </div>
+        </div>
+        <blockquote class="bg-w-dark rounded-sm p-10 text-white relative overflow-hidden">
+          <div class="absolute -right-4 -top-4 opacity-5 text-w-gold">
+            <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+          </div>
+          <p class="text-white/90 leading-relaxed text-lg italic font-serif relative z-10">"{about.philosophy}"</p>
+        </blockquote>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section class="py-28 px-5 lg:px-8 bg-w-linen/30">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16 fade-up">
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Die Menschen dahinter</p>
+        <h2 class="font-serif text-4xl sm:text-5xl text-w-dark font-medium">Unser Team</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {team.map((member, index) => (
+          <article class={`bg-white rounded-sm p-10 shadow-sm border border-w-linen/50 text-center hover:shadow-xl transition-all duration-300 hover:-translate-y-1 fade-up delay-${(index % 3 + 1) * 100}`}>
+            <!-- Avatar placeholder -->
+            <div class="w-20 h-20 mx-auto rounded-full bg-w-dark flex items-center justify-center mb-6">
+              <span class="font-serif text-2xl font-medium text-w-gold">
+                {member.first_name.charAt(0)}{member.last_name.charAt(0)}
+              </span>
+            </div>
+            <h3 class="font-serif font-medium text-w-dark text-xl">
+              {member.first_name} {member.last_name}
+            </h3>
+            <p class="text-w-gold text-[10px] font-semibold tracking-[0.2em] uppercase mt-2 mb-4">{member.role}</p>
+            {member.bio && <p class="text-w-stone/90 text-sm leading-relaxed font-light">{member.bio}</p>}
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>

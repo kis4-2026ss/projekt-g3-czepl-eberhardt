@@ -43,6 +43,7 @@ services:
       SECRET: "9d7f1c2e-7b8a-4d3e-a5c6-1b2d3e4f5a67"
       ADMIN_EMAIL: "admin@gmail.at"
       ADMIN_PASSWORD: "admin"
+      ADMIN_TOKEN: "adlerwirt-dev-token"
       PUBLIC_URL: "http://localhost:8055"
       DB_CLIENT: "pg"
       DB_HOST: "database"
@@ -54,6 +55,25 @@ services:
       CACHE_STORE: "redis"
       REDIS: "redis://cache:6379"
       WEBSOCKETS_ENABLED: "true"
+
+  website:
+    image: node:22-alpine
+    container_name: adlerwirt-website
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./website:/app
+      - website_node_modules:/app/node_modules
+    ports:
+      - "4321:4321"
+    depends_on:
+      - directus
+    environment:
+      DIRECTUS_URL: "http://directus:8055"
+      DIRECTUS_TOKEN: "adlerwirt-dev-token"
+      ADMIN_EMAIL: "admin@gmail.at"
+      ADMIN_PASSWORD: "admin"
+    command: sh /app/docker-start.sh
 
   seed:
     image: python:3.12-alpine
@@ -77,3 +97,4 @@ services:
 volumes:
   db_data:
   directus_uploads:
+  website_node_modules:

@@ -1,0 +1,144 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getSiteSettings, getOpeningHours } from '../lib/directus';
+
+const [settings, hours] = await Promise.all([getSiteSettings(), getOpeningHours()]);
+---
+
+<Layout title="Kontakt" description={`Reservierung, Anfahrt und Öffnungszeiten — ${settings.site_name}, ${settings.address_street}, ${settings.address_city}.`}>
+  <!-- Header -->
+  <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
+    <img src="/images/hero-faq.png" alt="Kontakt" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
+    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 via-w-dark/30 to-transparent"></div>
+    <div class="max-w-7xl mx-auto relative z-10 fade-up">
+      <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
+        <span class="w-8 h-px bg-w-gold/80"></span>Wir freuen uns auf Sie
+      </p>
+      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">Kontakt & Anfahrt</h1>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-24 grid grid-cols-1 lg:grid-cols-5 gap-12">
+
+    <!-- Contact info + map -->
+    <div class="lg:col-span-2 space-y-8 fade-up">
+      <div class="bg-white rounded-sm border border-w-linen/50 shadow-sm p-10 space-y-8">
+        <!-- Address -->
+        <div class="flex gap-4">
+          <div class="w-10 h-10 rounded-xl bg-w-linen flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-w-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-w-stone uppercase tracking-wider mb-1">Adresse</p>
+            <address class="not-italic text-w-dark text-sm leading-relaxed">
+              {settings.address_street}<br />
+              {settings.address_zip} {settings.address_city}
+            </address>
+            {settings.google_maps_url && (
+              <a href={settings.google_maps_url} target="_blank" rel="noopener"
+                 class="inline-flex items-center gap-1 text-w-gold text-xs font-medium mt-2 hover:text-w-gold-light transition-colors">
+                Auf Google Maps anzeigen →
+              </a>
+            )}
+          </div>
+        </div>
+
+        <div class="border-t border-w-linen"></div>
+
+        <!-- Phone -->
+        <div class="flex gap-4">
+          <div class="w-10 h-10 rounded-xl bg-w-linen flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-w-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-w-stone uppercase tracking-wider mb-1">Telefon</p>
+            <a href={`tel:${settings.contact_phone.replace(/\s/g,'')}`}
+               class="text-w-dark text-sm font-medium hover:text-w-green transition-colors">
+              {settings.contact_phone}
+            </a>
+            <p class="text-w-stone text-xs mt-1">Mo–Sa während der Öffnungszeiten</p>
+          </div>
+        </div>
+
+        <div class="border-t border-w-linen"></div>
+
+        <!-- Email -->
+        <div class="flex gap-4">
+          <div class="w-10 h-10 rounded-xl bg-w-linen flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-w-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-w-stone uppercase tracking-wider mb-1">E-Mail</p>
+            <a href={`mailto:${settings.contact_email}`}
+               class="text-w-dark text-sm font-medium hover:text-w-green transition-colors break-all">
+              {settings.contact_email}
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reservation CTA -->
+      <div class="bg-w-dark rounded-sm p-10 text-white relative overflow-hidden fade-up delay-100">
+        <div class="absolute -right-4 -bottom-4 opacity-10 text-w-gold">
+          <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+        </div>
+        <h3 class="font-serif text-2xl font-medium mb-3 relative z-10">Tisch reservieren</h3>
+        <p class="text-white/65 text-sm leading-relaxed mb-5">
+          Für Gruppen ab 4 Personen und am Wochenende empfehlen wir eine Reservierung.
+        </p>
+        <a href={`tel:${settings.contact_phone.replace(/\s/g,'')}`}
+           class="inline-flex items-center gap-2 px-5 py-3 bg-w-gold text-white text-sm font-medium rounded-xl hover:bg-w-gold-light transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+          </svg>
+          Jetzt anrufen
+        </a>
+      </div>
+    </div>
+
+    <!-- Opening hours -->
+    <div class="lg:col-span-3 fade-up delay-200">
+      <div class="bg-white rounded-sm border border-w-linen/50 shadow-sm overflow-hidden">
+        <div class="px-10 py-8 border-b border-w-linen/50 bg-w-cream/30">
+          <h2 class="font-serif text-2xl font-medium text-w-dark">Öffnungszeiten</h2>
+        </div>
+        <table class="w-full">
+          <tbody>
+            {hours.map(h => (
+              <tr class:list={['border-b border-w-linen last:border-0', h.closed ? 'opacity-50' : '']}>
+                <td class="px-7 py-4 font-medium text-w-dark text-sm w-36">{h.weekday}</td>
+                {h.closed
+                  ? <td class="px-7 py-4 text-w-stone text-sm italic" colspan="2">Ruhetag</td>
+                  : <>
+                      <td class="px-7 py-4 text-sm text-w-dark">
+                        <span class="font-medium">{h.open_from} – {h.open_to}</span>
+                        <br />
+                        <span class="text-w-stone text-xs">Küche: {h.kitchen_from} – {h.kitchen_to}</span>
+                      </td>
+                      <td class="px-7 py-4 text-right">
+                        {h.note && (
+                          <span class="inline-block px-2.5 py-1 rounded-full bg-w-gold/10 text-w-gold text-xs font-medium">
+                            {h.note}
+                          </span>
+                        )}
+                      </td>
+                    </>
+                }
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div class="px-7 py-4 bg-w-linen/50">
+          <p class="text-w-stone text-xs">Warme Küche bis ca. 30 Minuten vor Küchenschluss. An Feiertagen gelten gesonderte Zeiten.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

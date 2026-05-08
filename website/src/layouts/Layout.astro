@@ -1,0 +1,86 @@
+---
+import { ViewTransitions } from 'astro:transitions';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { getSiteSettings } from '../lib/directus';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const settings = await getSiteSettings();
+const { title = settings.site_name, description = settings.tagline } = Astro.props;
+const pageTitle = title === settings.site_name
+  ? title
+  : `${title} — ${settings.site_name}`;
+---
+
+<!doctype html>
+<html lang="de" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <title>{pageTitle}</title>
+    <ViewTransitions />
+  </head>
+  <body class="bg-w-cream text-w-dark font-sans antialiased selection:bg-w-gold/30 selection:text-w-dark">
+    <Nav settings={settings} />
+    <main>
+      <slot />
+    </main>
+    <Footer settings={settings} />
+
+    <style is:global>
+      /* Base fade-in classes */
+      .fade-up {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        will-change: opacity, transform;
+      }
+      .fade-up.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      /* Staggered delays */
+      .delay-100 { transition-delay: 100ms; }
+      .delay-200 { transition-delay: 200ms; }
+      .delay-300 { transition-delay: 300ms; }
+    </style>
+
+    <script>
+      function setupAnimations() {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, {
+          rootMargin: '0px 0px -10% 0px',
+          threshold: 0.1
+        });
+
+        document.querySelectorAll('.fade-up').forEach((el) => {
+          observer.observe(el);
+        });
+      }
+
+      // Run on initial load
+      setupAnimations();
+      
+      // Run after view transitions
+      document.addEventListener('astro:after-swap', setupAnimations);
+    </script>
+  </body>
+</html>

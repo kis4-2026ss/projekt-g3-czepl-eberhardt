@@ -1,0 +1,87 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getMenuItems, getCategories } from '../lib/directus';
+
+const [items, categories] = await Promise.all([getMenuItems(), getCategories()]);
+
+const byCategory = categories.map(cat => ({
+  ...cat,
+  items: items.filter(i => i.category?.id === cat.id && i.available !== false),
+})).filter(c => c.items.length > 0);
+
+function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
+---
+
+<Layout title="Speisekarte">
+  <!-- Page header -->
+  <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
+    <img src="/images/hero-speisekarte.png" alt="Speisekarte" class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay" />
+    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 to-transparent"></div>
+    <div class="max-w-7xl mx-auto relative z-10 fade-up">
+      <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
+        <span class="w-8 h-px bg-w-gold/80"></span>Was wir anbieten
+      </p>
+      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">Speisekarte</h1>
+      <p class="text-white/80 mt-6 max-w-xl text-lg font-light leading-relaxed fade-up delay-100">Saisonal, regional, hausgemacht. Wenn etwas aus ist, ist es aus.</p>
+    </div>
+  </div>
+
+  <!-- Sticky category nav -->
+  <nav class="sticky top-[64px] sm:top-[80px] z-40 bg-w-cream/90 backdrop-blur-md border-b border-w-linen/50 shadow-sm transition-all">
+    <div class="max-w-7xl mx-auto px-5 lg:px-8">
+      <ul class="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
+        {byCategory.map(cat => (
+          <li>
+            <a
+              href={`#${slug(cat.name)}`}
+              class="whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-medium text-w-stone border border-transparent hover:border-w-gold/30 hover:text-w-dark hover:bg-white transition-all block"
+            >
+              {cat.name}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Menu sections -->
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-20 space-y-24">
+    {byCategory.map((cat, index) => (
+      <section id={slug(cat.name)} class="scroll-mt-40 fade-up">
+        <div class="mb-10 text-center">
+          <h2 class="font-serif text-3xl sm:text-4xl text-w-dark font-medium">{cat.name}</h2>
+          {cat.description && <p class="text-w-stone text-base mt-3 italic max-w-2xl mx-auto">{cat.description}</p>}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+          {cat.items.map(item => (
+            <article class="p-6 bg-white rounded-sm border border-w-linen/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-medium text-w-dark text-lg group-hover:text-w-gold transition-colors">{item.name}</h3>
+                  {item.description && <p class="text-w-stone/90 text-sm mt-2 leading-relaxed">{item.description}</p>}
+                  <div class="flex flex-wrap gap-2 mt-4">
+                    {item.is_vegan       && <span class="text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider bg-w-green/5 text-w-green font-medium">vegan</span>}
+                    {item.is_vegetarian && !item.is_vegan && <span class="text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider bg-w-green/5 text-w-green font-medium">vegetarisch</span>}
+                    {item.allergens?.map(a => (
+                      <span class="text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider bg-w-stone/10 text-w-stone font-medium">{a}</span>
+                    ))}
+                  </div>
+                </div>
+                <span class="flex-shrink-0 font-medium text-w-gold text-lg">€{Number(item.price).toFixed(2)}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    ))}
+  </div>
+
+  <!-- Allergen note -->
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 pb-16">
+    <p class="text-w-stone text-xs leading-relaxed border-t border-w-linen pt-6 max-w-2xl">
+      Allergene und Unverträglichkeiten: Unsere Mitarbeiter informieren Sie gerne über alle verwendeten Zutaten.
+      Irrtümer und saisonale Änderungen vorbehalten.
+    </p>
+  </div>
+</Layout>
