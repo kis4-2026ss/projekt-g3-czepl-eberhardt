@@ -22,8 +22,9 @@ function formatDate(d: string | null) {
   <!-- ── Hero ────────────────────────────────────────────────── -->
   <section class="relative min-h-[95vh] flex items-center overflow-hidden">
     <!-- background image -->
-    <img src="/images/hero-gasthaus.png" alt="Adlerwirt Gasthaus" class="absolute inset-0 w-full h-full object-cover" />
-    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 via-w-dark/50 to-w-dark/30"></div>
+    <img src="/images/hero-gasthaus.png" alt="Adlerwirt Gasthaus" class="absolute inset-0 w-full h-full object-cover object-[70%_center]" />
+    <div class="absolute inset-0 bg-gradient-to-r from-w-dark/95 via-w-dark/60 to-transparent"></div>
+    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/80 via-transparent to-transparent"></div>
 
     <div class="relative z-10 max-w-7xl mx-auto px-5 lg:px-8 py-28 w-full mt-20">
       <div class="max-w-3xl fade-up">
@@ -32,11 +33,11 @@ function formatDate(d: string | null) {
             <span class="w-12 h-px bg-w-gold/80"></span>{hero.eyebrow}
           </p>
         )}
-        <h1 class="font-serif text-5xl sm:text-6xl lg:text-8xl text-white font-medium leading-[1.1] mb-8 tracking-tight">
+        <h1 class="font-serif text-5xl sm:text-6xl lg:text-8xl text-white font-medium leading-[1.1] mb-8 tracking-tight drop-shadow-lg">
           {hero.headline}
         </h1>
         {hero.subheadline && (
-          <p class="text-white/80 text-xl font-light leading-relaxed mb-12 max-w-2xl fade-up delay-100">{hero.subheadline}</p>
+          <p class="text-white/90 text-xl font-light leading-relaxed mb-12 max-w-2xl fade-up delay-100 drop-shadow-md">{hero.subheadline}</p>
         )}
         <div class="flex flex-col sm:flex-row gap-5 fade-up delay-200">
           {hero.cta_primary_label && (
