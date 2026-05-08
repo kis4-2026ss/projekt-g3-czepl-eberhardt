@@ -55,6 +55,25 @@ services:
       REDIS: "redis://cache:6379"
       WEBSOCKETS_ENABLED: "true"
 
+  website:
+    image: node:22-alpine
+    container_name: adlerwirt-website
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./website:/app
+      - website_node_modules:/app/node_modules
+    ports:
+      - "4321:4321"
+    depends_on:
+      - directus
+    environment:
+      DIRECTUS_URL: "http://directus:8055"
+      # Set a static token from Directus → Settings → Access Tokens,
+      # or enable public Read in Directus → Settings → Roles → Public.
+      DIRECTUS_TOKEN: "adlerwirt-dev-token"
+    command: sh -c "npm install --prefer-offline && npm run dev"
+
   seed:
     image: python:3.12-alpine
     container_name: directus-seed
@@ -77,3 +96,4 @@ services:
 volumes:
   db_data:
   directus_uploads:
+  website_node_modules:

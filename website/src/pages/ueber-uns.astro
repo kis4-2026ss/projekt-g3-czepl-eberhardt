@@ -1,0 +1,75 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getAbout, getTeam, md } from '../lib/directus';
+
+const [about, team] = await Promise.all([getAbout(), getTeam()]);
+const storyHtml = md(about.story);
+---
+
+<Layout title="Über uns" description={about.subtitle}>
+  <!-- Header -->
+  <div class="bg-w-green py-16 px-5 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Wer wir sind</p>
+      <h1 class="font-serif text-4xl sm:text-5xl text-white font-semibold">{about.title}</h1>
+      <p class="text-white/60 mt-3 font-serif italic text-lg">{about.subtitle}</p>
+    </div>
+  </div>
+
+  <!-- Story -->
+  <section class="py-20 px-5 lg:px-8">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <!-- Text -->
+      <div class="lg:col-span-2">
+        <div class="prose prose-stone max-w-none text-w-dark/85 leading-relaxed" set:html={storyHtml} />
+      </div>
+
+      <!-- Sidebar stats + philosophy -->
+      <aside class="space-y-6">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-w-linen rounded-2xl p-5 text-center">
+            <p class="font-serif text-4xl font-bold text-w-green">{about.founded_year}</p>
+            <p class="text-w-stone text-xs mt-1">gegründet</p>
+          </div>
+          <div class="bg-w-linen rounded-2xl p-5 text-center">
+            <p class="font-serif text-4xl font-bold text-w-green">{about.generations}.</p>
+            <p class="text-w-stone text-xs mt-1">Generation</p>
+          </div>
+        </div>
+        <blockquote class="bg-w-green rounded-2xl p-6 text-white">
+          <svg class="w-7 h-7 text-w-gold/50 mb-3" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
+          </svg>
+          <p class="text-white/85 leading-relaxed text-sm italic">{about.philosophy}</p>
+        </blockquote>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section class="py-20 px-5 lg:px-8 bg-w-linen">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-12">
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Die Menschen dahinter</p>
+        <h2 class="font-serif text-3xl sm:text-4xl text-w-dark font-semibold">Unser Team</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {team.map(member => (
+          <article class="bg-white rounded-2xl p-7 shadow-sm border border-w-linen">
+            <!-- Avatar placeholder -->
+            <div class="w-14 h-14 rounded-full bg-w-green flex items-center justify-center mb-5">
+              <span class="font-serif text-xl font-bold text-w-gold">
+                {member.first_name.charAt(0)}{member.last_name.charAt(0)}
+              </span>
+            </div>
+            <h3 class="font-serif font-semibold text-w-dark text-lg">
+              {member.first_name} {member.last_name}
+            </h3>
+            <p class="text-w-gold text-xs font-semibold tracking-wide uppercase mt-1 mb-3">{member.role}</p>
+            {member.bio && <p class="text-w-stone text-sm leading-relaxed">{member.bio}</p>}
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>

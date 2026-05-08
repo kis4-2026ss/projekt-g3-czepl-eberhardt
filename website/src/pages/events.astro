@@ -1,0 +1,61 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getEvents, md } from '../lib/directus';
+
+const events = await getEvents();
+
+function formatDate(d: string | null) {
+  if (!d) return null;
+  return new Date(d).toLocaleDateString('de-AT', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+function dateRange(ev: typeof events[0]) {
+  if (ev.is_recurring) return ev.recurrence_note;
+  const from = formatDate(ev.starts_on);
+  const to   = formatDate(ev.ends_on);
+  if (from && to)  return `${from} – ${to}`;
+  if (from)        return `ab ${from}`;
+  return null;
+}
+---
+
+<Layout title="Events" description="Saisonale Highlights, Stammtisch und besondere Abende im Gasthaus Adlerwirt.">
+  <!-- Header -->
+  <div class="bg-w-green py-16 px-5 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Aktuelles & Termine</p>
+      <h1 class="font-serif text-4xl sm:text-5xl text-white font-semibold">Events & Saisonales</h1>
+      <p class="text-white/60 mt-3 max-w-xl">Von der Spargelzeit bis zu den Wildwochen — was uns durch das Jahr begleitet.</p>
+    </div>
+  </div>
+
+  <!-- Events list -->
+  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-16 space-y-8">
+    {events.map((ev, i) => (
+      <article class:list={[
+        'grid grid-cols-1 lg:grid-cols-4 gap-0 rounded-2xl overflow-hidden shadow-sm border border-w-linen',
+        i % 2 === 0 ? '' : '',
+      ]}>
+        <!-- Colored sidebar -->
+        <div class="lg:col-span-1 bg-w-green p-8 flex flex-col justify-center">
+          {ev.is_recurring && (
+            <span class="inline-block px-2.5 py-1 rounded-full bg-w-gold/20 text-w-gold text-xs font-semibold mb-4">
+              wiederkehrend
+            </span>
+          )}
+          <p class="font-serif text-white text-xl font-semibold leading-snug">{ev.title}</p>
+          {ev.subtitle && <p class="text-white/60 text-xs mt-2">{ev.subtitle}</p>}
+          {dateRange(ev) && (
+            <p class="text-w-gold text-sm font-medium mt-4">{dateRange(ev)}</p>
+          )}
+        </div>
+        <!-- Content -->
+        <div class="lg:col-span-3 bg-white p-8 flex items-center">
+          {ev.description
+            ? <div class="prose prose-stone text-sm max-w-none" set:html={md(ev.description)} />
+            : <p class="text-w-stone italic text-sm">Weitere Details folgen.</p>
+          }
+        </div>
+      </article>
+    ))}
+  </div>
+</Layout>

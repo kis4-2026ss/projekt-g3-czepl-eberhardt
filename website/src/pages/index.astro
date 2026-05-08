@@ -1,0 +1,241 @@
+---
+import Layout from '../layouts/Layout.astro';
+import {
+  getSiteSettings, getHero, getAbout,
+  getFeaturedDishes, getTestimonials, getEvents, getOpeningHours,
+} from '../lib/directus';
+
+const [settings, hero, about, featured, testimonials, events, hours] = await Promise.all([
+  getSiteSettings(), getHero(), getAbout(),
+  getFeaturedDishes(), getTestimonials(), getEvents(), getOpeningHours(),
+]);
+
+function stars(n: number) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
+function formatDate(d: string | null) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('de-AT', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+---
+
+<Layout title={settings.site_name} description={hero.subheadline}>
+
+  <!-- ── Hero ────────────────────────────────────────────────── -->
+  <section class="relative min-h-[90vh] flex items-center bg-w-green overflow-hidden">
+    <!-- subtle dot pattern -->
+    <div class="absolute inset-0 opacity-[0.06]"
+         style="background-image:radial-gradient(circle,#fff 1px,transparent 1px);background-size:32px 32px"></div>
+    <div class="absolute inset-0 bg-gradient-to-br from-w-green via-w-green to-w-green-dark"></div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-5 lg:px-8 py-28">
+      <div class="max-w-2xl">
+        {hero.eyebrow && (
+          <p class="inline-flex items-center gap-3 text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-7">
+            <span class="w-10 h-px bg-w-gold/60"></span>{hero.eyebrow}
+          </p>
+        )}
+        <h1 class="font-serif text-4xl sm:text-5xl lg:text-6xl text-white font-semibold leading-[1.15] mb-6">
+          {hero.headline}
+        </h1>
+        {hero.subheadline && (
+          <p class="text-white/65 text-lg leading-relaxed mb-10 max-w-xl">{hero.subheadline}</p>
+        )}
+        <div class="flex flex-col sm:flex-row gap-4">
+          {hero.cta_primary_label && (
+            <a href={hero.cta_primary_link}
+               class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-w-gold text-white font-medium rounded-xl hover:bg-w-gold-light transition-colors shadow-lg shadow-black/20">
+              {hero.cta_primary_label}
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+              </svg>
+            </a>
+          )}
+          {hero.cta_secondary_label && (
+            <a href={hero.cta_secondary_link}
+               class="inline-flex items-center justify-center px-8 py-4 border border-white/25 text-white font-medium rounded-xl hover:border-white/50 hover:bg-white/8 transition-colors">
+              {hero.cta_secondary_label}
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce text-white/30">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ── Featured dishes ─────────────────────────────────────── -->
+  <section class="py-20 px-5 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-12">
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Empfehlungen des Hauses</p>
+        <h2 class="font-serif text-3xl sm:text-4xl text-w-dark font-semibold">Was Sie nicht verpassen sollten</h2>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {featured.map(item => (
+          <article class="bg-white rounded-2xl p-6 shadow-sm border border-w-linen hover:shadow-md transition-shadow group">
+            <div class="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p class="text-w-stone text-xs font-medium uppercase tracking-wider mb-1">{item.category?.name}</p>
+                <h3 class="font-serif text-lg font-semibold text-w-dark group-hover:text-w-green transition-colors">{item.name}</h3>
+              </div>
+              <span class="text-w-gold font-semibold text-lg whitespace-nowrap">€{Number(item.price).toFixed(2)}</span>
+            </div>
+            {item.description && <p class="text-w-stone text-sm leading-relaxed">{item.description}</p>}
+            <div class="flex gap-2 mt-4 flex-wrap">
+              {item.is_vegetarian && <span class="px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium border border-green-200">🌿 vegetarisch</span>}
+              {item.is_vegan     && <span class="px-2 py-0.5 rounded-full bg-green-50 text-green-700 text-xs font-medium border border-green-200">🌱 vegan</span>}
+            </div>
+          </article>
+        ))}
+      </div>
+      <div class="text-center mt-10">
+        <a href="/speisekarte" class="inline-flex items-center gap-2 text-w-green font-medium hover:text-w-gold transition-colors text-sm">
+          Zur vollständigen Speisekarte
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── About teaser ────────────────────────────────────────── -->
+  <section class="py-20 px-5 lg:px-8 bg-w-linen">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
+      <div>
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Unsere Geschichte</p>
+        <h2 class="font-serif text-3xl sm:text-4xl text-w-dark font-semibold leading-snug mb-4">{about.title}</h2>
+        <p class="text-w-stone text-base leading-relaxed mb-6 italic font-serif">{about.subtitle}</p>
+        <!-- first paragraph of story -->
+        <p class="text-w-dark/80 leading-relaxed">
+          {(about.story.split('\n\n')[0] ?? '').replace(/\*\*/g, '')}
+        </p>
+        <a href="/ueber-uns" class="inline-flex items-center gap-2 mt-6 text-w-green font-medium hover:text-w-gold transition-colors text-sm">
+          Mehr über uns
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+          </svg>
+        </a>
+      </div>
+      <div class="space-y-6">
+        <!-- Stats -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-white rounded-2xl p-6 text-center shadow-sm border border-w-linen">
+            <p class="font-serif text-5xl font-bold text-w-green">{about.founded_year}</p>
+            <p class="text-w-stone text-sm mt-1">gegründet</p>
+          </div>
+          <div class="bg-white rounded-2xl p-6 text-center shadow-sm border border-w-linen">
+            <p class="font-serif text-5xl font-bold text-w-green">{about.generations}.</p>
+            <p class="text-w-stone text-sm mt-1">Generation</p>
+          </div>
+        </div>
+        <!-- Philosophy quote -->
+        <blockquote class="bg-w-green rounded-2xl p-7 text-white">
+          <svg class="w-8 h-8 text-w-gold/50 mb-3" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
+          </svg>
+          <p class="text-white/85 leading-relaxed italic">{about.philosophy}</p>
+        </blockquote>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Testimonials ────────────────────────────────────────── -->
+  <section class="py-20 px-5 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-12">
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Was Gäste sagen</p>
+        <h2 class="font-serif text-3xl sm:text-4xl text-w-dark font-semibold">Stimmen aus dem Gastraum</h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {testimonials.slice(0, 3).map(t => (
+          <blockquote class="bg-white rounded-2xl p-7 shadow-sm border border-w-linen flex flex-col">
+            <p class="text-w-gold text-lg tracking-wide mb-4">{stars(t.rating)}</p>
+            <p class="text-w-dark/80 leading-relaxed italic flex-1">"{t.quote}"</p>
+            <footer class="mt-5 pt-5 border-t border-w-linen">
+              <p class="font-medium text-w-dark text-sm">{t.author}</p>
+              <p class="text-w-stone text-xs mt-0.5">{t.location}</p>
+            </footer>
+          </blockquote>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Events preview ──────────────────────────────────────── -->
+  <section class="py-20 px-5 lg:px-8 bg-w-linen">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
+        <div>
+          <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Aktuelles</p>
+          <h2 class="font-serif text-3xl sm:text-4xl text-w-dark font-semibold">Events & Saisonales</h2>
+        </div>
+        <a href="/events" class="text-w-green font-medium text-sm hover:text-w-gold transition-colors whitespace-nowrap">
+          Alle Events →
+        </a>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {events.slice(0, 4).map(ev => (
+          <article class="bg-white rounded-2xl p-7 shadow-sm border border-w-linen hover:shadow-md transition-shadow">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 w-14 h-14 rounded-xl bg-w-green flex items-center justify-center">
+                <svg class="w-6 h-6 text-w-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-serif font-semibold text-w-dark text-lg leading-snug">{ev.title}</h3>
+                {ev.subtitle && <p class="text-w-stone text-xs mt-1">{ev.subtitle}</p>}
+                {ev.starts_on && (
+                  <p class="text-w-gold text-xs font-medium mt-2">
+                    {ev.is_recurring ? ev.recurrence_note : formatDate(ev.starts_on)}
+                    {ev.ends_on && !ev.is_recurring && ` – ${formatDate(ev.ends_on)}`}
+                  </p>
+                )}
+                {ev.description && (
+                  <p class="text-w-dark/70 text-sm mt-2 leading-relaxed line-clamp-2">{ev.description}</p>
+                )}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Opening hours strip ─────────────────────────────────── -->
+  <section class="py-16 px-5 lg:px-8 bg-w-green text-white">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-10">
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-3">Wann wir für Sie da sind</p>
+        <h2 class="font-serif text-2xl sm:text-3xl font-semibold">Öffnungszeiten</h2>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        {hours.map(h => (
+          <div class:list={[
+            'rounded-xl p-4 text-center',
+            h.closed ? 'bg-white/5 opacity-50' : 'bg-white/10 border border-white/10',
+          ]}>
+            <p class="text-w-gold text-xs font-semibold uppercase tracking-wider mb-2">{h.weekday.slice(0,2)}</p>
+            {h.closed
+              ? <p class="text-white/50 text-xs">Ruhetag</p>
+              : <>
+                  <p class="text-white text-sm font-medium">{h.open_from}–{h.open_to}</p>
+                  {h.note && <p class="text-white/50 text-xs mt-1">{h.note}</p>}
+                </>
+            }
+          </div>
+        ))}
+      </div>
+      <p class="text-center mt-8">
+        <a href="/kontakt" class="text-w-gold/80 text-sm hover:text-w-gold transition-colors">
+          Vollständige Informationen & Reservierung →
+        </a>
+      </p>
+    </div>
+  </section>
+
+</Layout>

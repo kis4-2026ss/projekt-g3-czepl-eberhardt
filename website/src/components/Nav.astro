@@ -1,0 +1,82 @@
+---
+import type { SiteSettings } from '../lib/directus';
+
+interface Props { settings: SiteSettings }
+const { settings } = Astro.props;
+
+const links = [
+  { href: '/speisekarte', label: 'Speisekarte' },
+  { href: '/ueber-uns',  label: 'Über uns'    },
+  { href: '/events',     label: 'Events'      },
+  { href: '/faq',        label: 'FAQ'         },
+];
+const path = Astro.url.pathname;
+---
+
+<header class="sticky top-0 z-50 bg-w-green/95 backdrop-blur-sm border-b border-white/10">
+  <div class="max-w-7xl mx-auto px-5 lg:px-8">
+    <div class="flex items-center justify-between h-16 sm:h-20">
+
+      <!-- Logo -->
+      <a href="/" class="group flex flex-col leading-tight">
+        <span class="font-serif text-white text-lg sm:text-xl font-semibold group-hover:text-w-gold transition-colors duration-200">
+          {settings.site_name}
+        </span>
+        <span class="text-w-gold/70 text-[10px] tracking-[0.2em] uppercase">{settings.tagline}</span>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="hidden md:flex items-center gap-7">
+        {links.map(l => (
+          <a
+            href={l.href}
+            class:list={[
+              'text-sm font-medium transition-colors duration-200',
+              path.startsWith(l.href) ? 'text-w-gold' : 'text-white/75 hover:text-white',
+            ]}
+          >
+            {l.label}
+          </a>
+        ))}
+        <a
+          href="/kontakt"
+          class="ml-1 px-5 py-2 rounded-lg bg-w-gold text-white text-sm font-medium hover:bg-w-gold-light transition-colors duration-200"
+        >
+          Reservieren
+        </a>
+      </nav>
+
+      <!-- Mobile toggle -->
+      <button id="nav-toggle" class="md:hidden text-white p-2 -mr-2" aria-label="Menü">
+        <svg id="icon-open"   class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <svg id="icon-close"  class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile drawer -->
+  <div id="nav-drawer" class="hidden md:hidden border-t border-white/10 bg-w-green-dark">
+    <nav class="flex flex-col px-5 py-4 gap-1">
+      {links.map(l => (
+        <a href={l.href} class="text-white/80 hover:text-white py-2.5 text-sm font-medium border-b border-white/5 transition-colors">
+          {l.label}
+        </a>
+      ))}
+      <a href="/kontakt" class="mt-3 px-5 py-3 rounded-lg bg-w-gold text-white text-sm font-medium text-center hover:bg-w-gold-light transition-colors">
+        Tisch reservieren
+      </a>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const toggle  = document.getElementById('nav-toggle')!;
+  const drawer  = document.getElementById('nav-drawer')!;
+  const iconOpen  = document.getElementById('icon-open')!;
+  const iconClose = document.getElementById('icon-close')!;
+  toggle.addEventListener('click', () => {
+    const open = drawer.classList.toggle('hidden');
+    iconOpen.classList.toggle('hidden', !open);
+    iconClose.classList.toggle('hidden', open);
+  });
+</script>
