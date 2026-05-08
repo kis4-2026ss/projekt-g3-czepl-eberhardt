@@ -15,7 +15,7 @@ async function get<T>(path: string): Promise<T> {
   const headers: Record<string, string> = {};
   if (TOKEN) headers['Authorization'] = `Bearer ${TOKEN}`;
 
-  const res = await fetch(`${BASE}${path}`, { headers });
+  const res = await fetch(`${BASE}${path}`, { headers, cache: 'no-store' });
 
   if (res.status === 403) {
     throw new Error(
