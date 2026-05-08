@@ -41,8 +41,8 @@ services:
     environment:
       KEY: "5c5b7f4e-3a0e-4a3d-9b5e-2f3c6d8a1b22"
       SECRET: "9d7f1c2e-7b8a-4d3e-a5c6-1b2d3e4f5a67"
-      ADMIN_EMAIL: "admin@adlerwirt.at"
-      ADMIN_PASSWORD: "directus"
+      ADMIN_EMAIL: "admin@gmail.at"
+      ADMIN_PASSWORD: "admin"
       PUBLIC_URL: "http://localhost:8055"
       DB_CLIENT: "pg"
       DB_HOST: "database"
