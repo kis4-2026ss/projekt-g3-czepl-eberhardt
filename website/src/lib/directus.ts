@@ -91,6 +91,46 @@ export interface UiCopy {
   vegetarian_label: string;
   vegan_label: string;
   closed_label: string;
+  kitchen_label: string;
+  address_label: string;
+  phone_label: string;
+  email_label: string;
+  phone_hours_note: string;
+  maps_short_label: string;
+  recurring_label: string;
+  no_details_text: string;
+}
+
+export interface SpeisekarteCopy {
+  allergen_title: string;
+  allergen_note: string;
+  allergen_disclaimer: string;
+}
+
+export interface KontaktCopy {
+  hours_title: string;
+  hours_subtitle: string;
+  hours_footer_note: string;
+  reservation_eyebrow: string;
+  reservation_title: string;
+  reservation_text: string;
+  reservation_cta_label: string;
+  seo_description_template: string;
+}
+
+export interface FaqCopy {
+  help_eyebrow: string;
+  help_title: string;
+  help_text: string;
+  help_cta_label: string;
+  help_cta_href: string;
+}
+
+export interface UeberUnsCopy {
+  story_eyebrow: string;
+  philosophy_eyebrow: string;
+  team_eyebrow: string;
+  team_title: string;
 }
 
 export interface HomeCopy {
@@ -220,6 +260,10 @@ export const getAbout          = () => get<About>('/items/about');
 export const getNavigation     = () => get<NavigationLink[]>('/items/navigation_links?sort=sort');
 export const getUiCopy         = () => get<UiCopy>('/items/ui_copy');
 export const getHomeCopy       = () => get<HomeCopy>('/items/home_copy');
+export const getSpeisekarteCopy = () => get<SpeisekarteCopy>('/items/speisekarte_copy');
+export const getKontaktCopy     = () => get<KontaktCopy>('/items/kontakt_copy');
+export const getFaqCopy         = () => get<FaqCopy>('/items/faq_copy');
+export const getUeberUnsCopy    = () => get<UeberUnsCopy>('/items/ueber_uns_copy');
 export const getPageHeader     = (slug: string) =>
   get<PageHeader[]>(
     `/items/page_headers?filter[slug][_eq]=${encodeURIComponent(slug)}&limit=1`,

@@ -122,16 +122,6 @@
       ]
     },
     {
-      "collection": "tables",
-      "icon": "table_restaurant",
-      "display_template": "Tisch {{number}} ({{seats}} Plätze)",
-      "fields": [
-        {"field": "number", "type": "integer", "schema": {"is_nullable": false, "is_unique": true}, "meta": {"interface": "input", "required": true}},
-        {"field": "seats", "type": "integer", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true}},
-        {"field": "location", "type": "string", "meta": {"interface": "select-dropdown", "options": {"choices": [{"text": "Innen", "value": "indoor"}, {"text": "Terrasse", "value": "terrace"}, {"text": "Stüberl", "value": "stueberl"}]}}}
-      ]
-    },
-    {
       "collection": "categories",
       "icon": "restaurant_menu",
       "display_template": "{{name}}",
@@ -174,7 +164,7 @@
       "collection": "ui_copy",
       "is_singleton": true,
       "icon": "text_fields",
-      "note": "Reusable UI labels and templates",
+      "note": "Site-wide reusable UI labels (nav, footer, common badges)",
       "fields": [
         {"field": "nav_cta_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
         {"field": "nav_cta_href", "type": "string", "meta": {"interface": "input", "width": "half"}},
@@ -185,7 +175,67 @@
         {"field": "footer_since_line", "type": "string", "meta": {"interface": "input", "width": "full"}},
         {"field": "vegetarian_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
         {"field": "vegan_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
-        {"field": "closed_label", "type": "string", "meta": {"interface": "input", "width": "half"}}
+        {"field": "closed_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "kitchen_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "address_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "phone_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "email_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "phone_hours_note", "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "maps_short_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "recurring_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "no_details_text", "type": "string", "meta": {"interface": "input", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "speisekarte_copy",
+      "is_singleton": true,
+      "icon": "restaurant_menu",
+      "note": "Copy blocks for the menu page",
+      "fields": [
+        {"field": "allergen_title", "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "allergen_note", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "allergen_disclaimer", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "kontakt_copy",
+      "is_singleton": true,
+      "icon": "alternate_email",
+      "note": "Copy blocks for the contact page",
+      "fields": [
+        {"field": "hours_title", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "hours_subtitle", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "hours_footer_note", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "reservation_eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "reservation_title", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "reservation_text", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "reservation_cta_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "seo_description_template", "type": "text", "meta": {"interface": "input-multiline", "width": "full", "note": "Placeholders: {site_name}, {address_street}, {address_city}"}}
+      ]
+    },
+    {
+      "collection": "faq_copy",
+      "is_singleton": true,
+      "icon": "help_outline",
+      "note": "Copy blocks for the FAQ page",
+      "fields": [
+        {"field": "help_eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "help_title", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "help_text", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "help_cta_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "help_cta_href", "type": "string", "meta": {"interface": "input", "width": "half"}}
+      ]
+    },
+    {
+      "collection": "ueber_uns_copy",
+      "is_singleton": true,
+      "icon": "auto_stories",
+      "note": "Copy blocks for the about page",
+      "fields": [
+        {"field": "story_eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "philosophy_eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "team_eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "team_title", "type": "string", "meta": {"interface": "input", "width": "half"}}
       ]
     },
     {

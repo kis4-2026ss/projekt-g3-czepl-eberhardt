@@ -9,62 +9,83 @@ interface Props {
 const { settings, nav, ui } = Astro.props;
 
 const path = Astro.url.pathname;
+
+const kontakt = nav.find((l) => l.href === '/kontakt' || l.href === '/kontakt/');
+const navWithoutKontakt = nav.filter((l) => !(l.href === '/kontakt' || l.href === '/kontakt/'));
+
+function isActive(href: string) {
+  if (href === '/') return path === '/';
+  return path === href || path.startsWith(href + '/');
+}
 ---
 
 <header class="fixed top-0 inset-x-0 z-50 transition-all duration-300" id="main-nav">
   <!-- Solid background that fades in on scroll -->
-  <div class="absolute inset-0 bg-w-green/95 backdrop-blur-md border-b border-white/5 opacity-0 transition-opacity duration-300" id="nav-bg"></div>
+  <div class="absolute inset-0 bg-w-green/95 backdrop-blur-md border-b border-white/5 opacity-0 transition-opacity duration-300 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.7)]" id="nav-bg"></div>
 
-  <div class="max-w-7xl mx-auto px-5 lg:px-8 relative z-10">
+  <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 relative z-10">
     <div class="flex items-center justify-between h-20 sm:h-24 transition-all duration-300" id="nav-container">
 
-      <!-- Logo -->
-      <a href="/" class="group flex flex-col leading-tight">
-        <span class="font-serif text-white text-xl sm:text-2xl font-medium tracking-wide group-hover:text-w-gold transition-colors duration-300">
-          {settings.site_name}
+      <!-- Logo / Wordmark -->
+      <a href="/" class="group flex items-center gap-3 leading-tight">
+        <span aria-hidden="true" class="hidden sm:flex w-10 h-10 rounded-full border border-w-gold/60 items-center justify-center text-w-gold font-serif text-lg group-hover:bg-w-gold group-hover:text-w-green transition-colors duration-300">
+          {settings.site_name.charAt(0)}
         </span>
-        <span class="text-w-gold/80 text-[10px] tracking-[0.25em] uppercase mt-0.5">{settings.tagline}</span>
+        <span class="flex flex-col leading-tight">
+          <span class="font-serif text-white text-xl sm:text-2xl font-medium tracking-wide group-hover:text-w-gold transition-colors duration-300">
+            {settings.site_name}
+          </span>
+          <span class="text-w-gold/80 text-[10px] tracking-[0.28em] uppercase mt-0.5">{settings.tagline}</span>
+        </span>
       </a>
 
       <!-- Desktop nav -->
-      <nav class="hidden md:flex items-center gap-8">
-        {nav.map(l => (
+      <nav class="hidden md:flex items-center gap-1">
+        {navWithoutKontakt.map(l => (
           <a
             href={l.href}
             class:list={[
-              'text-sm font-medium transition-colors duration-300 uppercase tracking-wider',
-              path.startsWith(l.href) ? 'text-w-gold' : 'text-white/80 hover:text-white',
+              'group relative px-3 py-2 text-[13px] font-medium uppercase tracking-[0.18em] transition-colors duration-300',
+              isActive(l.href) ? 'text-w-gold' : 'text-white/85 hover:text-white',
             ]}
           >
             {l.label}
+            <span class:list={[
+              'pointer-events-none absolute left-3 right-3 -bottom-0.5 h-px bg-w-gold transition-all duration-300',
+              isActive(l.href) ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-50 group-hover:opacity-60 group-hover:scale-x-100',
+            ]}></span>
           </a>
         ))}
         <a
-          href={ui.nav_cta_href || '/kontakt'}
-          class="ml-2 px-6 py-2.5 rounded-sm bg-w-gold text-white text-sm font-medium tracking-wide uppercase hover:bg-white hover:text-w-dark transition-colors duration-300"
+          href={kontakt?.href || ui.nav_cta_href}
+          class="ml-4 btn btn-primary !py-2.5 !px-5"
         >
-          {ui.nav_cta_label || 'Reservieren'}
+          {kontakt?.label || ui.nav_cta_label}
         </a>
       </nav>
 
       <!-- Mobile toggle -->
-      <button id="nav-toggle" class="md:hidden text-white p-2 -mr-2" aria-label="Menü">
-        <svg id="icon-open"   class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <button id="nav-toggle" class="md:hidden text-white p-2 -mr-2 rounded-md hover:bg-white/10 transition-colors" aria-label="Menü" aria-expanded="false" aria-controls="nav-drawer">
+        <svg id="icon-open"   class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7h16M4 12h16M4 17h16"/></svg>
         <svg id="icon-close"  class="w-7 h-7 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
   </div>
 
   <!-- Mobile drawer -->
-  <div id="nav-drawer" class="hidden md:hidden absolute top-full inset-x-0 border-t border-white/10 bg-w-green/95 backdrop-blur-xl">
-    <nav class="flex flex-col px-5 py-6 gap-2">
-      {nav.map(l => (
-        <a href={l.href} class="text-white/90 hover:text-w-gold py-3 text-lg font-serif border-b border-white/5 transition-colors">
-          {l.label}
+  <div id="nav-drawer" class="hidden md:hidden absolute top-full inset-x-0 border-t border-white/10 bg-w-green/97 backdrop-blur-xl origin-top">
+    <nav class="flex flex-col px-5 py-6 gap-1 max-h-[calc(100vh-5rem)] overflow-auto">
+      {navWithoutKontakt.map(l => (
+        <a href={l.href} class:list={[
+          'flex items-center justify-between py-4 text-lg font-serif border-b border-white/5 transition-colors',
+          isActive(l.href) ? 'text-w-gold' : 'text-white/90 hover:text-w-gold',
+        ]}>
+          <span>{l.label}</span>
+          <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/></svg>
         </a>
       ))}
-      <a href={ui.nav_cta_href || '/kontakt'} class="mt-6 px-5 py-4 rounded-sm bg-w-gold text-white text-sm font-medium tracking-wide uppercase text-center hover:bg-white hover:text-w-dark transition-colors">
-        {ui.nav_cta_label || 'Reservieren'}
+      <a href={kontakt?.href || ui.nav_cta_href} class="mt-6 btn btn-primary">
+        {kontakt?.label || ui.nav_cta_label}
       </a>
     </nav>
   </div>
@@ -81,31 +102,46 @@ const path = Astro.url.pathname;
 
     if (!toggle || !drawer || !iconOpen || !iconClose || !bg || !container) return;
 
-    // Remove existing event listeners by replacing the toggle element
-    const newToggle = toggle.cloneNode(true);
+    const newToggle = toggle.cloneNode(true) as HTMLButtonElement;
     toggle.parentNode?.replaceChild(newToggle, toggle);
+
+    const open = () => {
+      drawer.classList.remove('hidden');
+      iconOpen.classList.add('hidden');
+      iconClose.classList.remove('hidden');
+      newToggle.setAttribute('aria-expanded', 'true');
+      bg.classList.remove('opacity-0');
+      bg.classList.add('opacity-100');
+      document.body.style.overflow = 'hidden';
+    };
+    const close = () => {
+      drawer.classList.add('hidden');
+      iconOpen.classList.remove('hidden');
+      iconClose.classList.add('hidden');
+      newToggle.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+      if (window.scrollY < 50) {
+        bg.classList.add('opacity-0');
+        bg.classList.remove('opacity-100');
+      }
+    };
 
     newToggle.addEventListener('click', () => {
       const isHidden = drawer.classList.contains('hidden');
-      if (isHidden) {
-        drawer.classList.remove('hidden');
-        iconOpen.classList.add('hidden');
-        iconClose.classList.remove('hidden');
-        bg.classList.remove('opacity-0');
-        bg.classList.add('opacity-100');
-      } else {
-        drawer.classList.add('hidden');
-        iconOpen.classList.remove('hidden');
-        iconClose.classList.add('hidden');
-        if (window.scrollY < 50) {
-          bg.classList.add('opacity-0');
-          bg.classList.remove('opacity-100');
-        }
-      }
+      if (isHidden) open();
+      else close();
+    });
+
+    drawer.querySelectorAll('a[href]').forEach((a) => {
+      a.addEventListener('click', close);
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') close();
     });
 
     const onScroll = () => {
-      if (window.scrollY > 50) {
+      if (window.scrollY > 40) {
         bg.classList.remove('opacity-0');
         bg.classList.add('opacity-100');
         container.classList.remove('h-20', 'sm:h-24');
@@ -124,8 +160,6 @@ const path = Astro.url.pathname;
     onScroll();
   }
 
-  // Run on initial load
   setupNav();
-  // Run on view transitions
   document.addEventListener('astro:after-swap', setupNav);
 </script>

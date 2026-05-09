@@ -194,7 +194,17 @@ def main() -> None:
     uuid_map = upload_images(d)
 
     print("Inserting singletons ...", flush=True)
-    for col in ("site_settings", "hero", "about", "ui_copy", "home_copy"):
+    for col in (
+        "site_settings",
+        "hero",
+        "about",
+        "ui_copy",
+        "home_copy",
+        "speisekarte_copy",
+        "kontakt_copy",
+        "faq_copy",
+        "ueber_uns_copy",
+    ):
         item = resolve_images(load_json(DATA_DIR / f"{col}.json"), uuid_map)
         upsert_singleton(d, col, item)
         print(f"  → {col}", flush=True)
@@ -206,7 +216,6 @@ def main() -> None:
         "testimonials",
         "events",
         "faq",
-        "tables",
         "navigation_links",
         "page_headers",
     ):
