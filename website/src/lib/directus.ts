@@ -219,7 +219,6 @@ export interface Testimonial {
   rating: number;
   quote: string;
   sort: number;
-  published_on: string;
 }
 
 export interface Event {
@@ -252,6 +251,8 @@ export interface FaqItem {
   answer: string;
 }
 
+
+
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
 
 export const getSiteSettings  = () => get<SiteSettings>('/items/site_settings');
@@ -271,7 +272,7 @@ export const getPageHeader     = (slug: string) =>
 export const getTeam           = () => get<TeamMember[]>('/items/team?sort=sort');
 export const getTestimonials   = () => get<Testimonial[]>('/items/testimonials?sort=sort');
 export const getOpeningHours   = () => get<OpeningHour[]>('/items/opening_hours?sort=sort');
-export const getFaq            = () => get<FaqItem[]>('/items/faq?sort=sort');
+export const getFaqItems       = () => get<FaqItem[]>('/items/faq_items?sort=sort');
 export const getEvents         = () => get<Event[]>('/items/events?sort=starts_on');
 export const getCategories     = () => get<Category[]>('/items/categories?sort=sort');
 

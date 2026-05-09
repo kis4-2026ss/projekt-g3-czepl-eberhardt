@@ -91,8 +91,7 @@
         {"field": "location", "type": "string", "meta": {"interface": "input", "width": "half"}},
         {"field": "rating", "type": "integer", "schema": {"default_value": 5}, "meta": {"interface": "select-dropdown", "options": {"choices": [{"text": "★", "value": 1}, {"text": "★★", "value": 2}, {"text": "★★★", "value": 3}, {"text": "★★★★", "value": 4}, {"text": "★★★★★", "value": 5}]}, "width": "half"}},
         {"field": "sort", "type": "integer", "meta": {"interface": "input", "hidden": true}},
-        {"field": "quote", "type": "text", "schema": {"is_nullable": false}, "meta": {"interface": "input-multiline", "required": true, "width": "full"}},
-        {"field": "published_on", "type": "date", "meta": {"interface": "datetime", "width": "half"}}
+        {"field": "quote", "type": "text", "schema": {"is_nullable": false}, "meta": {"interface": "input-multiline", "required": true, "width": "full"}}
       ]
     },
     {
@@ -111,10 +110,11 @@
       ]
     },
     {
-      "collection": "faq",
+      "collection": "faq_items",
       "icon": "help",
       "display_template": "{{question}}",
       "sort_field": "sort",
+      "note": "Q&A entries shown on the FAQ page",
       "fields": [
         {"field": "question", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "full"}},
         {"field": "sort", "type": "integer", "meta": {"interface": "input", "hidden": true}},

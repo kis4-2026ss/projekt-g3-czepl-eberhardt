@@ -1,10 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import PageHeader from '../components/PageHeader.astro';
-import { getFaq, getFaqCopy, getPageHeader } from '../lib/directus';
+import { getFaqItems, getFaqCopy, getPageHeader } from '../lib/directus';
 
 const [faqItems, copy, header] = await Promise.all([
-  getFaq(),
+  getFaqItems(),
   getFaqCopy(),
   getPageHeader('faq'),
 ]);

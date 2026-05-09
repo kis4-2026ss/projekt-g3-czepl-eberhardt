@@ -215,7 +215,7 @@ def main() -> None:
         "team",
         "testimonials",
         "events",
-        "faq",
+        "faq_items",
         "navigation_links",
         "page_headers",
     ):

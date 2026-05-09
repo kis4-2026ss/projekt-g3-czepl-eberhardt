@@ -1,18 +1,18 @@
 [
   {
     "slug": "ueber-uns",
-    "title": "\u00dcber uns",
+    "title": "Über uns",
     "eyebrow": "Wer wir sind",
-    "lead": "",
-    "seo_description": "",
+    "lead": "Vier Generationen, ein Wirtshaus — und die feste Überzeugung, dass gutes Essen Zeit braucht.",
+    "seo_description": "Die Geschichte und Philosophie des Gasthaus Adlerwirt — ein Familienbetrieb in vierter Generation in Linz.",
     "image": "hero-ueber-uns.png"
   },
   {
     "slug": "kontakt",
     "title": "Kontakt & Anfahrt",
     "eyebrow": "Wir freuen uns auf Sie",
-    "lead": "",
-    "seo_description": "",
+    "lead": "Reservieren Sie telefonisch oder schreiben Sie uns — wir melden uns rasch zurück.",
+    "seo_description": "Reservierung, Adresse, Telefon und Öffnungszeiten des Gasthaus Adlerwirt in Linz.",
     "image": "hero-kontakt.png"
   },
   {
@@ -20,23 +20,23 @@
     "title": "Speisekarte",
     "eyebrow": "Was wir anbieten",
     "lead": "Saisonal, regional, hausgemacht. Wenn etwas aus ist, ist es aus.",
-    "seo_description": "",
+    "seo_description": "Aktuelle Speisekarte mit Schnitzel, Tafelspitz, Mehlspeisen und saisonalen Empfehlungen.",
     "image": "hero-speisekarte.png"
   },
   {
     "slug": "events",
     "title": "Events & Saisonales",
     "eyebrow": "Aktuelles & Termine",
-    "lead": "Von der Spargelzeit bis zu den Wildwochen \u2014 was uns durch das Jahr begleitet.",
+    "lead": "Von der Spargelzeit bis zu den Wildwochen — was uns durch das Jahr begleitet.",
     "seo_description": "Saisonale Highlights, Stammtisch und besondere Abende im Gasthaus Adlerwirt.",
     "image": "hero-events.png"
   },
   {
     "slug": "faq",
-    "title": "FAQ",
-    "eyebrow": "H\u00e4ufige Fragen",
-    "lead": "Alles, was Sie vor dem Besuch wissen m\u00f6chten.",
-    "seo_description": "H\u00e4ufig gestellte Fragen zum Gasthaus Adlerwirt \u2014 Reservierung, Barrierefreiheit, Hunde und mehr.",
+    "title": "Häufige Fragen",
+    "eyebrow": "Gut zu wissen",
+    "lead": "Alles, was Sie vor dem Besuch wissen möchten.",
+    "seo_description": "Häufig gestellte Fragen zum Gasthaus Adlerwirt — Reservierung, Barrierefreiheit, Hunde und mehr.",
     "image": "hero-faq.png"
   }
 ]
