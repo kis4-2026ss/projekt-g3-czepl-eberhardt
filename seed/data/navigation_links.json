@@ -1,0 +1,7 @@
+[
+  { "href": "/speisekarte", "label": "Speisekarte", "sort": 1 },
+  { "href": "/ueber-uns", "label": "Über uns", "sort": 2 },
+  { "href": "/events", "label": "Events", "sort": 3 },
+  { "href": "/faq", "label": "FAQ", "sort": 4 },
+  { "href": "/kontakt", "label": "Kontakt", "sort": 5 }
+]

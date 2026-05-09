@@ -1,8 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getMenuItems, getCategories } from '../lib/directus';
+import { getMenuItems, getCategories, getPageHeader, assetUrl } from '../lib/directus';
 
-const [items, categories] = await Promise.all([getMenuItems(), getCategories()]);
+const [items, categories, header] = await Promise.all([
+  getMenuItems(),
+  getCategories(),
+  getPageHeader('speisekarte'),
+]);
 
 const byCategory = categories.map(cat => ({
   ...cat,
@@ -12,17 +16,19 @@ const byCategory = categories.map(cat => ({
 function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
 ---
 
-<Layout title="Speisekarte">
+<Layout title={header?.title || 'Speisekarte'} description={header?.seo_description || ''}>
   <!-- Page header -->
   <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
-    <img src="/images/hero-speisekarte.png" alt="Speisekarte" class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay" />
+    <img src={assetUrl(header?.image)} alt={header?.title || 'Speisekarte'} class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay" />
     <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 to-transparent"></div>
     <div class="max-w-7xl mx-auto relative z-10 fade-up">
       <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
-        <span class="w-8 h-px bg-w-gold/80"></span>Was wir anbieten
+        <span class="w-8 h-px bg-w-gold/80"></span>{header?.eyebrow || ''}
       </p>
-      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">Speisekarte</h1>
-      <p class="text-white/80 mt-6 max-w-xl text-lg font-light leading-relaxed fade-up delay-100">Saisonal, regional, hausgemacht. Wenn etwas aus ist, ist es aus.</p>
+      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">{header?.title || 'Speisekarte'}</h1>
+      {header?.lead && (
+        <p class="text-white/80 mt-6 max-w-xl text-lg font-light leading-relaxed fade-up delay-100">{header.lead}</p>
+      )}
     </div>
   </div>
 

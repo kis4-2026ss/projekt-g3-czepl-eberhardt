@@ -70,6 +70,7 @@ services:
       - directus
     environment:
       DIRECTUS_URL: "http://directus:8055"
+      PUBLIC_DIRECTUS_URL: "http://localhost:8055"
       DIRECTUS_TOKEN: "adlerwirt-dev-token"
       ADMIN_EMAIL: "admin@gmail.at"
       ADMIN_PASSWORD: "admin"
@@ -96,6 +97,7 @@ services:
       - directus
     volumes:
       - ./seed:/seed:ro
+      - ./seed/images:/seed/images:ro
     working_dir: /seed
     environment:
       DIRECTUS_URL: "http://directus:8055"

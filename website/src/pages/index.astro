@@ -3,11 +3,13 @@ import Layout from '../layouts/Layout.astro';
 import {
   getSiteSettings, getHero, getAbout,
   getFeaturedDishes, getTestimonials, getEvents, getOpeningHours,
+  getHomeCopy, getUiCopy, assetUrl,
 } from '../lib/directus';
 
-const [settings, hero, about, featured, testimonials, events, hours] = await Promise.all([
+const [settings, hero, about, featured, testimonials, events, hours, home, ui] = await Promise.all([
   getSiteSettings(), getHero(), getAbout(),
   getFeaturedDishes(), getTestimonials(), getEvents(), getOpeningHours(),
+  getHomeCopy(), getUiCopy(),
 ]);
 
 function stars(n: number) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
@@ -22,7 +24,7 @@ function formatDate(d: string | null) {
   <!-- ── Hero ────────────────────────────────────────────────── -->
   <section class="relative min-h-[95vh] flex items-center overflow-hidden">
     <!-- background image -->
-    <img src="/images/hero-gasthaus.png" alt="Adlerwirt Gasthaus" class="absolute inset-0 w-full h-full object-cover object-[70%_center]" />
+    <img src={assetUrl(hero.image)} alt={hero.image_alt} class="absolute inset-0 w-full h-full object-cover object-[70%_center]" />
     <div class="absolute inset-0 bg-gradient-to-r from-w-dark/95 via-w-dark/60 to-transparent"></div>
     <div class="absolute inset-0 bg-gradient-to-t from-w-dark/80 via-transparent to-transparent"></div>
 
@@ -67,8 +69,8 @@ function formatDate(d: string | null) {
   <section class="py-28 px-5 lg:px-8 bg-w-cream relative">
     <div class="max-w-7xl mx-auto relative z-10">
       <div class="text-center mb-16 fade-up">
-        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Empfehlungen des Hauses</p>
-        <h2 class="font-serif text-4xl sm:text-5xl text-w-dark font-medium">Was Sie nicht verpassen sollten</h2>
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">{home.featured_eyebrow}</p>
+        <h2 class="font-serif text-4xl sm:text-5xl text-w-dark font-medium">{home.featured_title}</h2>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {featured.map((item, index) => (
@@ -82,15 +84,15 @@ function formatDate(d: string | null) {
             </div>
             {item.description && <p class="text-w-dark/60 text-sm leading-relaxed">{item.description}</p>}
             <div class="flex gap-2 mt-6 flex-wrap">
-              {item.is_vegetarian && <span class="px-2 py-1 bg-w-green/5 text-w-green text-xs font-medium uppercase tracking-wider">vegetarisch</span>}
-              {item.is_vegan     && <span class="px-2 py-1 bg-w-green/5 text-w-green text-xs font-medium uppercase tracking-wider">vegan</span>}
+              {item.is_vegetarian && <span class="px-2 py-1 bg-w-green/5 text-w-green text-xs font-medium uppercase tracking-wider">{ui.vegetarian_label}</span>}
+              {item.is_vegan     && <span class="px-2 py-1 bg-w-green/5 text-w-green text-xs font-medium uppercase tracking-wider">{ui.vegan_label}</span>}
             </div>
           </article>
         ))}
       </div>
       <div class="text-center mt-12 fade-up delay-300">
         <a href="/speisekarte" class="inline-flex items-center gap-2 text-w-gold font-medium hover:text-w-dark transition-colors tracking-wide uppercase text-sm border-b border-w-gold pb-1 hover:border-w-dark">
-          Zur vollständigen Speisekarte
+          {home.featured_all_link_label}
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
           </svg>
@@ -101,11 +103,11 @@ function formatDate(d: string | null) {
 
   <!-- ── About teaser ────────────────────────────────────────── -->
   <section class="py-28 px-5 lg:px-8 bg-w-dark text-w-cream relative overflow-hidden">
-    <img src="/images/about-interior.png" alt="Interior" class="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-luminosity" />
+    <img src={assetUrl(about.image)} alt={about.title} class="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-luminosity" />
     <div class="absolute inset-0 bg-w-dark/80"></div>
     <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
       <div class="fade-up">
-        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Unsere Geschichte</p>
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">{home.about_eyebrow}</p>
         <h2 class="font-serif text-4xl sm:text-5xl text-white font-medium leading-snug mb-6">{about.title}</h2>
         <p class="text-w-gold/90 text-lg leading-relaxed mb-8 italic font-serif">{about.subtitle}</p>
         <!-- first paragraph of story -->
@@ -113,7 +115,7 @@ function formatDate(d: string | null) {
           {(about.story.split('\n\n')[0] ?? '').replace(/\*\*/g, '')}
         </p>
         <a href="/ueber-uns" class="inline-flex items-center gap-2 mt-8 text-w-gold font-medium hover:text-white transition-colors tracking-wide uppercase text-sm border-b border-w-gold pb-1 hover:border-white">
-          Mehr über uns
+          {home.about_link_label}
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
           </svg>
@@ -124,11 +126,11 @@ function formatDate(d: string | null) {
         <div class="grid grid-cols-2 gap-6">
           <div class="bg-white/5 backdrop-blur-sm rounded-sm p-8 text-center border border-white/10">
             <p class="font-serif text-5xl font-medium text-w-gold">{about.founded_year}</p>
-            <p class="text-white/60 text-sm mt-2 tracking-widest uppercase">gegründet</p>
+            <p class="text-white/60 text-sm mt-2 tracking-widest uppercase">{home.founded_label}</p>
           </div>
           <div class="bg-white/5 backdrop-blur-sm rounded-sm p-8 text-center border border-white/10">
             <p class="font-serif text-5xl font-medium text-w-gold">{about.generations}.</p>
-            <p class="text-white/60 text-sm mt-2 tracking-widest uppercase">Generation</p>
+            <p class="text-white/60 text-sm mt-2 tracking-widest uppercase">{home.generation_label}</p>
           </div>
         </div>
         <!-- Philosophy quote -->
@@ -146,8 +148,8 @@ function formatDate(d: string | null) {
   <section class="py-28 px-5 lg:px-8 bg-w-cream">
     <div class="max-w-7xl mx-auto">
       <div class="text-center mb-16 fade-up">
-        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Was Gäste sagen</p>
-        <h2 class="font-serif text-4xl sm:text-5xl text-w-dark font-medium">Stimmen aus dem Gastraum</h2>
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">{home.testimonials_eyebrow}</p>
+        <h2 class="font-serif text-4xl sm:text-5xl text-w-dark font-medium">{home.testimonials_title}</h2>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {testimonials.slice(0, 3).map((t, index) => (
@@ -169,11 +171,11 @@ function formatDate(d: string | null) {
     <div class="max-w-7xl mx-auto">
       <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-16 fade-up">
         <div>
-          <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Aktuelles</p>
-          <h2 class="font-serif text-4xl sm:text-5xl text-w-dark font-medium">Events & Saisonales</h2>
+          <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">{home.events_eyebrow}</p>
+          <h2 class="font-serif text-4xl sm:text-5xl text-w-dark font-medium">{home.events_title}</h2>
         </div>
         <a href="/events" class="text-w-gold font-medium hover:text-w-dark transition-colors tracking-wide uppercase text-sm border-b border-w-gold pb-1 hover:border-w-dark whitespace-nowrap">
-          Alle Events →
+          {home.events_all_link_label}
         </a>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -212,8 +214,8 @@ function formatDate(d: string | null) {
          style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:24px 24px"></div>
     <div class="max-w-7xl mx-auto relative z-10">
       <div class="text-center mb-14 fade-up">
-        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Wann wir für Sie da sind</p>
-        <h2 class="font-serif text-3xl sm:text-4xl font-medium">Öffnungszeiten</h2>
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">{home.opening_hours_eyebrow}</p>
+        <h2 class="font-serif text-3xl sm:text-4xl font-medium">{home.opening_hours_title}</h2>
       </div>
       <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 fade-up delay-100">
         {hours.map(h => (
@@ -223,7 +225,7 @@ function formatDate(d: string | null) {
           ]}>
             <p class="text-w-gold text-xs font-medium uppercase tracking-[0.2em] mb-3">{h.weekday.slice(0,2)}</p>
             {h.closed
-              ? <p class="text-white/40 text-sm">Ruhetag</p>
+              ? <p class="text-white/40 text-sm">{ui.closed_label}</p>
               : <>
                   <p class="text-white text-base font-medium">{h.open_from}–{h.open_to}</p>
                   {h.note && <p class="text-white/50 text-xs mt-2">{h.note}</p>}
@@ -234,7 +236,7 @@ function formatDate(d: string | null) {
       </div>
       <p class="text-center mt-12 fade-up delay-200">
         <a href="/kontakt" class="inline-flex items-center gap-2 text-w-gold font-medium hover:text-white transition-colors tracking-wide uppercase text-sm border-b border-w-gold pb-1 hover:border-white">
-          Vollständige Informationen & Reservierung →
+          {home.opening_hours_link_label}
         </a>
       </p>
     </div>

@@ -1,17 +1,18 @@
 ---
-import type { SiteSettings } from '../lib/directus';
+import type { NavigationLink, SiteSettings, UiCopy } from '../lib/directus';
 
-interface Props { settings: SiteSettings }
-const { settings } = Astro.props;
+interface Props {
+  settings: SiteSettings;
+  nav: NavigationLink[];
+  ui: UiCopy;
+}
+const { settings, nav, ui } = Astro.props;
 
 const year = new Date().getFullYear();
-const navLinks = [
-  { href: '/speisekarte', label: 'Speisekarte' },
-  { href: '/ueber-uns',  label: 'Über uns'    },
-  { href: '/events',     label: 'Events'      },
-  { href: '/faq',        label: 'FAQ'         },
-  { href: '/kontakt',    label: 'Kontakt'     },
-];
+
+function tmpl(s: string, vars: Record<string, string>) {
+  return s.replace(/\{(\w+)\}/g, (_m, k) => (k in vars ? vars[k] : ''));
+}
 ---
 
 <footer class="bg-w-dark text-white relative overflow-hidden pt-24 pb-12">
@@ -52,9 +53,9 @@ const navLinks = [
 
       <!-- Nav -->
       <div class="md:col-span-3">
-        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-6">Navigation</p>
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-6">{ui.footer_nav_title || 'Navigation'}</p>
         <ul class="space-y-3">
-          {navLinks.map(l => (
+          {nav.map(l => (
             <li>
               <a href={l.href} class="text-base text-white/70 hover:text-white transition-colors font-light">{l.label}</a>
             </li>
@@ -64,7 +65,7 @@ const navLinks = [
 
       <!-- Contact -->
       <div class="md:col-span-4">
-        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-6">Kontakt</p>
+        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-6">{ui.footer_contact_title || 'Kontakt'}</p>
         <address class="not-italic space-y-4 text-base text-white/70 font-light">
           <p>{settings.address_street}<br />{settings.address_zip} {settings.address_city}</p>
           <p>
@@ -81,7 +82,7 @@ const navLinks = [
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                 </svg>
-                Auf Google Maps öffnen
+                {ui.footer_maps_label || 'Auf Google Maps öffnen'}
               </a>
             </p>
           )}
@@ -90,8 +91,13 @@ const navLinks = [
     </div>
 
     <div class="pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-white/40 font-light">
-      <p>© {year} {settings.site_name}. Alle Rechte vorbehalten.</p>
-      <p>Ein Familienbetrieb seit {new Date().getFullYear() - 1897 + 1897} — oder einfach: seit Generationen.</p>
+      <p>
+        {tmpl(ui.footer_rights_template || '© {year} {site_name}. Alle Rechte vorbehalten.', {
+          year: String(year),
+          site_name: settings.site_name,
+        })}
+      </p>
+      <p>{ui.footer_since_line || 'Ein Familienbetrieb seit Generationen.'}</p>
     </div>
   </div>
 </footer>

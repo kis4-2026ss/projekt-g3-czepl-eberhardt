@@ -2,14 +2,18 @@
 import { ViewTransitions } from 'astro:transitions';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
-import { getSiteSettings } from '../lib/directus';
+import { getNavigation, getSiteSettings, getUiCopy } from '../lib/directus';
 
 interface Props {
   title?: string;
   description?: string;
 }
 
-const settings = await getSiteSettings();
+const [settings, nav, ui] = await Promise.all([
+  getSiteSettings(),
+  getNavigation(),
+  getUiCopy(),
+]);
 const { title = settings.site_name, description = settings.tagline } = Astro.props;
 const pageTitle = title === settings.site_name
   ? title
@@ -33,11 +37,11 @@ const pageTitle = title === settings.site_name
     <ViewTransitions />
   </head>
   <body class="bg-w-cream text-w-dark font-sans antialiased selection:bg-w-gold/30 selection:text-w-dark">
-    <Nav settings={settings} />
+    <Nav settings={settings} nav={nav} ui={ui} />
     <main>
       <slot />
     </main>
-    <Footer settings={settings} />
+    <Footer settings={settings} nav={nav} ui={ui} />
 
     <style is:global>
       /* Base fade-in classes */

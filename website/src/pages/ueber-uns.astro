@@ -1,19 +1,19 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getAbout, getTeam, md } from '../lib/directus';
+import { getAbout, getPageHeader, getTeam, md, assetUrl } from '../lib/directus';
 
-const [about, team] = await Promise.all([getAbout(), getTeam()]);
+const [about, team, header] = await Promise.all([getAbout(), getTeam(), getPageHeader('ueber-uns')]);
 const storyHtml = md(about.story);
 ---
 
-<Layout title="Über uns" description={about.subtitle}>
+<Layout title={header?.title || 'Über uns'} description={header?.seo_description || about.subtitle}>
   <!-- Header -->
   <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
-    <img src="/images/hero-ueber-uns.png" alt="Über uns" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
+    <img src={assetUrl(header?.image)} alt={header?.title || 'Über uns'} class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
     <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 via-w-dark/30 to-transparent"></div>
     <div class="max-w-7xl mx-auto relative z-10 fade-up">
       <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
-        <span class="w-8 h-px bg-w-gold/80"></span>Wer wir sind
+        <span class="w-8 h-px bg-w-gold/80"></span>{header?.eyebrow || ''}
       </p>
       <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">{about.title}</h1>
       <p class="text-white/80 mt-6 max-w-xl text-xl font-serif italic leading-relaxed fade-up delay-100">{about.subtitle}</p>

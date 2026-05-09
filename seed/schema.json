@@ -32,7 +32,8 @@
         {"field": "cta_primary_link", "type": "string", "meta": {"interface": "input", "width": "half"}},
         {"field": "cta_secondary_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
         {"field": "cta_secondary_link", "type": "string", "meta": {"interface": "input", "width": "half"}},
-        {"field": "image_alt", "type": "string", "meta": {"interface": "input", "width": "full"}}
+        {"field": "image_alt", "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "image", "type": "uuid", "schema": {}, "meta": {"interface": "file-image", "special": ["file"], "width": "full"}}
       ]
     },
     {
@@ -46,7 +47,8 @@
         {"field": "story", "type": "text", "meta": {"interface": "input-rich-text-md", "width": "full"}},
         {"field": "philosophy", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}},
         {"field": "founded_year", "type": "integer", "meta": {"interface": "input", "width": "half"}},
-        {"field": "generations", "type": "integer", "meta": {"interface": "input", "width": "half", "note": "Wirts-Generation"}}
+        {"field": "generations", "type": "integer", "meta": {"interface": "input", "width": "half", "note": "Wirts-Generation"}},
+        {"field": "image", "type": "uuid", "schema": {}, "meta": {"interface": "file-image", "special": ["file"], "width": "full", "note": "Hintergrundbild für die Über-uns-Sektion auf der Startseite"}}
       ]
     },
     {
@@ -154,6 +156,73 @@
         {"field": "is_featured", "type": "boolean", "schema": {"default_value": false}, "meta": {"interface": "boolean", "width": "half", "note": "Empfehlung des Hauses"}},
         {"field": "allergens", "type": "json", "meta": {"interface": "tags", "options": {"presets": ["Gluten", "Laktose", "Eier", "Nüsse", "Sellerie", "Senf", "Fisch", "Soja"]}}},
         {"field": "category", "type": "integer", "schema": {}, "meta": {"interface": "select-dropdown-m2o", "special": ["m2o"], "options": {"template": "{{name}}"}, "width": "full"}}
+      ]
+    },
+    {
+      "collection": "navigation_links",
+      "icon": "menu",
+      "display_template": "{{label}} ({{href}})",
+      "sort_field": "sort",
+      "note": "Navigation links in header/footer",
+      "fields": [
+        {"field": "href", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "label", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "sort", "type": "integer", "meta": {"interface": "input", "hidden": true}}
+      ]
+    },
+    {
+      "collection": "ui_copy",
+      "is_singleton": true,
+      "icon": "text_fields",
+      "note": "Reusable UI labels and templates",
+      "fields": [
+        {"field": "nav_cta_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "nav_cta_href", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_nav_title", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_contact_title", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_maps_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_rights_template", "type": "string", "meta": {"interface": "input", "width": "full", "note": "Use {year} and {site_name} placeholders"}},
+        {"field": "footer_since_line", "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "vegetarian_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "vegan_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "closed_label", "type": "string", "meta": {"interface": "input", "width": "half"}}
+      ]
+    },
+    {
+      "collection": "home_copy",
+      "is_singleton": true,
+      "icon": "home",
+      "note": "Copy blocks for homepage sections",
+      "fields": [
+        {"field": "featured_eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "featured_title", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "featured_all_link_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "about_eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "about_link_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "founded_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "generation_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "testimonials_eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "testimonials_title", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "events_eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "events_title", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "events_all_link_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "opening_hours_eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "opening_hours_title", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "opening_hours_link_label", "type": "string", "meta": {"interface": "input", "width": "half"}}
+      ]
+    },
+    {
+      "collection": "page_headers",
+      "icon": "article",
+      "display_template": "{{slug}} – {{title}}",
+      "note": "Header+SEO content for static pages",
+      "fields": [
+        {"field": "slug", "type": "string", "schema": {"is_nullable": false, "is_unique": true}, "meta": {"interface": "input", "required": true, "width": "half", "note": "E.g. index, kontakt, faq, events, speisekarte, ueber-uns"}},
+        {"field": "title", "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "eyebrow", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "lead", "type": "text", "meta": {"interface": "input-multiline", "width": "half"}},
+        {"field": "seo_description", "type": "text", "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "image", "type": "uuid", "schema": {}, "meta": {"interface": "file-image", "special": ["file"], "width": "full", "note": "Header-Hintergrundbild der Seite"}}
       ]
     }
   ],

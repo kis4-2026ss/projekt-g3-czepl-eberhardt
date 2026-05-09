@@ -1,15 +1,13 @@
 ---
-import type { SiteSettings } from '../lib/directus';
+import type { NavigationLink, SiteSettings, UiCopy } from '../lib/directus';
 
-interface Props { settings: SiteSettings }
-const { settings } = Astro.props;
+interface Props {
+  settings: SiteSettings;
+  nav: NavigationLink[];
+  ui: UiCopy;
+}
+const { settings, nav, ui } = Astro.props;
 
-const links = [
-  { href: '/speisekarte', label: 'Speisekarte' },
-  { href: '/ueber-uns',  label: 'Über uns'    },
-  { href: '/events',     label: 'Events'      },
-  { href: '/faq',        label: 'FAQ'         },
-];
 const path = Astro.url.pathname;
 ---
 
@@ -30,7 +28,7 @@ const path = Astro.url.pathname;
 
       <!-- Desktop nav -->
       <nav class="hidden md:flex items-center gap-8">
-        {links.map(l => (
+        {nav.map(l => (
           <a
             href={l.href}
             class:list={[
@@ -42,10 +40,10 @@ const path = Astro.url.pathname;
           </a>
         ))}
         <a
-          href="/kontakt"
+          href={ui.nav_cta_href || '/kontakt'}
           class="ml-2 px-6 py-2.5 rounded-sm bg-w-gold text-white text-sm font-medium tracking-wide uppercase hover:bg-white hover:text-w-dark transition-colors duration-300"
         >
-          Reservieren
+          {ui.nav_cta_label || 'Reservieren'}
         </a>
       </nav>
 
@@ -60,13 +58,13 @@ const path = Astro.url.pathname;
   <!-- Mobile drawer -->
   <div id="nav-drawer" class="hidden md:hidden absolute top-full inset-x-0 border-t border-white/10 bg-w-green/95 backdrop-blur-xl">
     <nav class="flex flex-col px-5 py-6 gap-2">
-      {links.map(l => (
+      {nav.map(l => (
         <a href={l.href} class="text-white/90 hover:text-w-gold py-3 text-lg font-serif border-b border-white/5 transition-colors">
           {l.label}
         </a>
       ))}
-      <a href="/kontakt" class="mt-6 px-5 py-4 rounded-sm bg-w-gold text-white text-sm font-medium tracking-wide uppercase text-center hover:bg-white hover:text-w-dark transition-colors">
-        Tisch reservieren
+      <a href={ui.nav_cta_href || '/kontakt'} class="mt-6 px-5 py-4 rounded-sm bg-w-gold text-white text-sm font-medium tracking-wide uppercase text-center hover:bg-white hover:text-w-dark transition-colors">
+        {ui.nav_cta_label || 'Reservieren'}
       </a>
     </nav>
   </div>

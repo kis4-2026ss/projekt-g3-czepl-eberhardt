@@ -1,0 +1,12 @@
+{
+  "nav_cta_label": "Reservieren",
+  "nav_cta_href": "/kontakt",
+  "footer_nav_title": "Navigation",
+  "footer_contact_title": "Kontakt",
+  "footer_maps_label": "Auf Google Maps öffnen",
+  "footer_rights_template": "© {year} {site_name}. Alle Rechte vorbehalten.",
+  "footer_since_line": "Ein Familienbetrieb seit Generationen.",
+  "vegetarian_label": "vegetarisch",
+  "vegan_label": "vegan",
+  "closed_label": "Ruhetag"
+}
