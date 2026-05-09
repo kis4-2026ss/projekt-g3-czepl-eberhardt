@@ -1,4 +1,4 @@
-# Project Proposal: Generic AI-to-Directus MCP Bridge
+# Project KI-gestützte Headless-CMS-Integration mit Preview- und Freigabe-Workflows
 
 ## Team
 
@@ -7,23 +7,23 @@
 
 ## Projekt-Metadaten
 
-- **Projekt-Fokus:** Generischer, introspektiver MCP-Server für Directus
+- **Projekt-Fokus:** MCP-Server für AI-gestützte CMS-Interaktion mit Preview- und Freigabe-Workflows
 - **Referenzsystem:** Beliebige Directus-Instanzen (Headless CMS)
-- **Technologie-Stack:** MCP Server (Node.js/TypeScript), Ollama (Lokales LLM), Cursor & Claude (Entwicklung)
+- **Technologie-Stack:** MCP Server (Node.js/TypeScript), LangChain, Ollama (Lokales LLM), Cursor & Claude (Entwicklung)
 
 ---
 
-## 1. Ziel des Projekts (Goal)
+## 1. Ziel des Projekts
 
 ### High-Level Goal
 
-Entwicklung eines universellen MCP-Servers, der es einem LLM ermöglicht, jede beliebige Directus-Instanz eigenständig zu explorieren und zu bearbeiten. Anstatt ein festes Schema vorauszusetzen, stellt der Server **Introspection-Tools** bereit. Mit diesen kann die KI das Datenmodell (Collections, Felder, Relationen) bei Bedarf selbst abfragen, den Kontext prüfen und daraufhin präzise Bearbeitungsschritte vorschlagen.
+Entwicklung eines MCP-Servers, der es einem LLM ermöglicht, jede beliebige Directus-Instanz eigenständig zu explorieren und zu bearbeiten. Mit diesem kann die KI das Datenmodell (Collections, Felder, Bilder) bei Bedarf selbst abfragen, den Kontext prüfen und daraufhin präzise Bearbeitungsschritte vorschlagen.
 
 Das System kombiniert die Flexibilität eines generischen CMS-Wrappers mit der Sicherheit eines **Human-in-the-Loop-Workflows**: KI-generierte Vorschläge werden erst nach einem visuellen Diff-Check und manueller Freigabe persistiert.
 
 ### Validierung des Ziels
 
-- **Dynamische Exploration:** Das LLM kann über ein Tool (z.B. `get_schema`) unbekannte CMS-Strukturen zur Laufzeit verstehen.
+- **Dynamische Exploration:** Das LLM kann über ein Tool (z.B. `get_schema`) unbekannte Headless CMS-Strukturen zur Laufzeit verstehen.
 - **Schema-Agnostische Bearbeitung:** Erfolgreiche Modifikation von Inhalten in unterschiedlichen Directus-Setups ohne Code-Anpassung am MCP-Server.
 - **End-to-End Validierung:** Eine eigens generierte Beispiel-Website dient als Referenz, um die Korrektheit der KI-gesteuerten Inhaltsänderungen visuell und funktional zu bestätigen.
 
@@ -35,7 +35,7 @@ Das System kombiniert die Flexibilität eines generischen CMS-Wrappers mit der S
 
 1.  **Generic Directus MCP Server:** Stellt Tools zur Verfügung, die sowohl Metadaten (Schema-Infos) als auch Content-Daten (CRUD) via Directus-API abrufbar machen.
 2.  **Schema Exploration Tool:** Ein spezielles Tool innerhalb des MCP-Servers, das dem LLM die Architektur der verbundenen Instanz offenlegt.
-3.  **AI Agent (Ollama):** Ein lokales LLM, das die Tools nutzt, um das Schema zu "lernen", den Kontext zu validieren und Inhaltsänderungen zu formulieren.
+3.  **AI Agent (Ollama):** Ein lokales LLM, das die Tools nutzt, um das Schema zu verstehen, den Kontext zu validieren und Inhaltsänderungen zu formulieren.
 4.  **Preview & Diff Service:** Berechnet die Differenz zwischen dem aktuellen Stand im CMS und dem KI-Vorschlag zur Validierung durch den Nutzer.
 5.  **Validation Website:** Eine dedizierte Frontend-Anwendung, die die manipulierten Daten live anzeigt, um die Wirksamkeit des Systems zu belegen.
 
@@ -49,9 +49,9 @@ Das System kombiniert die Flexibilität eines generischen CMS-Wrappers mit der S
 ## 3. KI-Einsatz im Projektverlauf
 
 | Phase             | Fokus der KI-Unterstützung                                              | Tools           |
-| :---------------- | :---------------------------------------------------------------------- | :-------------- |
+| :---------------- | :---------------------------------------------------------------------- |:----------------|
 | **Konzeption**    | Design der Introspection-Tools (`inspect_collection`, `list_fields`).   | Claude          |
-| **Entwicklung**   | Implementierung der dynamischen API-Abstraktion und des Tool-Handlings. | Cursor          |
+| **Entwicklung**   | Implementierung der dynamischen API-Abstraktion und des Tool-Handlings. | Cursor, Claude  |
 | **Content Logic** | Optimierung der Strategie, wie das LLM das Schema effizient abfragt.    | Ollama          |
 | **Validation**    | Generierung der Beispiel-Inhalte und Struktur für die Test-Website.     | Cursor / Claude |
 | **Dokumentation** | Erstellung technischer Guides und des AI Decision Logs.                 | Claude          |
