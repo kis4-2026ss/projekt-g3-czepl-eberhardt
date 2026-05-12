@@ -5,16 +5,29 @@ import {
   ListToolsRequestSchema,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { DirectusClient } from "./directus.js";
+import { DirectusClient, type DirectusClientOpts } from "./directus.js";
 import http from "node:http";
 
-// ── Client setup ──────────────────────────────────────────────────────────────
+// ── Per-request client factory ────────────────────────────────────────────────
+//
+// Connection details may be supplied per request via HTTP headers, falling back
+// to env vars. This lets a single MCP server serve multiple Directus instances
+// (the chat-app uses this to switch between connection profiles).
 
-const client = new DirectusClient(
-  process.env.DIRECTUS_URL ?? "http://localhost:8055",
-  process.env.DIRECTUS_EMAIL ?? "admin@gmail.at",
-  process.env.DIRECTUS_PASSWORD ?? "admin",
-);
+function header(req: http.IncomingMessage, name: string): string | undefined {
+  const v = req.headers[name.toLowerCase()];
+  return Array.isArray(v) ? v[0] : v;
+}
+
+function makeClient(req: http.IncomingMessage): DirectusClient {
+  const opts: DirectusClientOpts = {
+    url:      header(req, "x-directus-url")      ?? process.env.DIRECTUS_URL      ?? "http://localhost:8055",
+    token:    header(req, "x-directus-token")    ?? process.env.DIRECTUS_TOKEN,
+    email:    header(req, "x-directus-email")    ?? process.env.DIRECTUS_EMAIL,
+    password: header(req, "x-directus-password") ?? process.env.DIRECTUS_PASSWORD,
+  };
+  return new DirectusClient(opts);
+}
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -144,6 +157,27 @@ const TOOLS: Tool[] = [
     },
   },
   {
+    name: "update_items",
+    description:
+      "Bulk-update multiple items in a collection in one request. Provide the list of IDs and the fields to change. Use this instead of calling update_item in a loop.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        collection: { type: "string", description: "Collection name" },
+        ids: {
+          type: "array",
+          items: {},
+          description: "List of primary key IDs to update",
+        },
+        data: {
+          type: "object",
+          description: "Fields to set on all matched items (partial update)",
+        },
+      },
+      required: ["collection", "ids", "data"],
+    },
+  },
+  {
     name: "update_singleton",
     description:
       "Update fields of a singleton collection (e.g. 'site_settings', 'hero', 'about'). This is a partial update – only provided fields are changed.",
@@ -190,7 +224,7 @@ function err(message: string) {
 
 // ── Server factory ────────────────────────────────────────────────────────────
 
-function makeServer(): Server {
+function makeServer(client: DirectusClient): Server {
   const server = new Server(
     { name: "directus-mcp", version: "1.0.0" },
     { capabilities: { tools: {} } },
@@ -264,6 +298,15 @@ function makeServer(): Server {
           return ok(await client.updateItem(collection, id, data));
         }
 
+        case "update_items": {
+          const { collection, ids, data } = args as {
+            collection: string;
+            ids: (string | number)[];
+            data: Record<string, unknown>;
+          };
+          return ok(await client.updateItems(collection, ids, data));
+        }
+
         case "update_singleton": {
           const { collection, data } = args as {
             collection: string;
@@ -314,7 +357,7 @@ httpServer.on("request", (req, res) => {
       : undefined;
 
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    const server = makeServer();
+    const server = makeServer(makeClient(req));
 
     res.on("close", () => transport.close().catch(() => {}));
     await server.connect(transport);
