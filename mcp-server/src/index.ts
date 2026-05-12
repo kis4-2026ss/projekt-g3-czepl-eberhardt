@@ -32,6 +32,10 @@ function makeClient(req: http.IncomingMessage): DirectusClient {
 
 const WEBSITE_URL = (process.env.WEBSITE_URL ?? "http://localhost:4321").replace(/\/$/, "");
 
+/** Tool schema hint: Directus returns HTTP 403 for invalid /items/.../id paths (easy to mistake for RBAC). */
+const ITEM_PK_DESCRIPTION =
+  "Exact primary key from read_items/read_item (integer or UUID). Never a title, slug, or placeholder; if you only know a name, call read_items with a filter first, then use data[0].id.";
+
 // ── Preview store ─────────────────────────────────────────────────────────────
 
 interface PreviewEntry {
@@ -120,12 +124,13 @@ const TOOLS: Tool[] = [
   },
   {
     name: "read_item",
-    description: "Read a single item by its primary key ID from a collection.",
+    description:
+      "Read a single item by primary key. If you only know a human-readable field (e.g. dish name), use read_items with a filter instead.",
     inputSchema: {
       type: "object",
       properties: {
         collection: { type: "string", description: "Collection name" },
-        id: { description: "Item primary key (integer or UUID string)" },
+        id: { description: ITEM_PK_DESCRIPTION },
         fields: {
           type: "array",
           items: { type: "string" },
@@ -177,12 +182,12 @@ const TOOLS: Tool[] = [
   {
     name: "update_item",
     description:
-      "Update one or more fields of an existing item. Set dry_run=true to get a before/after diff and a preview URL before writing.",
+      "Update one or more fields of an existing item by primary key. Set dry_run=true to get a before/after diff and a preview URL before writing.",
     inputSchema: {
       type: "object",
       properties: {
         collection: { type: "string", description: "Collection name" },
-        id: { description: "Item primary key (integer or UUID string)" },
+        id: { description: ITEM_PK_DESCRIPTION },
         data: {
           type: "object",
           description: "Fields to update as key-value pairs (partial update)",
@@ -206,7 +211,7 @@ const TOOLS: Tool[] = [
         ids: {
           type: "array",
           items: {},
-          description: "List of primary key IDs to update",
+          description: `List of primary keys to update. ${ITEM_PK_DESCRIPTION}`,
         },
         data: {
           type: "object",
@@ -239,12 +244,12 @@ const TOOLS: Tool[] = [
   {
     name: "delete_item",
     description:
-      "Permanently delete an item from a collection. Set dry_run=true to preview what would be deleted and get a preview URL.",
+      "Permanently delete an item by primary key. Set dry_run=true to preview what would be deleted and get a preview URL.",
     inputSchema: {
       type: "object",
       properties: {
         collection: { type: "string", description: "Collection name" },
-        id: { description: "Item primary key (integer or UUID string)" },
+        id: { description: ITEM_PK_DESCRIPTION },
         dry_run: {
           type: "boolean",
           description: "If true, return the item that would be deleted and a preview_url without deleting",

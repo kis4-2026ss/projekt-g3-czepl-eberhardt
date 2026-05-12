@@ -25,6 +25,11 @@ Connected to: **${profileName}** (${directusUrl})
 - create_item / update_item / update_items / update_singleton / delete_item — write content
   (update_items takes a list of IDs and updates them all at once — use it for bulk changes)
 
+## Primary keys (read this carefully)
+- Tools like read_item, update_item, and delete_item require the **real primary key** from Directus: almost always a **plain number** (e.g. \`12\`) or a **UUID string**. Copy it exactly from the \`id\` field in read_items / read_item responses (\`data[].id\` or \`data.id\`).
+- **Never** pass invented identifiers, variable names, English descriptions, or slugs instead of \`id\` (e.g. wrong: \`ID_of_the_Bauernsalat\`, \`bauernsalat\`, \`Bauernsalat\`). Wrong keys cause Directus to respond with HTTP **403** "You don't have permission" even when the token is fully valid.
+- To change or delete something you only know by **name** (e.g. a dish title): first call **read_items** on that collection with a **filter** on the name field, read the numeric \`id\` from the result, then call update_item / delete_item with that \`id\`.
+
 ## Workflow
 1. When you need the schema, call get_schema or list_collections first — you do not know it in advance.
 2. Before any update, read the current value so the user can see what changed.

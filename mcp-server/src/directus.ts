@@ -4,6 +4,36 @@ export interface DiffEntry {
   after: unknown;
 }
 
+/** Integer PK or UUID-shaped string — anything else often yields HTTP 403 on /items/.../id. */
+function looksLikeDirectusItemKey(id: string): boolean {
+  if (/^\d+$/.test(id)) return true;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
+/** MCP / LLM callers often pass one comma-separated string instead of a JSON string array. */
+function coerceStringList(value: unknown): string[] | undefined {
+  if (value == null) return undefined;
+  const out: string[] = [];
+  if (Array.isArray(value)) {
+    for (const v of value) {
+      if (v == null) continue;
+      const s = typeof v === "string" ? v : String(v);
+      for (const part of s.split(",")) {
+        const t = part.trim();
+        if (t) out.push(t);
+      }
+    }
+  } else if (typeof value === "string") {
+    for (const part of value.split(",")) {
+      const t = part.trim();
+      if (t) out.push(t);
+    }
+  } else {
+    return undefined;
+  }
+  return out.length > 0 ? out : undefined;
+}
+
 export function computeDiff(
   before: Record<string, unknown>,
   patch: Record<string, unknown>,
@@ -14,9 +44,10 @@ export function computeDiff(
 }
 
 export interface ReadItemsParams {
-  fields?: string[];
+  /** Field names; may also arrive as a single comma-separated string from tool callers. */
+  fields?: string[] | string;
   filter?: Record<string, unknown>;
-  sort?: string[];
+  sort?: string[] | string;
   limit?: number;
   offset?: number;
   search?: string;
@@ -85,7 +116,22 @@ export class DirectusClient {
 
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`Directus API error ${res.status} on ${path}: ${body}`);
+      let hint = "";
+      const pathOnly = path.split("?")[0] ?? path;
+      const itemPath = /^\/items\/[^/]+\/([^/]+)$/.exec(pathOnly);
+      const rawId = itemPath?.[1];
+      if (
+        res.status === 403 &&
+        rawId &&
+        !looksLikeDirectusItemKey(rawId) &&
+        ["GET", "PATCH", "DELETE"].includes(options.method?.toUpperCase() ?? "GET")
+      ) {
+        hint =
+          ` Directus often returns 403 (not 404) for a bad primary key in the URL. ` +
+          `The segment "${rawId}" does not look like a numeric id or UUID — ` +
+          `use the exact id from read_items/read_item (e.g. filter by name first), not a placeholder or slug.`;
+      }
+      throw new Error(`Directus API error ${res.status} on ${path}: ${body}${hint}`);
     }
 
     if (res.status === 204) return undefined as T;
@@ -126,8 +172,10 @@ export class DirectusClient {
 
   async readItems(collection: string, params: ReadItemsParams): Promise<unknown> {
     const q = new URLSearchParams();
-    if (params.fields?.length) q.set("fields", params.fields.join(","));
-    if (params.sort?.length) q.set("sort", params.sort.join(","));
+    const fields = coerceStringList(params.fields);
+    const sort = coerceStringList(params.sort);
+    if (fields?.length) q.set("fields", fields.join(","));
+    if (sort?.length) q.set("sort", sort.join(","));
     if (params.limit != null) q.set("limit", String(params.limit));
     if (params.offset != null) q.set("offset", String(params.offset));
     if (params.search) q.set("search", params.search);
@@ -140,9 +188,10 @@ export class DirectusClient {
   async readItem(
     collection: string,
     id: string | number,
-    fields?: string[],
+    fields?: string[] | string,
   ): Promise<unknown> {
-    const qs = fields?.length ? `?fields=${fields.join(",")}` : "";
+    const f = coerceStringList(fields);
+    const qs = f?.length ? `?fields=${f.join(",")}` : "";
     return this.request<unknown>(`/items/${collection}/${id}${qs}`);
   }
 
@@ -180,8 +229,9 @@ export class DirectusClient {
   }
 
   // Singletons use the same /items/:collection endpoint but without an ID.
-  async readSingleton(collection: string, fields?: string[]): Promise<unknown> {
-    const qs = fields?.length ? `?fields=${fields.join(",")}` : "";
+  async readSingleton(collection: string, fields?: string[] | string): Promise<unknown> {
+    const f = coerceStringList(fields);
+    const qs = f?.length ? `?fields=${f.join(",")}` : "";
     return this.request<unknown>(`/items/${collection}${qs}`);
   }
 
