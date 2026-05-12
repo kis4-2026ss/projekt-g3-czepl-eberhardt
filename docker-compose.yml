@@ -73,6 +73,7 @@ services:
       DIRECTUS_TOKEN: "adlerwirt-dev-token"
       ADMIN_EMAIL: "admin@gmail.at"
       ADMIN_PASSWORD: "admin"
+      MCP_SERVER_URL: "http://mcp-server:3001"
     command: sh /app/docker-start.sh
 
   mcp-server:
@@ -88,6 +89,7 @@ services:
       DIRECTUS_EMAIL: "admin@gmail.at"
       DIRECTUS_PASSWORD: "admin"
       PORT: "3001"
+      WEBSITE_URL: "http://localhost:4321"
 
   seed:
     image: python:3.12-alpine

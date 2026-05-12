@@ -7,4 +7,5 @@ export default defineConfig({
   adapter: node({ mode: 'standalone' }),
   integrations: [tailwind()],
   server: { host: true },
+  security: { checkOrigin: false },
 });

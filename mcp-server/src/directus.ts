@@ -1,3 +1,18 @@
+export interface DiffEntry {
+  field: string;
+  before: unknown;
+  after: unknown;
+}
+
+export function computeDiff(
+  before: Record<string, unknown>,
+  patch: Record<string, unknown>,
+): DiffEntry[] {
+  return Object.entries(patch)
+    .filter(([k, v]) => JSON.stringify(before[k]) !== JSON.stringify(v))
+    .map(([k, v]) => ({ field: k, before: before[k], after: v }));
+}
+
 export interface ReadItemsParams {
   fields?: string[];
   filter?: Record<string, unknown>;

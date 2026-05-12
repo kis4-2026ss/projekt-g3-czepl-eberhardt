@@ -1,8 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getSiteSettings, getOpeningHours } from '../lib/directus';
+import { applyPreviewSingleton, applyPreviewList } from '../lib/preview';
 
-const [settings, hours] = await Promise.all([getSiteSettings(), getOpeningHours()]);
+let [settings, hours] = await Promise.all([getSiteSettings(), getOpeningHours()]);
+const { preview } = Astro.locals;
+settings = applyPreviewSingleton(settings, preview, 'site_settings');
+hours = applyPreviewList(hours, preview, 'opening_hours');
 ---
 
 <Layout title="Kontakt" description={`Reservierung, Anfahrt und Öffnungszeiten — ${settings.site_name}, ${settings.address_street}, ${settings.address_city}.`}>

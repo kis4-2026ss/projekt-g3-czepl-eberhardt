@@ -1,8 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getEvents, md } from '../lib/directus';
+import { applyPreviewList } from '../lib/preview';
 
-const events = await getEvents();
+let events = await getEvents();
+const { preview } = Astro.locals;
+events = applyPreviewList(events, preview, 'events');
 
 function formatDate(d: string | null) {
   if (!d) return null;

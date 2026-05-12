@@ -1,8 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getFaq } from '../lib/directus';
+import { applyPreviewList } from '../lib/preview';
 
-const faqItems = await getFaq();
+let faqItems = await getFaq();
+const { preview } = Astro.locals;
+faqItems = applyPreviewList(faqItems, preview, 'faq');
 ---
 
 <Layout title="FAQ" description="Häufig gestellte Fragen zum Gasthaus Adlerwirt — Reservierung, Barrierefreiheit, Hunde und mehr.">

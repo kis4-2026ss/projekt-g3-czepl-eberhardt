@@ -1,12 +1,19 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getMenuItems, getCategories } from '../lib/directus';
+import { applyPreviewList } from '../lib/preview';
 
-const [items, categories] = await Promise.all([getMenuItems(), getCategories()]);
+let [items, categories] = await Promise.all([getMenuItems(), getCategories()]);
+const { preview } = Astro.locals;
+items = applyPreviewList(items, preview, 'menu_items');
+categories = applyPreviewList(categories, preview, 'categories');
 
 const byCategory = categories.map(cat => ({
   ...cat,
-  items: items.filter(i => i.category?.id === cat.id && i.available !== false),
+  items: items.filter(i => {
+    const catId = typeof i.category === 'object' ? (i.category as any)?.id : i.category;
+    return catId === cat.id && i.available !== false;
+  }),
 })).filter(c => c.items.length > 0);
 
 function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
@@ -55,7 +62,7 @@ function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
           {cat.items.map(item => (
-            <article class="p-6 bg-white rounded-sm border border-w-linen/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+            <article data-preview-collection="menu_items" data-preview-id={item.id} class="p-6 bg-white rounded-sm border border-w-linen/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
               <div class="flex items-start justify-between gap-4">
                 <div class="flex-1 min-w-0">
                   <h3 class="font-medium text-w-dark text-lg group-hover:text-w-gold transition-colors">{item.name}</h3>

@@ -1,8 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getAbout, getTeam, md } from '../lib/directus';
+import { applyPreviewSingleton, applyPreviewList } from '../lib/preview';
 
-const [about, team] = await Promise.all([getAbout(), getTeam()]);
+let [about, team] = await Promise.all([getAbout(), getTeam()]);
+const { preview } = Astro.locals;
+about = applyPreviewSingleton(about, preview, 'about');
+team = applyPreviewList(team, preview, 'team');
 const storyHtml = md(about.story);
 ---
 

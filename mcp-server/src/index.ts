@@ -5,8 +5,9 @@ import {
   ListToolsRequestSchema,
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { DirectusClient } from "./directus.js";
+import { DirectusClient, computeDiff, type DiffEntry } from "./directus.js";
 import http from "node:http";
+import { randomUUID } from "node:crypto";
 
 // ── Client setup ──────────────────────────────────────────────────────────────
 
@@ -15,6 +16,35 @@ const client = new DirectusClient(
   process.env.DIRECTUS_EMAIL ?? "admin@gmail.at",
   process.env.DIRECTUS_PASSWORD ?? "admin",
 );
+
+const WEBSITE_URL = (process.env.WEBSITE_URL ?? "http://localhost:4321").replace(/\/$/, "");
+
+// ── Preview store ─────────────────────────────────────────────────────────────
+
+interface PreviewEntry {
+  action: "create" | "update" | "delete" | "update_singleton";
+  collection: string;
+  id?: string | number;
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+  diff?: DiffEntry[];
+  data?: Record<string, unknown>;
+}
+
+const previewStore = new Map<string, { entry: PreviewEntry; timer: ReturnType<typeof setTimeout> }>();
+const PREVIEW_TTL_MS = 30 * 60 * 1000;
+
+function storePreview(entry: PreviewEntry): string {
+  const token = randomUUID();
+  const timer = setTimeout(() => previewStore.delete(token), PREVIEW_TTL_MS);
+  previewStore.set(token, { entry, timer });
+  return token;
+}
+
+function buildPreviewResponse(token: string, entry: PreviewEntry): Record<string, unknown> {
+  const preview_url = `${WEBSITE_URL}?preview_token=${token}`;
+  return { ...entry, preview_token: token, preview_url };
+}
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
@@ -61,8 +91,7 @@ const TOOLS: Tool[] = [
         },
         filter: {
           type: "object",
-          description:
-            "Directus filter object, e.g. { \"available\": { \"_eq\": true } }",
+          description: "Directus filter object, e.g. { \"available\": { \"_eq\": true } }",
         },
         sort: {
           type: "array",
@@ -114,7 +143,8 @@ const TOOLS: Tool[] = [
   // Write
   {
     name: "create_item",
-    description: "Create a new item in a collection.",
+    description:
+      "Create a new item in a collection. Set dry_run=true to preview what would be created and get a preview URL before writing.",
     inputSchema: {
       type: "object",
       properties: {
@@ -123,13 +153,18 @@ const TOOLS: Tool[] = [
           type: "object",
           description: "Item data as key-value pairs matching the collection's fields",
         },
+        dry_run: {
+          type: "boolean",
+          description: "If true, store a preview and return a preview_url without writing anything",
+        },
       },
       required: ["collection", "data"],
     },
   },
   {
     name: "update_item",
-    description: "Update one or more fields of an existing item in a collection.",
+    description:
+      "Update one or more fields of an existing item. Set dry_run=true to get a before/after diff and a preview URL before writing.",
     inputSchema: {
       type: "object",
       properties: {
@@ -139,6 +174,10 @@ const TOOLS: Tool[] = [
           type: "object",
           description: "Fields to update as key-value pairs (partial update)",
         },
+        dry_run: {
+          type: "boolean",
+          description: "If true, return a before/after diff and preview_url without writing",
+        },
       },
       required: ["collection", "id", "data"],
     },
@@ -146,7 +185,7 @@ const TOOLS: Tool[] = [
   {
     name: "update_singleton",
     description:
-      "Update fields of a singleton collection (e.g. 'site_settings', 'hero', 'about'). This is a partial update – only provided fields are changed.",
+      "Update fields of a singleton collection (e.g. 'site_settings', 'hero', 'about'). Set dry_run=true to get a diff and preview URL before writing.",
     inputSchema: {
       type: "object",
       properties: {
@@ -155,40 +194,44 @@ const TOOLS: Tool[] = [
           type: "object",
           description: "Fields to update as key-value pairs",
         },
+        dry_run: {
+          type: "boolean",
+          description: "If true, return a before/after diff and preview_url without writing",
+        },
       },
       required: ["collection", "data"],
     },
   },
   {
     name: "delete_item",
-    description: "Permanently delete an item from a collection by its primary key.",
+    description:
+      "Permanently delete an item from a collection. Set dry_run=true to preview what would be deleted and get a preview URL.",
     inputSchema: {
       type: "object",
       properties: {
         collection: { type: "string", description: "Collection name" },
         id: { description: "Item primary key (integer or UUID string)" },
+        dry_run: {
+          type: "boolean",
+          description: "If true, return the item that would be deleted and a preview_url without deleting",
+        },
       },
       required: ["collection", "id"],
     },
   },
 ];
 
-// ── Helper ────────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function ok(data: unknown) {
-  return {
-    content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
-  };
+  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
 }
 
 function err(message: string) {
-  return {
-    content: [{ type: "text" as const, text: `Error: ${message}` }],
-    isError: true,
-  };
+  return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
 }
 
-// ── Server factory ────────────────────────────────────────────────────────────
+// ── MCP Server factory ────────────────────────────────────────────────────────
 
 function makeServer(): Server {
   const server = new Server(
@@ -248,32 +291,74 @@ function makeServer(): Server {
         // ── Write ────────────────────────────────────────────────────────────
 
         case "create_item": {
-          const { collection, data } = args as {
+          const { collection, data, dry_run = false } = args as {
             collection: string;
             data: Record<string, unknown>;
+            dry_run?: boolean;
           };
+          if (dry_run) {
+            const entry: PreviewEntry = { action: "create", collection, after: data, data };
+            const token = storePreview(entry);
+            return ok(buildPreviewResponse(token, entry));
+          }
           return ok(await client.createItem(collection, data));
         }
 
         case "update_item": {
-          const { collection, id, data } = args as {
+          const { collection, id, data, dry_run = false } = args as {
             collection: string;
             id: string | number;
             data: Record<string, unknown>;
+            dry_run?: boolean;
           };
+          if (dry_run) {
+            const res = await client.readItem(collection, id) as { data: Record<string, unknown> };
+            const before = res.data;
+            const after = { ...before, ...data };
+            const entry: PreviewEntry = {
+              action: "update", collection, id,
+              before, after, diff: computeDiff(before, data), data,
+            };
+            const token = storePreview(entry);
+            return ok(buildPreviewResponse(token, entry));
+          }
           return ok(await client.updateItem(collection, id, data));
         }
 
         case "update_singleton": {
-          const { collection, data } = args as {
+          const { collection, data, dry_run = false } = args as {
             collection: string;
             data: Record<string, unknown>;
+            dry_run?: boolean;
           };
+          if (dry_run) {
+            const res = await client.readSingleton(collection) as { data: Record<string, unknown> };
+            const before = res.data;
+            const after = { ...before, ...data };
+            const entry: PreviewEntry = {
+              action: "update_singleton", collection,
+              before, after, diff: computeDiff(before, data), data,
+            };
+            const token = storePreview(entry);
+            return ok(buildPreviewResponse(token, entry));
+          }
           return ok(await client.updateSingleton(collection, data));
         }
 
         case "delete_item": {
-          const { collection, id } = args as { collection: string; id: string | number };
+          const { collection, id, dry_run = false } = args as {
+            collection: string;
+            id: string | number;
+            dry_run?: boolean;
+          };
+          if (dry_run) {
+            const res = await client.readItem(collection, id) as { data: Record<string, unknown> };
+            const entry: PreviewEntry = {
+              action: "delete", collection, id, before: res.data,
+            };
+            const token = storePreview(entry);
+            return ok(buildPreviewResponse(token, entry));
+          }
           await client.deleteItem(collection, id);
           return ok({ success: true, deleted: { collection, id } });
         }
@@ -292,33 +377,109 @@ function makeServer(): Server {
 // ── HTTP server ───────────────────────────────────────────────────────────────
 
 const PORT = Number(process.env.PORT ?? 3001);
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, mcp-session-id",
+};
 
 const httpServer = http.createServer();
 
 httpServer.on("request", (req, res) => {
   void (async () => {
-    if (req.url !== "/mcp") {
-      res.writeHead(404, { "Content-Type": "application/json" })
-        .end(JSON.stringify({ error: "Not found" }));
+    const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
+    const path = url.pathname;
+    const method = req.method ?? "GET";
+
+    // CORS preflight
+    if (method === "OPTIONS") {
+      res.writeHead(204, CORS_HEADERS).end();
       return;
     }
 
-    const chunks: Buffer[] = [];
-    await new Promise<void>((resolve, reject) => {
-      req.on("data", (chunk: Buffer) => chunks.push(chunk));
-      req.on("end", resolve);
-      req.on("error", reject);
-    });
-    const body = chunks.length
-      ? (JSON.parse(Buffer.concat(chunks).toString()) as unknown)
-      : undefined;
+    // ── MCP endpoint ──────────────────────────────────────────────────────────
+    if (path === "/mcp") {
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve, reject) => {
+        req.on("data", (chunk: Buffer) => chunks.push(chunk));
+        req.on("end", resolve);
+        req.on("error", reject);
+      });
+      const body = chunks.length
+        ? (JSON.parse(Buffer.concat(chunks).toString()) as unknown)
+        : undefined;
 
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    const server = makeServer();
+      const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+      const server = makeServer();
+      res.on("close", () => transport.close().catch(() => {}));
+      await server.connect(transport);
+      await transport.handleRequest(req, res, body);
+      return;
+    }
 
-    res.on("close", () => transport.close().catch(() => {}));
-    await server.connect(transport);
-    await transport.handleRequest(req, res, body);
+    // ── GET /preview/:token ───────────────────────────────────────────────────
+    if (method === "GET" && path.startsWith("/preview/")) {
+      const token = path.slice("/preview/".length);
+      const stored = previewStore.get(token);
+      if (!stored) {
+        res.writeHead(404, { "Content-Type": "application/json", ...CORS_HEADERS })
+          .end(JSON.stringify({ error: "Preview not found or expired" }));
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
+        .end(JSON.stringify({ ...stored.entry, preview_token: token }));
+      return;
+    }
+
+    // ── POST /confirm/:token ──────────────────────────────────────────────────
+    if (method === "POST" && path.startsWith("/confirm/")) {
+      const token = path.slice("/confirm/".length);
+      const stored = previewStore.get(token);
+      if (!stored) {
+        res.writeHead(404, { "Content-Type": "application/json", ...CORS_HEADERS })
+          .end(JSON.stringify({ error: "Preview not found or expired" }));
+        return;
+      }
+
+      const { entry } = stored;
+      clearTimeout(stored.timer);
+      previewStore.delete(token);
+
+      switch (entry.action) {
+        case "create":
+          await client.createItem(entry.collection, entry.data!);
+          break;
+        case "update":
+          await client.updateItem(entry.collection, entry.id!, entry.data!);
+          break;
+        case "update_singleton":
+          await client.updateSingleton(entry.collection, entry.data!);
+          break;
+        case "delete":
+          await client.deleteItem(entry.collection, entry.id!);
+          break;
+      }
+
+      res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
+        .end(JSON.stringify({ success: true, action: entry.action, collection: entry.collection }));
+      return;
+    }
+
+    // ── DELETE /preview/:token ────────────────────────────────────────────────
+    if (method === "DELETE" && path.startsWith("/preview/")) {
+      const token = path.slice("/preview/".length);
+      const stored = previewStore.get(token);
+      if (stored) {
+        clearTimeout(stored.timer);
+        previewStore.delete(token);
+      }
+      res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
+        .end(JSON.stringify({ success: true }));
+      return;
+    }
+
+    res.writeHead(404, { "Content-Type": "application/json" })
+      .end(JSON.stringify({ error: "Not found" }));
   })().catch((e: unknown) => {
     process.stderr.write(`Request error: ${e instanceof Error ? e.message : String(e)}\n`);
     if (!res.headersSent) res.writeHead(500).end();

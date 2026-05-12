@@ -4,11 +4,19 @@ import {
   getSiteSettings, getHero, getAbout,
   getFeaturedDishes, getTestimonials, getEvents, getOpeningHours,
 } from '../lib/directus';
+import { applyPreviewSingleton, applyPreviewList } from '../lib/preview';
 
-const [settings, hero, about, featured, testimonials, events, hours] = await Promise.all([
+let [settings, hero, about, featured, testimonials, events, hours] = await Promise.all([
   getSiteSettings(), getHero(), getAbout(),
   getFeaturedDishes(), getTestimonials(), getEvents(), getOpeningHours(),
 ]);
+
+const { preview } = Astro.locals;
+hero = applyPreviewSingleton(hero, preview, 'hero');
+about = applyPreviewSingleton(about, preview, 'about');
+events = applyPreviewList(events, preview, 'events');
+hours = applyPreviewList(hours, preview, 'opening_hours');
+featured = applyPreviewList(featured, preview, 'menu_items');
 
 function stars(n: number) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
 function formatDate(d: string | null) {
