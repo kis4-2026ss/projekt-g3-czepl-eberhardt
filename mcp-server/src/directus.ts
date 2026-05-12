@@ -22,17 +22,36 @@ export interface ReadItemsParams {
   search?: string;
 }
 
-export class DirectusClient {
-  private token: string | null = null;
+export interface DirectusClientOpts {
+  url: string;
+  /** Static API token. If provided, used directly without a login round-trip. */
+  token?: string;
+  /** Optional email/password fallback (legacy). */
+  email?: string;
+  password?: string;
+}
 
-  constructor(
-    private readonly url: string,
-    private readonly email: string,
-    private readonly password: string,
-  ) {}
+export class DirectusClient {
+  private token: string | null;
+  private readonly url: string;
+  private readonly email?: string;
+  private readonly password?: string;
+
+  constructor(opts: DirectusClientOpts) {
+    this.url      = opts.url;
+    this.token    = opts.token ?? null;
+    this.email    = opts.email;
+    this.password = opts.password;
+  }
 
   private async ensureAuth(): Promise<void> {
     if (this.token) return;
+    if (!this.email || !this.password) {
+      throw new Error(
+        "DirectusClient: no token and no email/password provided. " +
+          "Send X-Directus-Token (or X-Directus-Email + X-Directus-Password) headers.",
+      );
+    }
     const res = await fetch(`${this.url}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -57,7 +76,8 @@ export class DirectusClient {
       },
     });
 
-    if (res.status === 401) {
+    if (res.status === 401 && this.email && this.password) {
+      // Re-login only makes sense when we own the credentials.
       this.token = null;
       await this.ensureAuth();
       return this.request<T>(path, options);
@@ -141,6 +161,17 @@ export class DirectusClient {
     return this.request<unknown>(`/items/${collection}/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
+    });
+  }
+
+  async updateItems(
+    collection: string,
+    ids: (string | number)[],
+    data: Record<string, unknown>,
+  ): Promise<unknown> {
+    return this.request<unknown>(`/items/${collection}`, {
+      method: "PATCH",
+      body: JSON.stringify({ keys: ids, data }),
     });
   }
 

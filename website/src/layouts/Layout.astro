@@ -3,15 +3,15 @@ import { ViewTransitions } from 'astro:transitions';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import PreviewBanner from '../components/PreviewBanner.astro';
-import { getSiteSettings } from '../lib/directus';
+import { getSiteSettings, getNavigation, getUiCopy } from '../lib/directus';
 import { applyPreviewSingleton } from '../lib/preview';
 
 interface Props {
-  title?: string;
-  description?: string;
+  title?: string | undefined;
+  description?: string | undefined;
 }
 
-let settings = await getSiteSettings();
+let [settings, nav, ui] = await Promise.all([getSiteSettings(), getNavigation(), getUiCopy()]);
 const { preview, previewToken } = Astro.locals;
 settings = applyPreviewSingleton(settings, preview, 'site_settings');
 
@@ -31,18 +31,18 @@ const pageTitle = title === settings.site_name
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap"
       rel="stylesheet"
     />
     <title>{pageTitle}</title>
     <ViewTransitions />
   </head>
   <body class="bg-w-cream text-w-dark font-sans antialiased selection:bg-w-gold/30 selection:text-w-dark">
-    <Nav settings={settings} />
+    <Nav settings={settings} nav={nav} ui={ui} />
     <main>
       <slot />
     </main>
-    <Footer settings={settings} />
+    <Footer settings={settings} nav={nav} ui={ui} />
 
     {preview && previewToken && (
       <PreviewBanner preview={preview} token={previewToken} />
@@ -67,7 +67,177 @@ const pageTitle = title === settings.site_name
     )}
 
     <style is:global>
-      /* Base fade-in classes */
+      :root {
+        color-scheme: light;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        --section-y: clamp(5rem, 7vw, 8rem);
+      }
+
+      body {
+        min-height: 100vh;
+      }
+
+      /* Subtle paper-ish texture for warmth */
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        background:
+          radial-gradient(1100px 700px at 12% -10%, rgba(198,156,109,0.08), transparent 55%),
+          radial-gradient(900px 600px at 90% 10%, rgba(22,42,27,0.06), transparent 55%),
+          radial-gradient(700px 500px at 50% 120%, rgba(198,156,109,0.05), transparent 55%),
+          linear-gradient(to bottom, rgba(242,239,233,0.45), rgba(253,251,247,0.35));
+      }
+
+      /* Focus rings */
+      :focus-visible {
+        outline: 2px solid rgba(198, 156, 109, 0.9);
+        outline-offset: 3px;
+        border-radius: 2px;
+      }
+      :focus:not(:focus-visible) { outline: none; }
+
+      /* Anchor scroll-margin under fixed nav */
+      :where(section, div, article)[id] { scroll-margin-top: 7rem; }
+
+      /* Hide scrollbar utility */
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+      .line-clamp-2 {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      a { text-underline-offset: 0.2em; }
+
+      /* ──────────────────────────────────────────────────────────
+         Design system primitives – consistent across every page
+         ────────────────────────────────────────────────────────── */
+
+      /* Section vertical rhythm */
+      .section { padding-top: var(--section-y); padding-bottom: var(--section-y); }
+      .section-tight { padding-top: calc(var(--section-y) * 0.7); padding-bottom: calc(var(--section-y) * 0.7); }
+
+      /* Card */
+      .card {
+        background-color: rgba(255,255,255,0.96);
+        border: 1px solid rgba(242,239,233,0.9);
+        border-radius: 6px;
+        box-shadow: 0 1px 2px rgba(26,24,22,0.04), 0 12px 32px -24px rgba(26,24,22,0.18);
+        transition: transform 350ms cubic-bezier(.16,1,.3,1), box-shadow 350ms cubic-bezier(.16,1,.3,1), border-color 250ms;
+      }
+      .card-hover:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(26,24,22,0.04), 0 24px 48px -20px rgba(26,24,22,0.25);
+        border-color: rgba(198,156,109,0.35);
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.95rem 1.75rem;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-radius: 4px;
+        transition: background-color 250ms, color 250ms, border-color 250ms, transform 250ms, box-shadow 250ms;
+        white-space: nowrap;
+      }
+      .btn-primary {
+        background-color: #c69c6d;
+        color: #ffffff;
+        box-shadow: 0 8px 24px -12px rgba(198,156,109,0.7);
+      }
+      .btn-primary:hover {
+        background-color: #b08856;
+        transform: translateY(-1px);
+        box-shadow: 0 12px 28px -10px rgba(198,156,109,0.8);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: #ffffff;
+        border: 1px solid rgba(255,255,255,0.35);
+      }
+      .btn-ghost:hover {
+        border-color: rgba(255,255,255,0.85);
+        background-color: rgba(255,255,255,0.08);
+      }
+      .btn-outline {
+        background: transparent;
+        color: #1a1816;
+        border: 1px solid rgba(26,24,22,0.18);
+      }
+      .btn-outline:hover {
+        border-color: #c69c6d;
+        color: #b08856;
+      }
+
+      /* Inline link with underline & arrow */
+      .inline-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #c69c6d;
+        font-weight: 500;
+        font-size: 0.8125rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(198,156,109,0.5);
+        padding-bottom: 0.35rem;
+        transition: color 250ms, border-color 250ms, gap 250ms;
+      }
+      .inline-link:hover {
+        color: #1a1816;
+        border-color: #1a1816;
+        gap: 0.75rem;
+      }
+      .inline-link.on-dark { color: #c69c6d; border-color: rgba(198,156,109,0.5); }
+      .inline-link.on-dark:hover { color: #ffffff; border-color: #ffffff; }
+
+      /* Eyebrow */
+      .eyebrow {
+        color: #c69c6d;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+      }
+
+      /* Decorative ornament line */
+      .ornament {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: rgba(198,156,109,0.7);
+      }
+      .ornament::before, .ornament::after {
+        content: '';
+        height: 1px;
+        width: 2.5rem;
+        background-color: rgba(198,156,109,0.4);
+      }
+
+      /* Typography prose color overrides for dark backgrounds */
+      .prose-on-dark p,
+      .prose-on-dark li,
+      .prose-on-dark { color: rgba(255,255,255,0.78); }
+      .prose-on-dark strong { color: #ffffff; }
+
+      /* Fade-in utility */
       .fade-up {
         opacity: 0;
         transform: translateY(20px);
@@ -78,10 +248,16 @@ const pageTitle = title === settings.site_name
         opacity: 1;
         transform: translateY(0);
       }
-      /* Staggered delays */
       .delay-100 { transition-delay: 100ms; }
       .delay-200 { transition-delay: 200ms; }
       .delay-300 { transition-delay: 300ms; }
+      .delay-400 { transition-delay: 400ms; }
+
+      /* Reduced motion */
+      @media (prefers-reduced-motion: reduce) {
+        .fade-up { opacity: 1 !important; transform: none !important; transition: none !important; }
+        * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+      }
     </style>
 
     <script>
@@ -103,10 +279,7 @@ const pageTitle = title === settings.site_name
         });
       }
 
-      // Run on initial load
       setupAnimations();
-      
-      // Run after view transitions
       document.addEventListener('astro:after-swap', setupAnimations);
     </script>
   </body>

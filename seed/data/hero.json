@@ -6,5 +6,6 @@
   "cta_primary_link": "/reservierung",
   "cta_secondary_label": "Speisekarte ansehen",
   "cta_secondary_link": "/speisekarte",
-  "image_alt": "Holzvertäfelte Stube mit gedeckten Tischen und Kachelofen"
+  "image_alt": "Holzvertäfelte Stube mit gedeckten Tischen und Kachelofen",
+  "image": "hero-gasthaus.png"
 }

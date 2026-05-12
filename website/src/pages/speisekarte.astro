@@ -1,9 +1,16 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getMenuItems, getCategories } from '../lib/directus';
+import PageHeader from '../components/PageHeader.astro';
+import { getMenuItems, getCategories, getPageHeader, getSpeisekarteCopy, getUiCopy } from '../lib/directus';
 import { applyPreviewList } from '../lib/preview';
 
-let [items, categories] = await Promise.all([getMenuItems(), getCategories()]);
+let [items, categories, header, copy, ui] = await Promise.all([
+  getMenuItems(),
+  getCategories(),
+  getPageHeader('speisekarte'),
+  getSpeisekarteCopy(),
+  getUiCopy(),
+]);
 const { preview } = Astro.locals;
 items = applyPreviewList(items, preview, 'menu_items');
 categories = applyPreviewList(categories, preview, 'categories');
@@ -19,29 +26,19 @@ const byCategory = categories.map(cat => ({
 function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '-'); }
 ---
 
-<Layout title="Speisekarte">
-  <!-- Page header -->
-  <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
-    <img src="/images/hero-speisekarte.png" alt="Speisekarte" class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay" />
-    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 to-transparent"></div>
-    <div class="max-w-7xl mx-auto relative z-10 fade-up">
-      <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
-        <span class="w-8 h-px bg-w-gold/80"></span>Was wir anbieten
-      </p>
-      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">Speisekarte</h1>
-      <p class="text-white/80 mt-6 max-w-xl text-lg font-light leading-relaxed fade-up delay-100">Saisonal, regional, hausgemacht. Wenn etwas aus ist, ist es aus.</p>
-    </div>
-  </div>
+<Layout title={header?.title} description={header?.seo_description}>
+  <PageHeader header={header} />
 
   <!-- Sticky category nav -->
-  <nav class="sticky top-[64px] sm:top-[80px] z-40 bg-w-cream/90 backdrop-blur-md border-b border-w-linen/50 shadow-sm transition-all">
-    <div class="max-w-7xl mx-auto px-5 lg:px-8">
+  <nav id="cat-nav" class="sticky top-16 sm:top-20 z-40 bg-w-cream/85 backdrop-blur-md border-b border-w-linen/70 transition-shadow">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
       <ul class="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
         {byCategory.map(cat => (
           <li>
             <a
               href={`#${slug(cat.name)}`}
-              class="whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-medium text-w-stone border border-transparent hover:border-w-gold/30 hover:text-w-dark hover:bg-white transition-all block"
+              data-cat-link={slug(cat.name)}
+              class="cat-link whitespace-nowrap px-5 py-2.5 rounded-full text-[13px] font-medium tracking-wide text-w-stone border border-transparent hover:border-w-gold/30 hover:text-w-dark hover:bg-white/80 transition-all block"
             >
               {cat.name}
             </a>
@@ -52,43 +49,87 @@ function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '
   </nav>
 
   <!-- Menu sections -->
-  <div class="max-w-7xl mx-auto px-5 lg:px-8 py-20 space-y-24">
-    {byCategory.map((cat, index) => (
+  <div class="max-w-5xl mx-auto px-5 sm:px-6 lg:px-8 py-20 sm:py-24 space-y-20 sm:space-y-24">
+    {byCategory.map((cat) => (
       <section id={slug(cat.name)} class="scroll-mt-40 fade-up">
-        <div class="mb-10 text-center">
-          <h2 class="font-serif text-3xl sm:text-4xl text-w-dark font-medium">{cat.name}</h2>
-          {cat.description && <p class="text-w-stone text-base mt-3 italic max-w-2xl mx-auto">{cat.description}</p>}
+        <div class="mb-10 sm:mb-12 text-center">
+          <h2 class="font-serif text-3xl sm:text-4xl text-w-dark font-medium tracking-tight">{cat.name}</h2>
+          <div class="mt-5 flex items-center justify-center gap-3 text-w-gold/60">
+            <span class="h-px w-10 bg-w-gold/40"></span>
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.39 7.36H22l-6.18 4.49L18.21 22 12 17.27 5.79 22l2.39-8.15L2 9.36h7.61z" opacity="0.55"/></svg>
+            <span class="h-px w-10 bg-w-gold/40"></span>
+          </div>
+          {cat.description && <p class="text-w-stone text-base mt-5 italic max-w-2xl mx-auto font-light">{cat.description}</p>}
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+        <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 sm:gap-y-8">
           {cat.items.map(item => (
-            <article data-preview-collection="menu_items" data-preview-id={item.id} class="p-6 bg-white rounded-sm border border-w-linen/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex-1 min-w-0">
-                  <h3 class="font-medium text-w-dark text-lg group-hover:text-w-gold transition-colors">{item.name}</h3>
-                  {item.description && <p class="text-w-stone/90 text-sm mt-2 leading-relaxed">{item.description}</p>}
-                  <div class="flex flex-wrap gap-2 mt-4">
-                    {item.is_vegan       && <span class="text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider bg-w-green/5 text-w-green font-medium">vegan</span>}
-                    {item.is_vegetarian && !item.is_vegan && <span class="text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider bg-w-green/5 text-w-green font-medium">vegetarisch</span>}
+            <li class="group">
+              <article data-preview-collection="menu_items" data-preview-id={item.id} class="py-5 px-1 border-b border-w-linen/70 hover:border-w-gold/30 transition-colors">
+                <div class="flex items-baseline gap-3">
+                  <h3 class="font-serif font-medium text-w-dark text-lg sm:text-xl leading-snug group-hover:text-w-gold transition-colors">{item.name}</h3>
+                  <span class="flex-1 border-b border-dotted border-w-stone/35 translate-y-[-4px]"></span>
+                  <span class="font-medium text-w-gold text-base sm:text-lg whitespace-nowrap tabular-nums">€{Number(item.price).toFixed(2)}</span>
+                </div>
+                {item.description && <p class="text-w-stone/90 text-[14px] sm:text-[15px] mt-1.5 leading-relaxed font-light pr-4">{item.description}</p>}
+                {(item.is_vegan || item.is_vegetarian || (item.allergens && item.allergens.length > 0)) && (
+                  <div class="flex flex-wrap gap-1.5 mt-3">
+                    {item.is_vegan       && <span class="text-[10px] px-2 py-0.5 rounded-sm uppercase tracking-[0.18em] bg-w-green/8 text-w-green font-semibold">{ui.vegan_label}</span>}
+                    {item.is_vegetarian && !item.is_vegan && <span class="text-[10px] px-2 py-0.5 rounded-sm uppercase tracking-[0.18em] bg-w-green/8 text-w-green font-semibold">{ui.vegetarian_label}</span>}
                     {item.allergens?.map(a => (
-                      <span class="text-[10px] px-2 py-1 rounded-sm uppercase tracking-wider bg-w-stone/10 text-w-stone font-medium">{a}</span>
+                      <span class="text-[10px] px-2 py-0.5 rounded-sm uppercase tracking-[0.18em] bg-w-stone/10 text-w-stone font-medium">{a}</span>
                     ))}
                   </div>
-                </div>
-                <span class="flex-shrink-0 font-medium text-w-gold text-lg">€{Number(item.price).toFixed(2)}</span>
-              </div>
-            </article>
+                )}
+              </article>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
     ))}
   </div>
 
   <!-- Allergen note -->
-  <div class="max-w-7xl mx-auto px-5 lg:px-8 pb-16">
-    <p class="text-w-stone text-xs leading-relaxed border-t border-w-linen pt-6 max-w-2xl">
-      Allergene und Unverträglichkeiten: Unsere Mitarbeiter informieren Sie gerne über alle verwendeten Zutaten.
-      Irrtümer und saisonale Änderungen vorbehalten.
+  <div class="max-w-5xl mx-auto px-5 sm:px-6 lg:px-8 pb-20">
+    <p class="text-w-stone text-xs leading-relaxed border-t border-w-linen pt-6 max-w-2xl font-light">
+      <strong class="font-semibold text-w-dark/70">{copy.allergen_title}:</strong> {copy.allergen_note} {copy.allergen_disclaimer}
     </p>
   </div>
+
+  <script>
+    function setupCatNav() {
+      const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('.cat-link'));
+      const sections = links
+        .map(a => {
+          const id = a.getAttribute('data-cat-link');
+          return id ? document.getElementById(id) : null;
+        })
+        .filter((el): el is HTMLElement => !!el);
+
+      if (!sections.length) return;
+
+      const setActive = (id: string) => {
+        links.forEach(a => {
+          if (a.getAttribute('data-cat-link') === id) {
+            a.classList.add('!bg-w-green', '!text-white', 'border-transparent');
+            a.classList.remove('text-w-stone');
+          } else {
+            a.classList.remove('!bg-w-green', '!text-white');
+            a.classList.add('text-w-stone');
+          }
+        });
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        const visible = entries
+          .filter(e => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible[0]) setActive(visible[0].target.id);
+      }, { rootMargin: '-40% 0px -55% 0px', threshold: [0, 0.1, 0.5] });
+
+      sections.forEach(s => observer.observe(s));
+    }
+    setupCatNav();
+    document.addEventListener('astro:after-swap', setupCatNav);
+  </script>
 </Layout>

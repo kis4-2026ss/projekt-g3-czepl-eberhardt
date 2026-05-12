@@ -1,14 +1,17 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import SectionHeader from '../components/SectionHeader.astro';
 import {
   getSiteSettings, getHero, getAbout,
   getFeaturedDishes, getTestimonials, getEvents, getOpeningHours,
+  getHomeCopy, getUiCopy, assetUrl,
 } from '../lib/directus';
 import { applyPreviewSingleton, applyPreviewList } from '../lib/preview';
 
-let [settings, hero, about, featured, testimonials, events, hours] = await Promise.all([
+let [settings, hero, about, featured, testimonials, events, hours, home, ui] = await Promise.all([
   getSiteSettings(), getHero(), getAbout(),
   getFeaturedDishes(), getTestimonials(), getEvents(), getOpeningHours(),
+  getHomeCopy(), getUiCopy(),
 ]);
 
 const { preview } = Astro.locals;
@@ -28,35 +31,38 @@ function formatDate(d: string | null) {
 <Layout title={settings.site_name} description={hero.subheadline}>
 
   <!-- ── Hero ────────────────────────────────────────────────── -->
-  <section class="relative min-h-[95vh] flex items-center overflow-hidden">
-    <!-- background image -->
-    <img src="/images/hero-gasthaus.png" alt="Adlerwirt Gasthaus" class="absolute inset-0 w-full h-full object-cover object-[70%_center]" />
-    <div class="absolute inset-0 bg-gradient-to-r from-w-dark/95 via-w-dark/60 to-transparent"></div>
-    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/80 via-transparent to-transparent"></div>
+  <section class="relative min-h-[92vh] flex items-center justify-center overflow-hidden">
+    <img src={assetUrl(hero.image)} alt={hero.image_alt} class="absolute inset-0 w-full h-full object-cover object-center" />
+    <!-- two-stop gradient for crisp readability without crushing the image -->
+    <div class="absolute inset-0 bg-gradient-to-b from-w-dark/55 via-w-dark/35 to-w-dark/85"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(11,22,14,0.45)_100%)]"></div>
 
-    <div class="relative z-10 max-w-7xl mx-auto px-5 lg:px-8 py-28 w-full mt-20">
-      <div class="max-w-3xl fade-up">
+    <div class="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-28 w-full mt-16 text-center">
+      <div class="max-w-4xl mx-auto fade-up flex flex-col items-center">
         {hero.eyebrow && (
-          <p class="inline-flex items-center gap-3 text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-7">
-            <span class="w-12 h-px bg-w-gold/80"></span>{hero.eyebrow}
+          <p class="inline-flex items-center gap-4 text-w-gold text-xs sm:text-sm font-semibold tracking-[0.32em] uppercase mb-7">
+            <span class="w-10 sm:w-14 h-px bg-w-gold/80"></span>
+            {hero.eyebrow}
+            <span class="w-10 sm:w-14 h-px bg-w-gold/80"></span>
           </p>
         )}
-        <h1 class="font-serif text-5xl sm:text-6xl lg:text-8xl text-white font-medium leading-[1.1] mb-8 tracking-tight drop-shadow-lg">
+        <h1 class="font-serif text-[2.75rem] sm:text-6xl lg:text-[5.5rem] xl:text-[6.5rem] text-white font-medium leading-[1.04] mb-7 tracking-tight drop-shadow-2xl">
           {hero.headline}
         </h1>
         {hero.subheadline && (
-          <p class="text-white/90 text-xl font-light leading-relaxed mb-12 max-w-2xl fade-up delay-100 drop-shadow-md">{hero.subheadline}</p>
+          <p class="text-white/90 text-lg sm:text-xl font-light leading-relaxed mb-10 max-w-2xl mx-auto fade-up delay-100 drop-shadow-lg">
+            {hero.subheadline}
+          </p>
         )}
-        <div class="flex flex-col sm:flex-row gap-5 fade-up delay-200">
+        <div class="flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto fade-up delay-200">
           {hero.cta_primary_label && (
-            <a href={hero.cta_primary_link}
-               class="inline-flex items-center justify-center gap-2 px-9 py-4 bg-w-gold text-white font-medium tracking-wide rounded-sm hover:bg-w-gold-light transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+            <a href={hero.cta_primary_link} class="btn btn-primary">
               {hero.cta_primary_label}
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
             </a>
           )}
           {hero.cta_secondary_label && (
-            <a href={hero.cta_secondary_link}
-               class="inline-flex items-center justify-center px-9 py-4 border border-white/30 text-white font-medium tracking-wide rounded-sm hover:border-white hover:bg-white/10 transition-all duration-300">
+            <a href={hero.cta_secondary_link} class="btn btn-ghost">
               {hero.cta_secondary_label}
             </a>
           )}
@@ -64,107 +70,102 @@ function formatDate(d: string | null) {
       </div>
     </div>
 
-    <div class="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce text-white/50 fade-up delay-300">
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7"/>
-      </svg>
-    </div>
+    <a href="#featured" aria-label="Weiter scrollen" class="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 hover:text-w-gold transition-colors fade-up delay-300">
+      <span class="block animate-bounce">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7"/></svg>
+      </span>
+    </a>
   </section>
 
   <!-- ── Featured dishes ─────────────────────────────────────── -->
-  <section class="py-28 px-5 lg:px-8 bg-w-cream relative">
-    <div class="max-w-7xl mx-auto relative z-10">
-      <div class="text-center mb-16 fade-up">
-        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Empfehlungen des Hauses</p>
-        <h2 class="font-serif text-4xl sm:text-5xl text-w-dark font-medium">Was Sie nicht verpassen sollten</h2>
+  <section id="featured" class="section bg-w-cream">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+      <div class="flex justify-center mb-14 sm:mb-16">
+        <SectionHeader eyebrow={home.featured_eyebrow} title={home.featured_title} />
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
         {featured.map((item, index) => (
-          <article class={`bg-white rounded-sm p-8 shadow-sm border border-w-linen/50 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group fade-up delay-${(index % 3 + 1) * 100}`}>
-            <div class="flex items-start justify-between gap-3 mb-4">
-              <div>
-                <p class="text-w-stone text-xs font-medium uppercase tracking-[0.15em] mb-2">{item.category?.name}</p>
-                <h3 class="font-serif text-xl font-medium text-w-dark group-hover:text-w-gold transition-colors">{item.name}</h3>
+          <article class={`card card-hover p-8 sm:p-10 group fade-up delay-${(index % 3 + 1) * 100}`}>
+            <div class="flex items-start justify-between gap-4 mb-4">
+              <div class="min-w-0">
+                <p class="text-w-stone text-[11px] font-semibold uppercase tracking-[0.22em] mb-3">{item.category?.name}</p>
+                <h3 class="font-serif text-2xl font-medium text-w-dark leading-snug group-hover:text-w-gold transition-colors duration-300">{item.name}</h3>
               </div>
-              <span class="text-w-gold font-medium text-xl whitespace-nowrap">€{Number(item.price).toFixed(2)}</span>
+              <span class="text-w-gold font-medium text-lg whitespace-nowrap mt-1">€{Number(item.price).toFixed(2)}</span>
             </div>
-            {item.description && <p class="text-w-dark/60 text-sm leading-relaxed">{item.description}</p>}
-            <div class="flex gap-2 mt-6 flex-wrap">
-              {item.is_vegetarian && <span class="px-2 py-1 bg-w-green/5 text-w-green text-xs font-medium uppercase tracking-wider">vegetarisch</span>}
-              {item.is_vegan     && <span class="px-2 py-1 bg-w-green/5 text-w-green text-xs font-medium uppercase tracking-wider">vegan</span>}
-            </div>
+            {item.description && <p class="text-w-dark/70 text-[15px] leading-relaxed font-light">{item.description}</p>}
+            {(item.is_vegetarian || item.is_vegan) && (
+              <div class="flex gap-2 mt-6 flex-wrap">
+                {item.is_vegan && <span class="px-2.5 py-1 bg-w-green/5 text-w-green text-[10px] font-semibold uppercase tracking-[0.18em] rounded-sm">{ui.vegan_label}</span>}
+                {item.is_vegetarian && !item.is_vegan && <span class="px-2.5 py-1 bg-w-green/5 text-w-green text-[10px] font-semibold uppercase tracking-[0.18em] rounded-sm">{ui.vegetarian_label}</span>}
+              </div>
+            )}
           </article>
         ))}
       </div>
-      <div class="text-center mt-12 fade-up delay-300">
-        <a href="/speisekarte" class="inline-flex items-center gap-2 text-w-gold font-medium hover:text-w-dark transition-colors tracking-wide uppercase text-sm border-b border-w-gold pb-1 hover:border-w-dark">
-          Zur vollständigen Speisekarte
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-          </svg>
+      <div class="text-center mt-14 fade-up delay-300">
+        <a href="/speisekarte" class="inline-link">
+          {home.featured_all_link_label}
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
         </a>
       </div>
     </div>
   </section>
 
   <!-- ── About teaser ────────────────────────────────────────── -->
-  <section class="py-28 px-5 lg:px-8 bg-w-dark text-w-cream relative overflow-hidden">
-    <img src="/images/about-interior.png" alt="Interior" class="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-luminosity" />
-    <div class="absolute inset-0 bg-w-dark/80"></div>
-    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
+  <section class="section bg-w-dark text-w-cream relative overflow-hidden">
+    <img src={assetUrl(about.image)} alt={about.title} class="absolute inset-0 w-full h-full object-cover opacity-15 mix-blend-luminosity" />
+    <div class="absolute inset-0 bg-gradient-to-r from-w-dark/95 via-w-dark/85 to-w-dark/55"></div>
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center relative z-10">
       <div class="fade-up">
-        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Unsere Geschichte</p>
-        <h2 class="font-serif text-4xl sm:text-5xl text-white font-medium leading-snug mb-6">{about.title}</h2>
-        <p class="text-w-gold/90 text-lg leading-relaxed mb-8 italic font-serif">{about.subtitle}</p>
-        <!-- first paragraph of story -->
-        <p class="text-white/70 leading-relaxed font-light text-lg">
+        <p class="eyebrow mb-5">{home.about_eyebrow}</p>
+        <h2 class="font-serif text-4xl sm:text-5xl lg:text-[3.25rem] text-white font-medium leading-[1.1] tracking-tight mb-6">
+          {about.title}
+        </h2>
+        <p class="text-w-gold/95 text-xl sm:text-2xl leading-relaxed mb-8 italic font-serif">{about.subtitle}</p>
+        <p class="text-white/75 leading-[1.85] font-light text-base sm:text-lg max-w-xl">
           {(about.story.split('\n\n')[0] ?? '').replace(/\*\*/g, '')}
         </p>
-        <a href="/ueber-uns" class="inline-flex items-center gap-2 mt-8 text-w-gold font-medium hover:text-white transition-colors tracking-wide uppercase text-sm border-b border-w-gold pb-1 hover:border-white">
-          Mehr über uns
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-          </svg>
+        <a href="/ueber-uns" class="inline-link on-dark mt-10">
+          {home.about_link_label}
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
         </a>
       </div>
       <div class="space-y-6 fade-up delay-200">
-        <!-- Stats -->
-        <div class="grid grid-cols-2 gap-6">
-          <div class="bg-white/5 backdrop-blur-sm rounded-sm p-8 text-center border border-white/10">
-            <p class="font-serif text-5xl font-medium text-w-gold">{about.founded_year}</p>
-            <p class="text-white/60 text-sm mt-2 tracking-widest uppercase">gegründet</p>
+        <div class="grid grid-cols-2 gap-4 sm:gap-6">
+          <div class="bg-white/5 backdrop-blur-md rounded-md p-8 sm:p-10 text-center border border-white/10 hover:bg-white/10 transition-colors duration-500">
+            <p class="font-serif text-5xl sm:text-6xl font-medium text-w-gold leading-none">{about.founded_year}</p>
+            <p class="text-white/55 text-[11px] mt-4 tracking-[0.25em] uppercase">{home.founded_label}</p>
           </div>
-          <div class="bg-white/5 backdrop-blur-sm rounded-sm p-8 text-center border border-white/10">
-            <p class="font-serif text-5xl font-medium text-w-gold">{about.generations}.</p>
-            <p class="text-white/60 text-sm mt-2 tracking-widest uppercase">Generation</p>
+          <div class="bg-white/5 backdrop-blur-md rounded-md p-8 sm:p-10 text-center border border-white/10 hover:bg-white/10 transition-colors duration-500">
+            <p class="font-serif text-5xl sm:text-6xl font-medium text-w-gold leading-none">{about.generations}.</p>
+            <p class="text-white/55 text-[11px] mt-4 tracking-[0.25em] uppercase">{home.generation_label}</p>
           </div>
         </div>
-        <!-- Philosophy quote -->
-        <blockquote class="bg-w-green rounded-sm p-10 border border-white/10">
-          <svg class="w-8 h-8 text-w-gold mb-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/>
-          </svg>
-          <p class="text-white/90 leading-relaxed italic text-lg font-serif">"{about.philosophy}"</p>
+        <blockquote class="bg-w-green rounded-md p-8 sm:p-10 border border-white/5 relative overflow-hidden">
+          <div class="absolute -right-4 -top-4 opacity-[0.07] text-w-gold pointer-events-none">
+            <svg class="w-44 h-44" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+          </div>
+          <p class="text-white/95 leading-[1.75] italic text-lg sm:text-xl font-serif relative z-10">"{about.philosophy}"</p>
         </blockquote>
       </div>
     </div>
   </section>
 
   <!-- ── Testimonials ────────────────────────────────────────── -->
-  <section class="py-28 px-5 lg:px-8 bg-w-cream">
-    <div class="max-w-7xl mx-auto">
-      <div class="text-center mb-16 fade-up">
-        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Was Gäste sagen</p>
-        <h2 class="font-serif text-4xl sm:text-5xl text-w-dark font-medium">Stimmen aus dem Gastraum</h2>
+  <section class="section bg-w-cream">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+      <div class="flex justify-center mb-14 sm:mb-16">
+        <SectionHeader eyebrow={home.testimonials_eyebrow} title={home.testimonials_title} />
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
         {testimonials.slice(0, 3).map((t, index) => (
-          <blockquote class={`bg-white rounded-sm p-10 shadow-sm border border-w-linen/50 flex flex-col fade-up delay-${(index % 3 + 1) * 100}`}>
-            <p class="text-w-gold text-xl tracking-widest mb-6">{stars(t.rating)}</p>
-            <p class="text-w-dark/70 leading-relaxed italic flex-1 text-lg">"{t.quote}"</p>
-            <footer class="mt-8 pt-6 border-t border-w-linen">
+          <blockquote class={`card p-8 sm:p-10 flex flex-col fade-up delay-${(index % 3 + 1) * 100}`}>
+            <p class="text-w-gold text-xl tracking-[0.2em] mb-6">{stars(t.rating)}</p>
+            <p class="text-w-dark/80 leading-[1.8] italic flex-1 text-lg font-serif">"{t.quote}"</p>
+            <footer class="mt-8 pt-6 border-t border-w-linen flex items-center justify-between">
               <p class="font-medium text-w-dark text-base">{t.author}</p>
-              <p class="text-w-stone text-xs mt-1 uppercase tracking-wider">{t.location}</p>
+              <p class="text-w-stone text-[11px] uppercase tracking-[0.22em]">{t.location}</p>
             </footer>
           </blockquote>
         ))}
@@ -173,37 +174,33 @@ function formatDate(d: string | null) {
   </section>
 
   <!-- ── Events preview ──────────────────────────────────────── -->
-  <section class="py-28 px-5 lg:px-8 bg-w-linen/50">
-    <div class="max-w-7xl mx-auto">
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-16 fade-up">
-        <div>
-          <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Aktuelles</p>
-          <h2 class="font-serif text-4xl sm:text-5xl text-w-dark font-medium">Events & Saisonales</h2>
-        </div>
-        <a href="/events" class="text-w-gold font-medium hover:text-w-dark transition-colors tracking-wide uppercase text-sm border-b border-w-gold pb-1 hover:border-w-dark whitespace-nowrap">
-          Alle Events →
+  <section class="section bg-w-linen/40">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 sm:gap-10 mb-14 sm:mb-16 fade-up">
+        <SectionHeader eyebrow={home.events_eyebrow} title={home.events_title} align="left" ornament={false} />
+        <a href="/events" class="inline-link whitespace-nowrap">
+          {home.events_all_link_label}
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
         </a>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
         {events.slice(0, 4).map((ev, index) => (
-          <article class={`bg-white rounded-sm p-8 shadow-sm border border-w-linen hover:shadow-md transition-shadow fade-up delay-${(index % 2 + 1) * 100}`}>
+          <article class={`card card-hover p-7 sm:p-8 fade-up delay-${(index % 2 + 1) * 100}`}>
             <div class="flex items-start gap-6">
-              <div class="flex-shrink-0 w-16 h-16 rounded-sm bg-w-green flex items-center justify-center">
-                <svg class="w-7 h-7 text-w-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
+              <div class="flex-shrink-0 w-16 h-16 rounded-md bg-w-green flex items-center justify-center">
+                <svg class="w-7 h-7 text-w-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               </div>
-              <div class="flex-1 min-w-0">
-                <h3 class="font-serif font-medium text-w-dark text-xl leading-snug">{ev.title}</h3>
-                {ev.subtitle && <p class="text-w-stone text-sm mt-1">{ev.subtitle}</p>}
+              <div class="flex-1 min-w-0 pt-1">
+                <h3 class="font-serif font-medium text-w-dark text-xl sm:text-2xl leading-snug">{ev.title}</h3>
+                {ev.subtitle && <p class="text-w-stone text-[15px] mt-1.5 font-light">{ev.subtitle}</p>}
                 {ev.starts_on && (
-                  <p class="text-w-gold text-xs font-medium uppercase tracking-wider mt-3">
+                  <p class="text-w-gold text-[11px] font-semibold uppercase tracking-[0.22em] mt-4">
                     {ev.is_recurring ? ev.recurrence_note : formatDate(ev.starts_on)}
                     {ev.ends_on && !ev.is_recurring && ` – ${formatDate(ev.ends_on)}`}
                   </p>
                 )}
                 {ev.description && (
-                  <p class="text-w-dark/60 text-base mt-3 leading-relaxed line-clamp-2">{ev.description}</p>
+                  <p class="text-w-dark/70 text-[15px] mt-3 leading-relaxed line-clamp-2 font-light">{ev.description}</p>
                 )}
               </div>
             </div>
@@ -214,38 +211,45 @@ function formatDate(d: string | null) {
   </section>
 
   <!-- ── Opening hours strip ─────────────────────────────────── -->
-  <section class="py-24 px-5 lg:px-8 bg-w-green text-white relative">
-    <!-- subtle pattern -->
-    <div class="absolute inset-0 opacity-5"
+  <section class="section bg-w-green text-white relative">
+    <div class="absolute inset-0 opacity-[0.04]"
          style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:24px 24px"></div>
-    <div class="max-w-7xl mx-auto relative z-10">
-      <div class="text-center mb-14 fade-up">
-        <p class="text-w-gold text-xs font-semibold tracking-[0.2em] uppercase mb-4">Wann wir für Sie da sind</p>
-        <h2 class="font-serif text-3xl sm:text-4xl font-medium">Öffnungszeiten</h2>
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 relative z-10">
+      <div class="flex justify-center mb-12 sm:mb-14 fade-up">
+        <div class="text-center max-w-3xl">
+          <p class="eyebrow mb-5 inline-flex items-center gap-3 justify-center">
+            <span class="w-8 h-px bg-w-gold/70 hidden sm:inline-block"></span>
+            <span>{home.opening_hours_eyebrow}</span>
+            <span class="w-8 h-px bg-w-gold/70 hidden sm:inline-block"></span>
+          </p>
+          <h2 class="font-serif text-3xl sm:text-4xl lg:text-[2.75rem] text-white font-medium tracking-tight">
+            {home.opening_hours_title}
+          </h2>
+        </div>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4 fade-up delay-100">
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 fade-up delay-100">
         {hours.map(h => (
           <div class:list={[
-            'rounded-sm p-6 text-center transition-colors',
-            h.closed ? 'bg-white/5 opacity-60' : 'bg-white/10 border border-white/10 hover:bg-white/15',
+            'rounded-md p-5 sm:p-6 text-center transition-all duration-300',
+            h.closed ? 'bg-white/5 opacity-60' : 'bg-white/[0.07] border border-white/10 hover:bg-white/15 hover:-translate-y-0.5',
           ]}>
-            <p class="text-w-gold text-xs font-medium uppercase tracking-[0.2em] mb-3">{h.weekday.slice(0,2)}</p>
+            <p class="text-w-gold text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.28em] mb-3">{h.weekday.slice(0,3)}</p>
             {h.closed
-              ? <p class="text-white/40 text-sm">Ruhetag</p>
+              ? <p class="text-white/60 text-sm font-light italic">{ui.closed_label}</p>
               : <>
-                  <p class="text-white text-base font-medium">{h.open_from}–{h.open_to}</p>
-                  {h.note && <p class="text-white/50 text-xs mt-2">{h.note}</p>}
+                  <p class="text-white text-[15px] sm:text-base font-medium tracking-wide tabular-nums">{h.open_from}–{h.open_to}</p>
+                  {h.note && <p class="text-white/55 text-[11px] mt-2 font-light leading-relaxed">{h.note}</p>}
                 </>
             }
           </div>
         ))}
       </div>
-      <p class="text-center mt-12 fade-up delay-200">
-        <a href="/kontakt" class="inline-flex items-center gap-2 text-w-gold font-medium hover:text-white transition-colors tracking-wide uppercase text-sm border-b border-w-gold pb-1 hover:border-white">
-          Vollständige Informationen & Reservierung →
+      <p class="text-center mt-12 sm:mt-14 fade-up delay-200">
+        <a href="/kontakt" class="inline-link on-dark">
+          {home.opening_hours_link_label}
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
         </a>
       </p>
     </div>
   </section>
-
 </Layout>

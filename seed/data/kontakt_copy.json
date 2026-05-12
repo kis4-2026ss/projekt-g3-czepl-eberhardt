@@ -1,0 +1,10 @@
+{
+  "hours_title": "Öffnungszeiten",
+  "hours_subtitle": "Wochenplan",
+  "hours_footer_note": "Warme Küche bis ca. 30 Minuten vor Küchenschluss. An Feiertagen gelten gesonderte Zeiten.",
+  "reservation_eyebrow": "Reservierung",
+  "reservation_title": "Tisch reservieren",
+  "reservation_text": "Für Gruppen ab 4 Personen und am Wochenende empfehlen wir eine Reservierung.",
+  "reservation_cta_label": "Jetzt anrufen",
+  "seo_description_template": "Reservierung, Anfahrt und Öffnungszeiten — {site_name}, {address_street}, {address_city}."
+}

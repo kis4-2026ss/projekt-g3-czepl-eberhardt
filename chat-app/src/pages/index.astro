@@ -1,0 +1,1030 @@
+---
+import Layout from '@/layouts/Layout.astro';
+
+const suggestions = [
+  {
+    label: 'Explore the schema',
+    prompt: 'List all collections and give me a quick overview of what kind of data this instance manages.',
+    icon: 'schema',
+  },
+  {
+    label: 'Inspect a collection',
+    prompt: 'Pick the most interesting collection and show me its fields, their types, and how many items it contains.',
+    icon: 'inspect',
+  },
+  {
+    label: 'Summarise singletons',
+    prompt: 'Find all singleton collections (the ones that hold a single record) and summarise their current values.',
+    icon: 'singleton',
+  },
+  {
+    label: 'Suggest a change',
+    prompt: 'Read one piece of content and propose a small improvement — do NOT write anything yet, just suggest the edit.',
+    icon: 'edit',
+  },
+];
+---
+
+<Layout>
+  <div class="flex flex-col h-screen max-h-screen">
+    <!-- ── Top bar ─────────────────────────────────────────────── -->
+    <header class="flex-shrink-0 border-b border-zinc-800/80 bg-surface/70 backdrop-blur-md">
+      <div class="max-w-4xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-strong to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <svg class="w-4.5 h-4.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="6" cy="6"  r="2"/>
+              <circle cx="18" cy="6" r="2"/>
+              <circle cx="12" cy="18" r="2"/>
+              <path stroke-linecap="round" d="M6 8v2a2 2 0 002 2h8a2 2 0 002-2V8M12 12v4"/>
+            </svg>
+          </div>
+          <div class="leading-tight">
+            <p class="text-[15px] text-zinc-100 font-semibold tracking-tight">MCP Console</p>
+            <p class="text-[11px] text-zinc-500 font-mono">directus · ollama · mcp</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 sm:gap-3">
+          <div id="status-pill" class="hidden md:flex items-center gap-2 text-[11px] font-mono text-zinc-500">
+            <span class="w-1.5 h-1.5 rounded-full bg-zinc-600 status-dot"></span>
+            <span class="status-label">connecting…</span>
+          </div>
+          <button
+            id="profile-btn"
+            type="button"
+            class="group flex items-center gap-2 px-3 py-1.5 rounded-md border border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 hover:bg-zinc-900/80 transition-colors"
+            title="Manage Directus connections"
+          >
+            <svg class="w-3.5 h-3.5 text-brand flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <ellipse cx="12" cy="6" rx="8" ry="3"/>
+              <path stroke-linecap="round" d="M4 6v6c0 1.66 3.58 3 8 3s8-1.34 8-3V6M4 12v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/>
+            </svg>
+            <span class="text-[12.5px] text-zinc-200 max-w-[10rem] truncate profile-label">…</span>
+            <svg class="w-3 h-3 text-zinc-500 group-hover:text-zinc-300 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <button
+            id="new-chat-btn"
+            type="button"
+            class="text-[12px] font-medium text-zinc-400 hover:text-zinc-100 transition-colors px-3 py-1.5 rounded-md border border-zinc-800 hover:border-zinc-700"
+            title="New conversation"
+          >
+            New
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Model-pull banner (visible while pulling / errored) ─── -->
+    <div id="pull-banner" class="hidden flex-shrink-0 border-b border-brand/20 bg-brand/[0.06]">
+      <div class="max-w-4xl mx-auto px-5 sm:px-8 py-3 flex items-center gap-3">
+        <svg id="pull-spinner" class="w-4 h-4 text-brand animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" d="M21 12a9 9 0 11-6.219-8.56"/>
+        </svg>
+        <svg id="pull-error-icon" class="hidden w-4 h-4 text-rose-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"/>
+          <path stroke-linecap="round" d="M12 8v4M12 16h.01"/>
+        </svg>
+        <div class="flex-1 min-w-0">
+          <p class="text-[12.5px] text-zinc-100 font-medium pull-title">Pulling model…</p>
+          <p class="text-[11px] text-zinc-400 font-mono truncate pull-detail">starting…</p>
+        </div>
+        <div class="hidden sm:block w-40 flex-shrink-0 pull-progress-wrap">
+          <div class="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+            <div class="pull-progress-bar h-full bg-gradient-to-r from-brand to-indigo-400 transition-[width] duration-300" style="width: 0%"></div>
+          </div>
+          <p class="text-[10.5px] text-zinc-500 font-mono mt-1 text-right pull-progress-pct">—</p>
+        </div>
+        <button id="pull-retry" type="button" class="hidden px-3 py-1.5 text-[11px] font-medium text-white bg-brand-strong hover:bg-indigo-400 rounded-md transition-colors">
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Message stream ──────────────────────────────────────── -->
+    <main id="chat-scroll" class="flex-1 overflow-y-auto scroll-y">
+      <div class="max-w-4xl mx-auto px-5 sm:px-8 py-10">
+        <!-- Welcome screen — replaced by messages after first send -->
+        <section id="welcome" class="text-center py-10 sm:py-16 msg-in">
+          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-brand/30 bg-brand/5 text-[11px] font-mono text-brand mb-6">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
+            connected via mcp
+          </span>
+          <h1 class="text-3xl sm:text-5xl text-zinc-100 leading-[1.1] font-semibold tracking-tight mb-4">
+            Talk to your <span class="bg-gradient-to-r from-brand to-indigo-300 bg-clip-text text-transparent">Directus</span>.
+          </h1>
+          <p class="text-zinc-400 max-w-xl mx-auto leading-relaxed text-[15px]">
+            Read and modify any Directus instance through conversation — schema introspection,
+            CRUD, and singletons, all via the Model Context Protocol.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-12 max-w-2xl mx-auto text-left">
+            {suggestions.map((s) => (
+              <button
+                type="button"
+                data-prompt={s.prompt}
+                class="suggestion group p-4 rounded-lg border border-zinc-800 bg-zinc-900/30 hover:bg-zinc-900/70 hover:border-zinc-700 transition-all duration-200"
+              >
+                <div class="flex items-start gap-3">
+                  <span class="flex-shrink-0 w-8 h-8 rounded-md bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+                    {s.icon === 'schema' && <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/><path stroke-linecap="round" d="M10 7h4M7 10v4M17 10v4M10 17h4"/></svg>}
+                    {s.icon === 'inspect' && <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M21 21l-4.3-4.3"/></svg>}
+                    {s.icon === 'singleton' && <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="5" width="16" height="14" rx="2"/><path stroke-linecap="round" d="M8 12h8M8 16h5"/></svg>}
+                    {s.icon === 'edit' && <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.4 3.6a2.121 2.121 0 113 3L12 16l-4 1 1-4 9.4-9.4z"/></svg>}
+                  </span>
+                  <div class="min-w-0">
+                    <p class="text-sm text-zinc-100 font-medium leading-snug group-hover:text-white transition-colors">{s.label}</p>
+                    <p class="text-[12.5px] text-zinc-500 mt-1 leading-relaxed">{s.prompt}</p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <!-- Messages are injected here -->
+        <div id="messages" class="flex flex-col gap-6 hidden"></div>
+      </div>
+    </main>
+
+    <!-- ── Composer ────────────────────────────────────────────── -->
+    <footer class="flex-shrink-0 border-t border-zinc-800/80 bg-surface/80 backdrop-blur-md">
+      <div class="max-w-4xl mx-auto px-5 sm:px-8 py-4">
+        <form id="composer" class="flex items-end gap-3">
+          <div class="flex-1 relative">
+            <textarea
+              id="input"
+              rows="1"
+              placeholder="Send a message…  (Enter to send, Shift+Enter for newline)"
+              class="w-full resize-none bg-zinc-900/60 border border-zinc-800 focus:border-brand/60 focus:bg-zinc-900/80 rounded-lg px-4 py-3 text-zinc-100 placeholder:text-zinc-600 outline-none transition-all max-h-40 leading-relaxed text-[15px]"
+            ></textarea>
+          </div>
+          <button
+            id="send-btn"
+            type="submit"
+            class="flex-shrink-0 h-12 w-12 sm:w-auto sm:px-5 flex items-center justify-center gap-2 rounded-lg bg-brand-strong text-white font-medium text-sm hover:bg-indigo-400 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+            disabled
+          >
+            <span class="hidden sm:inline send-label">Send</span>
+            <svg class="w-4 h-4 send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 12l14-7-7 14-2-5-5-2z"/>
+            </svg>
+            <svg class="w-4 h-4 stop-icon hidden" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="6" width="12" height="12" rx="1.5"/>
+            </svg>
+          </button>
+        </form>
+        <p class="text-[10.5px] text-zinc-600 mt-2 text-center">
+          This assistant can modify your CMS data. Review results before relying on them.
+        </p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ── Profile / Connections modal ─────────────────────────── -->
+  <div id="profile-modal" class="fixed inset-0 z-50 hidden">
+    <div class="profile-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative h-full w-full flex items-center justify-center p-4 sm:p-8 overflow-y-auto scroll-y">
+      <div class="profile-dialog w-full max-w-2xl bg-surface-raised border border-zinc-800 rounded-xl shadow-2xl shadow-black/60 my-auto">
+        <header class="flex items-start justify-between gap-4 px-6 sm:px-8 pt-6 pb-4 border-b border-zinc-800">
+          <div>
+            <p class="text-[10.5px] font-mono uppercase tracking-[0.18em] text-brand mb-2">settings</p>
+            <h2 class="text-xl text-zinc-100 font-semibold tracking-tight">Directus connections</h2>
+            <p class="text-zinc-500 text-[13px] mt-1.5 leading-relaxed">
+              Connect to any Directus instance — local, staging, or production.
+            </p>
+          </div>
+          <button id="modal-close" type="button" class="text-zinc-500 hover:text-zinc-100 transition-colors p-1" aria-label="Close">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" d="M6 6l12 12M6 18L18 6"/>
+            </svg>
+          </button>
+        </header>
+
+        <!-- Profile list -->
+        <ul id="profile-list" class="divide-y divide-zinc-800 max-h-[40vh] overflow-y-auto scroll-y"></ul>
+
+        <!-- Edit / create form -->
+        <div id="profile-form" class="hidden px-6 sm:px-8 py-5 border-t border-zinc-800 bg-zinc-900/40">
+          <h3 class="text-base text-zinc-100 font-semibold mb-4 form-title">New connection</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label class="block sm:col-span-2">
+              <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-1.5 inline-block font-medium">Name</span>
+              <input id="f-name" type="text" placeholder="e.g. Production CMS" class="w-full bg-surface/80 border border-zinc-800 focus:border-brand/60 rounded-md px-3 py-2 text-zinc-100 placeholder:text-zinc-600 outline-none text-[14px]" />
+            </label>
+            <label class="block sm:col-span-2">
+              <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-1.5 inline-block font-medium">Directus URL</span>
+              <input id="f-url" type="url" placeholder="https://cms.example.com" class="w-full bg-surface/80 border border-zinc-800 focus:border-brand/60 rounded-md px-3 py-2 text-zinc-100 placeholder:text-zinc-600 outline-none text-[14px] font-mono" />
+            </label>
+            <label class="block sm:col-span-2">
+              <span class="text-[11px] uppercase tracking-[0.18em] text-zinc-500 mb-1.5 inline-block font-medium">Static token</span>
+              <div class="relative">
+                <input id="f-token" type="password" placeholder="Directus admin token" class="w-full bg-surface/80 border border-zinc-800 focus:border-brand/60 rounded-md px-3 py-2 pr-10 text-zinc-100 placeholder:text-zinc-600 outline-none text-[14px] font-mono" />
+                <button id="f-token-toggle" type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-brand p-1" aria-label="Show token">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+              <p class="text-[11px] text-zinc-600 mt-1.5">Create a static token under <em>Settings → Access Tokens</em> in your Directus admin.</p>
+            </label>
+          </div>
+
+          <!-- Test result -->
+          <div id="f-test-result" class="hidden mt-4 p-3 rounded-md border text-[13px]"></div>
+
+          <div class="flex flex-wrap items-center justify-end gap-2 mt-5">
+            <button id="f-cancel" type="button" class="px-3 py-1.5 text-[12px] font-medium text-zinc-500 hover:text-zinc-100 transition-colors">Cancel</button>
+            <button id="f-test" type="button" class="px-4 py-1.5 text-[12px] font-medium text-zinc-200 border border-zinc-700 hover:border-zinc-500 rounded-md transition-colors">Test connection</button>
+            <button id="f-save" type="button" class="px-4 py-1.5 text-[12px] font-medium text-white bg-brand-strong hover:bg-indigo-400 rounded-md transition-colors">Save</button>
+          </div>
+        </div>
+
+        <footer class="px-6 sm:px-8 py-4 border-t border-zinc-800 flex items-center justify-between gap-4">
+          <p class="text-[11px] text-zinc-600 leading-relaxed">
+            Tokens are stored locally in <code class="text-brand font-mono">chat.db</code>.
+          </p>
+          <button id="add-profile-btn" type="button" class="px-4 py-1.5 text-[12px] font-medium text-white bg-brand-strong hover:bg-indigo-400 rounded-md transition-colors flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" d="M12 5v14M5 12h14"/>
+            </svg>
+            New connection
+          </button>
+        </footer>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { marked } from 'marked';
+
+  marked.setOptions({ gfm: true, breaks: true });
+
+  // ── Types ────────────────────────────────────────────────────
+  type ChatEvent =
+    | { type: 'tool_call'; id: string; name: string; args: Record<string, unknown> }
+    | { type: 'tool_result'; id: string; result: string; isError: boolean }
+    | { type: 'text'; content: string }
+    | { type: 'error'; message: string }
+    | { type: 'done' };
+
+  type Profile = {
+    id: number;
+    name: string;
+    directus_url: string;
+    is_default: number;
+    created_at: string;
+    token_hint: string;
+  };
+
+  // ── State ────────────────────────────────────────────────────
+  let busy = false;
+  let abortCtl: AbortController | null = null;
+  let profiles: Profile[] = [];
+  let activeProfileId: number | null = null;
+  let editingId: number | null = null;
+  const STORAGE_KEY = 'mcpconsole.activeProfileId';
+
+  // ── DOM ──────────────────────────────────────────────────────
+  const $welcome    = document.getElementById('welcome') as HTMLElement;
+  const $messages   = document.getElementById('messages') as HTMLElement;
+  const $scroll     = document.getElementById('chat-scroll') as HTMLElement;
+  const $form       = document.getElementById('composer') as HTMLFormElement;
+  const $input      = document.getElementById('input') as HTMLTextAreaElement;
+  const $sendBtn    = document.getElementById('send-btn') as HTMLButtonElement;
+  const $sendLabel  = $sendBtn.querySelector('.send-label') as HTMLElement;
+  const $sendIcon   = $sendBtn.querySelector('.send-icon') as SVGElement;
+  const $stopIcon   = $sendBtn.querySelector('.stop-icon') as SVGElement;
+  const $newBtn     = document.getElementById('new-chat-btn') as HTMLButtonElement;
+  const $statusDot  = document.querySelector('.status-dot') as HTMLElement;
+  const $statusLbl  = document.querySelector('.status-label') as HTMLElement;
+
+  // Profile modal DOM
+  const $profileBtn    = document.getElementById('profile-btn')    as HTMLButtonElement;
+  const $profileLabel  = document.querySelector('.profile-label')  as HTMLElement;
+  const $modal         = document.getElementById('profile-modal')  as HTMLElement;
+  const $modalClose    = document.getElementById('modal-close')    as HTMLButtonElement;
+  const $modalBackdrop = $modal.querySelector('.profile-backdrop') as HTMLElement;
+  const $profileList   = document.getElementById('profile-list')   as HTMLElement;
+  const $addBtn        = document.getElementById('add-profile-btn') as HTMLButtonElement;
+  const $form2         = document.getElementById('profile-form')   as HTMLElement;
+  const $formTitle     = $form2.querySelector('.form-title')       as HTMLElement;
+  const $fName         = document.getElementById('f-name')         as HTMLInputElement;
+  const $fUrl          = document.getElementById('f-url')          as HTMLInputElement;
+  const $fToken        = document.getElementById('f-token')        as HTMLInputElement;
+  const $fTokenToggle  = document.getElementById('f-token-toggle') as HTMLButtonElement;
+  const $fCancel       = document.getElementById('f-cancel')       as HTMLButtonElement;
+  const $fTest         = document.getElementById('f-test')         as HTMLButtonElement;
+  const $fSave         = document.getElementById('f-save')         as HTMLButtonElement;
+  const $fTestResult   = document.getElementById('f-test-result')  as HTMLElement;
+
+  // Pull banner DOM
+  const $pullBanner   = document.getElementById('pull-banner')          as HTMLElement;
+  const $pullSpinner  = document.getElementById('pull-spinner')         as unknown as SVGElement;
+  const $pullErrIcon  = document.getElementById('pull-error-icon')      as unknown as SVGElement;
+  const $pullTitle    = $pullBanner.querySelector('.pull-title')        as HTMLElement;
+  const $pullDetail   = $pullBanner.querySelector('.pull-detail')       as HTMLElement;
+  const $pullBar      = $pullBanner.querySelector('.pull-progress-bar') as HTMLElement;
+  const $pullPct      = $pullBanner.querySelector('.pull-progress-pct') as HTMLElement;
+  const $pullProgWrap = $pullBanner.querySelector('.pull-progress-wrap') as HTMLElement;
+  const $pullRetry    = document.getElementById('pull-retry')           as HTMLButtonElement;
+
+  // ── Helpers ──────────────────────────────────────────────────
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function el(html: string): HTMLElement {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html.trim();
+    return tmp.firstElementChild as HTMLElement;
+  }
+
+  function scrollToBottom(smooth = true): void {
+    $scroll.scrollTo({ top: $scroll.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+  }
+
+  function autoGrow(): void {
+    $input.style.height = 'auto';
+    $input.style.height = Math.min($input.scrollHeight, 160) + 'px';
+  }
+
+  function setBusy(b: boolean): void {
+    busy = b;
+    $input.disabled = b;
+    $sendBtn.disabled = b ? false : $input.value.trim().length === 0;
+    if (b) {
+      $sendLabel.textContent = 'Stop';
+      $sendIcon.classList.add('hidden');
+      $stopIcon.classList.remove('hidden');
+    } else {
+      $sendLabel.textContent = 'Send';
+      $sendIcon.classList.remove('hidden');
+      $stopIcon.classList.add('hidden');
+    }
+  }
+
+  function setStatus(state: 'ok' | 'busy' | 'err' | 'idle', label: string): void {
+    const colors = {
+      ok:   'bg-emerald-400',
+      busy: 'bg-brand animate-pulse',
+      err:  'bg-rose-400',
+      idle: 'bg-zinc-600',
+    } as const;
+    $statusDot.className = 'w-1.5 h-1.5 rounded-full status-dot ' + colors[state];
+    $statusLbl.textContent = label;
+  }
+
+  // ── Rendering ────────────────────────────────────────────────
+  function renderUserMessage(content: string): void {
+    $welcome.classList.add('hidden');
+    $messages.classList.remove('hidden');
+    const node = el(`
+      <div class="msg-in flex justify-end">
+        <div class="bubble-user rounded-2xl rounded-br-sm px-4 py-3 max-w-[85%] sm:max-w-[75%] text-[15px] leading-relaxed whitespace-pre-wrap">${escapeHtml(content)}</div>
+      </div>
+    `);
+    $messages.appendChild(node);
+    scrollToBottom();
+  }
+
+  function createAssistantTurn(): {
+    container: HTMLElement;
+    toolsHost: HTMLElement;
+    body: HTMLElement;
+    setTyping: (on: boolean) => void;
+  } {
+    $welcome.classList.add('hidden');
+    $messages.classList.remove('hidden');
+    const node = el(`
+      <div class="msg-in flex items-start gap-3">
+        <div class="flex-shrink-0 w-9 h-9 rounded-lg bg-gradient-to-br from-brand-strong to-indigo-600 flex items-center justify-center mt-0.5 shadow-lg shadow-indigo-500/15">
+          <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="6" cy="6"  r="2"/>
+            <circle cx="18" cy="6" r="2"/>
+            <circle cx="12" cy="18" r="2"/>
+            <path stroke-linecap="round" d="M6 8v2a2 2 0 002 2h8a2 2 0 002-2V8M12 12v4"/>
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0 max-w-[calc(100%-3rem)]">
+          <div class="tools-host flex flex-col gap-2 mb-2 empty:hidden"></div>
+          <div class="assistant-body bubble-assistant rounded-2xl rounded-tl-sm px-4 py-3">
+            <div class="prose-chat body-content"></div>
+            <div class="typing flex items-center gap-1.5 py-1">
+              <span class="typing-dot w-1.5 h-1.5 rounded-full bg-brand"></span>
+              <span class="typing-dot w-1.5 h-1.5 rounded-full bg-brand"></span>
+              <span class="typing-dot w-1.5 h-1.5 rounded-full bg-brand"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `);
+    $messages.appendChild(node);
+    const toolsHost = node.querySelector('.tools-host') as HTMLElement;
+    const body      = node.querySelector('.body-content') as HTMLElement;
+    const typing    = node.querySelector('.typing') as HTMLElement;
+    const assistantBody = node.querySelector('.assistant-body') as HTMLElement;
+
+    scrollToBottom();
+
+    return {
+      container: node,
+      toolsHost,
+      body,
+      setTyping: (on: boolean) => {
+        typing.style.display = on ? '' : 'none';
+        if (!on && body.innerHTML.trim() === '') {
+          assistantBody.style.display = 'none';
+        }
+      },
+    };
+  }
+
+  function renderToolCall(host: HTMLElement, _id: string, _name: string, _args: Record<string, unknown>): void {
+    // Show a single unobtrusive working indicator — users don't need to see tool internals.
+    if (!host.querySelector('.tool-working')) {
+      host.appendChild(el(`
+        <div class="tool-working flex items-center gap-2 text-zinc-500 text-[12px] px-1 py-0.5">
+          <svg class="w-3 h-3 animate-spin text-brand flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" d="M21 12a9 9 0 11-6.219-8.56"/>
+          </svg>
+          <span class="w-label">Working…</span>
+        </div>
+      `));
+    }
+    scrollToBottom();
+  }
+
+  function renderToolResult(host: HTMLElement, _id: string, _result: string, isError: boolean): void {
+    const indicator = host.querySelector('.tool-working') as HTMLElement | null;
+    if (indicator && isError) {
+      const label = indicator.querySelector('.w-label') as HTMLElement | null;
+      if (label) label.textContent = 'Retrying…';
+    }
+  }
+
+  function hideWorkingIndicator(host: HTMLElement): void {
+    const indicator = host.querySelector('.tool-working') as HTMLElement | null;
+    if (indicator) indicator.classList.add('hidden');
+  }
+
+  function renderError(host: HTMLElement, message: string): void {
+    // Render newlines and treat indented lines as monospace command snippets.
+    const formatted = escapeHtml(message)
+      .split('\n')
+      .map((line) => {
+        if (/^\s{2,}\S/.test(line)) {
+          return `<code class="block font-mono text-[12.5px] bg-black/30 border border-rose-400/20 rounded px-2 py-1 my-1 text-rose-100/90">${line.replace(/^\s+/, '')}</code>`;
+        }
+        return line === '' ? '<br/>' : `<span>${line}</span><br/>`;
+      })
+      .join('');
+
+    const card = el(`
+      <div class="msg-in flex items-start gap-3 mt-2">
+        <div class="flex-1">
+          <div class="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+            <p class="text-[10.5px] uppercase tracking-[0.18em] text-rose-300/90 mb-1.5 font-medium">error</p>
+            <div class="leading-relaxed">${formatted}</div>
+          </div>
+        </div>
+      </div>
+    `);
+    host.appendChild(card);
+    scrollToBottom();
+  }
+
+  // ── Streaming ────────────────────────────────────────────────
+  async function sendMessage(text: string): Promise<void> {
+    if (busy) return;
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    renderUserMessage(trimmed);
+
+    $input.value = '';
+    autoGrow();
+    setBusy(true);
+    setStatus('busy', 'thinking…');
+
+    const turn = createAssistantTurn();
+    let collected = '';
+    let sawText = false;
+    let errored = false;
+
+    abortCtl = new AbortController();
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: trimmed, profileId: activeProfileId }),
+        signal: abortCtl.signal,
+      });
+      if (!res.ok || !res.body) {
+        throw new Error(`Server returned ${res.status}`);
+      }
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buffer = '';
+
+      outer: while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += dec.decode(value, { stream: true });
+
+        let idx: number;
+        while ((idx = buffer.indexOf('\n\n')) !== -1) {
+          const chunk = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          for (const line of chunk.split('\n')) {
+            if (!line.startsWith('data:')) continue;
+            const payload = line.slice(5).trim();
+            if (!payload) continue;
+            let event: ChatEvent;
+            try { event = JSON.parse(payload) as ChatEvent; } catch { continue; }
+
+            if (event.type === 'tool_call') {
+              setStatus('busy', `tool: ${event.name}`);
+              renderToolCall(turn.toolsHost, event.id, event.name, event.args);
+            } else if (event.type === 'tool_result') {
+              renderToolResult(turn.toolsHost, event.id, event.result, event.isError);
+              setStatus('busy', 'processing…');
+            } else if (event.type === 'text') {
+              hideWorkingIndicator(turn.toolsHost);
+              sawText = true;
+              collected += event.content;
+              turn.body.innerHTML = marked.parse(collected) as string;
+              scrollToBottom();
+            } else if (event.type === 'error') {
+              errored = true;
+              renderError(turn.toolsHost, event.message);
+            } else if (event.type === 'done') {
+              break outer;
+            }
+          }
+        }
+      }
+    } catch (e: unknown) {
+      if ((e as Error).name === 'AbortError') {
+        renderError(turn.toolsHost, 'Cancelled by user.');
+      } else {
+        errored = true;
+        renderError(turn.toolsHost, e instanceof Error ? e.message : String(e));
+      }
+    } finally {
+      hideWorkingIndicator(turn.toolsHost);
+      turn.setTyping(false);
+      abortCtl = null;
+      setBusy(false);
+      setStatus(errored ? 'err' : 'ok', errored ? 'error' : 'ready');
+      $input.focus();
+    }
+  }
+
+  // ── Health check ─────────────────────────────────────────────
+  type PullState = {
+    status: 'idle' | 'checking' | 'pulling' | 'ready' | 'error';
+    model: string;
+    statusText: string;
+    current: number;
+    total: number;
+    error: string | null;
+    startedAt: number | null;
+    finishedAt: number | null;
+  };
+  type HealthResponse = {
+    ok: boolean;
+    profile: { id: number; name: string } | null;
+    mcp:    { ok: boolean; tools: number; error: string | null };
+    ollama: { ok: boolean; modelReady: boolean; model: string; pull: PullState; error: string | null };
+  };
+
+  let healthTimer: number | null = null;
+
+  function fmtBytes(n: number): string {
+    if (!n) return '';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return `${n.toFixed(n < 10 ? 1 : 0)} ${units[i]}`;
+  }
+
+  function renderPullBanner(pull: PullState): void {
+    if (pull.status === 'ready' || pull.status === 'idle') {
+      $pullBanner.classList.add('hidden');
+      return;
+    }
+    $pullBanner.classList.remove('hidden');
+
+    if (pull.status === 'error') {
+      $pullSpinner.classList.add('hidden');
+      $pullErrIcon.classList.remove('hidden');
+      $pullProgWrap.classList.add('hidden');
+      $pullRetry.classList.remove('hidden');
+      $pullTitle.textContent = `Failed to pull ${pull.model}`;
+      $pullDetail.textContent = pull.error ?? 'unknown error';
+      return;
+    }
+
+    // pulling / checking
+    $pullSpinner.classList.remove('hidden');
+    $pullErrIcon.classList.add('hidden');
+    $pullRetry.classList.add('hidden');
+    $pullTitle.textContent =
+      pull.status === 'checking' ? `Checking ${pull.model}…` : `Pulling ${pull.model}…`;
+    $pullDetail.textContent = pull.statusText || 'starting…';
+
+    if (pull.total > 0) {
+      const pct = Math.min(100, Math.round((pull.current / pull.total) * 100));
+      $pullProgWrap.classList.remove('hidden');
+      $pullBar.style.width = `${pct}%`;
+      $pullPct.textContent = `${pct}%  ·  ${fmtBytes(pull.current)} / ${fmtBytes(pull.total)}`;
+    } else {
+      $pullProgWrap.classList.add('hidden');
+    }
+  }
+
+  async function checkHealth(): Promise<void> {
+    if (healthTimer != null) { clearTimeout(healthTimer); healthTimer = null; }
+    try {
+      const qs = activeProfileId ? `?profileId=${activeProfileId}` : '';
+      const res = await fetch('/api/health' + qs);
+      const data = (await res.json()) as HealthResponse;
+
+      renderPullBanner(data.ollama.pull);
+
+      if (data.ok) {
+        setStatus('ok', `${data.mcp.tools} tools ready`);
+      } else if (!data.profile) {
+        setStatus('err', 'no profile');
+      } else if (!data.ollama.ok) {
+        setStatus('err', 'ollama offline');
+      } else if (!data.ollama.modelReady) {
+        const p = data.ollama.pull;
+        if (p.status === 'pulling' && p.total > 0) {
+          const pct = Math.round((p.current / p.total) * 100);
+          setStatus('busy', `pulling ${pct}%`);
+        } else if (p.status === 'error') {
+          setStatus('err', 'pull failed');
+        } else {
+          setStatus('busy', `pulling ${data.ollama.model}…`);
+        }
+      } else if (!data.mcp.ok) {
+        setStatus('err', 'directus offline');
+      } else {
+        setStatus('err', 'offline');
+      }
+
+      // Poll faster while the pull is active so progress feels live.
+      const pullActive = data.ollama.pull.status === 'pulling' || data.ollama.pull.status === 'checking';
+      if (pullActive) {
+        healthTimer = window.setTimeout(() => { void checkHealth(); }, 1500);
+      }
+    } catch {
+      setStatus('err', 'offline');
+    }
+  }
+
+  async function retryPull(): Promise<void> {
+    $pullRetry.disabled = true;
+    try {
+      await fetch('/api/pull', { method: 'POST' });
+    } catch { /* state will reflect via /api/health */ }
+    finally { $pullRetry.disabled = false; }
+    void checkHealth();
+  }
+
+  // ── Profile management ──────────────────────────────────────
+  function updateProfileLabel(): void {
+    const active = profiles.find((p) => p.id === activeProfileId);
+    $profileLabel.textContent = active ? active.name : 'No connection';
+  }
+
+  async function loadProfiles(): Promise<void> {
+    try {
+      const res = await fetch('/api/profiles');
+      const data = (await res.json()) as { profiles: Profile[] };
+      profiles = data.profiles;
+
+      const stored = Number(localStorage.getItem(STORAGE_KEY));
+      const fromStorage = profiles.find((p) => p.id === stored);
+      const fromDefault = profiles.find((p) => p.is_default === 1);
+      activeProfileId = (fromStorage ?? fromDefault ?? profiles[0])?.id ?? null;
+
+      updateProfileLabel();
+      renderProfileList();
+    } catch (e) {
+      console.error('Failed to load profiles', e);
+    }
+  }
+
+  function selectProfile(id: number): void {
+    activeProfileId = id;
+    localStorage.setItem(STORAGE_KEY, String(id));
+    updateProfileLabel();
+    renderProfileList();
+    void checkHealth();
+  }
+
+  function openModal(): void {
+    $modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    resetForm(true);
+  }
+
+  function closeModal(): void {
+    $modal.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  function resetForm(hide = false): void {
+    editingId = null;
+    $fName.value = '';
+    $fUrl.value = '';
+    $fToken.value = '';
+    $fToken.placeholder = 'Directus admin token';
+    $fToken.type = 'password';
+    $fTestResult.classList.add('hidden');
+    $fTestResult.innerHTML = '';
+    $formTitle.textContent = 'New connection';
+    if (hide) $form2.classList.add('hidden');
+  }
+
+  function openCreateForm(): void {
+    resetForm();
+    $form2.classList.remove('hidden');
+    $fName.focus();
+  }
+
+  function openEditForm(p: Profile): void {
+    resetForm();
+    editingId = p.id;
+    $fName.value  = p.name;
+    $fUrl.value   = p.directus_url;
+    $fToken.value = '';
+    $fToken.placeholder = `current: ${p.token_hint} — leave empty to keep`;
+    $formTitle.textContent = `Edit — ${p.name}`;
+    $form2.classList.remove('hidden');
+    $fName.focus();
+  }
+
+  function renderProfileList(): void {
+    if (profiles.length === 0) {
+      $profileList.innerHTML = `
+        <li class="px-6 sm:px-8 py-10 text-center text-zinc-500 text-sm">
+          No connections yet. Add one to get started.
+        </li>`;
+      return;
+    }
+    $profileList.innerHTML = profiles.map((p) => {
+      const active = p.id === activeProfileId;
+      return `
+        <li class="px-6 sm:px-8 py-4 flex items-center gap-4 ${active ? 'bg-brand/[0.05]' : ''}">
+          <button class="profile-pick flex-1 min-w-0 text-left" data-id="${p.id}">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="w-2 h-2 rounded-full ${active ? 'bg-emerald-400' : 'bg-zinc-700'}"></span>
+              <p class="font-medium text-zinc-100 truncate">${escapeHtml(p.name)}</p>
+              ${p.is_default ? '<span class="text-[9.5px] uppercase tracking-[0.18em] text-brand border border-brand/40 rounded px-1.5 py-0.5 font-mono">default</span>' : ''}
+              ${active && !p.is_default ? '<span class="text-[9.5px] uppercase tracking-[0.18em] text-emerald-300/90 font-mono">active</span>' : ''}
+            </div>
+            <p class="text-[12px] text-zinc-500 font-mono truncate mt-1">${escapeHtml(p.directus_url)}</p>
+            <p class="text-[11px] text-zinc-600 mt-0.5">token: <span class="font-mono">${escapeHtml(p.token_hint)}</span></p>
+          </button>
+          <div class="flex items-center gap-1 flex-shrink-0">
+            ${!p.is_default ? `<button class="profile-default p-2 text-zinc-500 hover:text-brand transition-colors" title="Set as default" data-id="${p.id}">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l2.39 4.84L20 9l-4.27 3.79L17.18 19 12 16.27 6.82 19l1.45-6.21L4 9l5.61-1.16L12 3z"/></svg>
+            </button>` : ''}
+            <button class="profile-edit p-2 text-zinc-500 hover:text-brand transition-colors" title="Edit" data-id="${p.id}">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.4 3.6a2.121 2.121 0 113 3L12 16l-4 1 1-4 9.4-9.4z"/></svg>
+            </button>
+            ${!p.is_default ? `<button class="profile-delete p-2 text-zinc-500 hover:text-rose-400 transition-colors" title="Delete" data-id="${p.id}">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-1 12a2 2 0 01-2 2H8a2 2 0 01-2-2L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16"/></svg>
+            </button>` : ''}
+          </div>
+        </li>`;
+    }).join('');
+
+    $profileList.querySelectorAll<HTMLButtonElement>('.profile-pick').forEach((btn) => {
+      btn.addEventListener('click', () => selectProfile(Number(btn.dataset.id)));
+    });
+    $profileList.querySelectorAll<HTMLButtonElement>('.profile-edit').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = profiles.find((x) => x.id === Number(btn.dataset.id));
+        if (p) openEditForm(p);
+      });
+    });
+    $profileList.querySelectorAll<HTMLButtonElement>('.profile-default').forEach((btn) => {
+      btn.addEventListener('click', () => void setAsDefault(Number(btn.dataset.id)));
+    });
+    $profileList.querySelectorAll<HTMLButtonElement>('.profile-delete').forEach((btn) => {
+      btn.addEventListener('click', () => void deleteProfile(Number(btn.dataset.id)));
+    });
+  }
+
+  async function setAsDefault(id: number): Promise<void> {
+    const res = await fetch(`/api/profiles/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_default: true }),
+    });
+    if (!res.ok) {
+      const { error } = (await res.json()) as { error?: string };
+      alert(error ?? 'Failed to update default.');
+      return;
+    }
+    await loadProfiles();
+  }
+
+  async function deleteProfile(id: number): Promise<void> {
+    const p = profiles.find((x) => x.id === id);
+    if (!p) return;
+    if (!confirm(`Delete connection "${p.name}"?`)) return;
+    const res = await fetch(`/api/profiles/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const { error } = (await res.json()) as { error?: string };
+      alert(error ?? 'Failed to delete.');
+      return;
+    }
+    if (activeProfileId === id) {
+      localStorage.removeItem(STORAGE_KEY);
+      activeProfileId = null;
+    }
+    await loadProfiles();
+    void checkHealth();
+  }
+
+  function setTestResult(html: string, kind: 'ok' | 'err' | 'info'): void {
+    const styles = {
+      ok:   'border-emerald-500/30 bg-emerald-500/10 text-emerald-100',
+      err:  'border-rose-500/30 bg-rose-500/10 text-rose-100',
+      info: 'border-brand/30 bg-brand/10 text-zinc-100',
+    } as const;
+    $fTestResult.className = `mt-4 p-3 rounded-md border text-[13px] ${styles[kind]}`;
+    $fTestResult.innerHTML = html;
+    $fTestResult.classList.remove('hidden');
+  }
+
+  async function testConnection(): Promise<void> {
+    const url   = $fUrl.value.trim();
+    const token = $fToken.value.trim();
+    if (!url || !token) {
+      setTestResult('URL and token are required to test.', 'err');
+      return;
+    }
+    setTestResult('<span class="opacity-70">Testing connection…</span>', 'info');
+    $fTest.disabled = true;
+    try {
+      const res = await fetch('/api/profiles/0/test?unsaved=1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ directus_url: url, directus_token: token }),
+      });
+      const data = await res.json() as {
+        ok: boolean;
+        error?: string;
+        directus?: { ok: boolean; info: string; error: string | null };
+        mcp?: { ok: boolean; tools: number; error: string | null };
+      };
+      if (data.error) {
+        setTestResult(escapeHtml(data.error), 'err');
+        return;
+      }
+      const d = data.directus!, m = data.mcp!;
+      const parts: string[] = [];
+      parts.push(d.ok
+        ? `<div class="flex items-start gap-2"><span class="text-emerald-300 mt-px">✓</span><span>Directus reachable — authenticated as <code class="text-brand-soft font-mono">${escapeHtml(d.info)}</code></span></div>`
+        : `<div class="flex items-start gap-2"><span class="text-rose-300 mt-px">✗</span><span>Directus: ${escapeHtml(d.error ?? 'failed')}</span></div>`);
+      parts.push(m.ok
+        ? `<div class="flex items-start gap-2 mt-1"><span class="text-emerald-300 mt-px">✓</span><span>MCP server: ${m.tools} tools available</span></div>`
+        : `<div class="flex items-start gap-2 mt-1"><span class="text-rose-300 mt-px">✗</span><span>MCP: ${escapeHtml(m.error ?? 'failed')}</span></div>`);
+      setTestResult(parts.join(''), data.ok ? 'ok' : 'err');
+    } catch (e) {
+      setTestResult(escapeHtml(e instanceof Error ? e.message : String(e)), 'err');
+    } finally {
+      $fTest.disabled = false;
+    }
+  }
+
+  async function saveProfile(): Promise<void> {
+    const name  = $fName.value.trim();
+    const url   = $fUrl.value.trim();
+    const token = $fToken.value.trim();
+    if (!name || !url) {
+      setTestResult('Name and URL are required.', 'err');
+      return;
+    }
+    if (editingId === null && !token) {
+      setTestResult('A token is required when creating a connection.', 'err');
+      return;
+    }
+
+    $fSave.disabled = true;
+    try {
+      const body: Record<string, string> = { name, directus_url: url };
+      if (token) body.directus_token = token;
+
+      const res = await fetch(
+        editingId !== null ? `/api/profiles/${editingId}` : '/api/profiles',
+        {
+          method: editingId !== null ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+      );
+      const data = await res.json() as { error?: string; profile?: Profile };
+      if (!res.ok || data.error) {
+        setTestResult(escapeHtml(data.error ?? 'Failed to save.'), 'err');
+        return;
+      }
+      const saved = data.profile!;
+      await loadProfiles();
+      if (editingId === null) selectProfile(saved.id);
+      else if (saved.id === activeProfileId) void checkHealth();
+      resetForm(true);
+    } catch (e) {
+      setTestResult(escapeHtml(e instanceof Error ? e.message : String(e)), 'err');
+    } finally {
+      $fSave.disabled = false;
+    }
+  }
+
+  // ── Wire up ──────────────────────────────────────────────────
+  $input.addEventListener('input', () => {
+    autoGrow();
+    if (!busy) $sendBtn.disabled = $input.value.trim().length === 0;
+  });
+
+  $input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (busy) return;
+      void sendMessage($input.value);
+    }
+  });
+
+  $form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (busy) {
+      abortCtl?.abort();
+      return;
+    }
+    void sendMessage($input.value);
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.suggestion').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const prompt = btn.getAttribute('data-prompt') ?? '';
+      $input.value = prompt;
+      autoGrow();
+      $input.focus();
+      $sendBtn.disabled = false;
+    });
+  });
+
+  $newBtn.addEventListener('click', () => {
+    if (busy) abortCtl?.abort();
+    history.length = 0;
+    $messages.innerHTML = '';
+    $messages.classList.add('hidden');
+    $welcome.classList.remove('hidden');
+    $input.value = '';
+    autoGrow();
+    $input.focus();
+    void checkHealth();
+  });
+
+  // Profile modal events
+  $profileBtn.addEventListener('click', openModal);
+  $modalClose.addEventListener('click', closeModal);
+  $modalBackdrop.addEventListener('click', closeModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$modal.classList.contains('hidden')) closeModal();
+  });
+  $addBtn.addEventListener('click', openCreateForm);
+  $fCancel.addEventListener('click', () => resetForm(true));
+  $fTest.addEventListener('click', () => void testConnection());
+  $fSave.addEventListener('click', () => void saveProfile());
+  $fTokenToggle.addEventListener('click', () => {
+    $fToken.type = $fToken.type === 'password' ? 'text' : 'password';
+  });
+
+  $pullRetry.addEventListener('click', () => void retryPull());
+
+  // Initial focus + status
+  $input.focus();
+  autoGrow();
+  void (async () => {
+    await loadProfiles();
+    void checkHealth();
+  })();
+</script>

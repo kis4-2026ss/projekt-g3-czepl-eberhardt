@@ -1,55 +1,42 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getFaq } from '../lib/directus';
+import PageHeader from '../components/PageHeader.astro';
+import { getFaqItems, getFaqCopy, getPageHeader } from '../lib/directus';
 import { applyPreviewList } from '../lib/preview';
 
-let faqItems = await getFaq();
+let [faqItems, copy, header] = await Promise.all([getFaqItems(), getFaqCopy(), getPageHeader('faq')]);
 const { preview } = Astro.locals;
 faqItems = applyPreviewList(faqItems, preview, 'faq');
 ---
 
-<Layout title="FAQ" description="Häufig gestellte Fragen zum Gasthaus Adlerwirt — Reservierung, Barrierefreiheit, Hunde und mehr.">
-  <!-- Header -->
-  <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
-    <img src="/images/hero-faq.png" alt="FAQ" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
-    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 via-w-dark/30 to-transparent"></div>
-    <div class="max-w-7xl mx-auto relative z-10 fade-up">
-      <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
-        <span class="w-8 h-px bg-w-gold/80"></span>Häufige Fragen
-      </p>
-      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">FAQ</h1>
-      <p class="text-white/80 mt-6 max-w-xl text-lg font-light leading-relaxed fade-up delay-100">Alles, was Sie vor dem Besuch wissen möchten.</p>
-    </div>
-  </div>
+<Layout title={header?.title} description={header?.seo_description}>
+  <PageHeader header={header} />
 
   <!-- FAQ accordion -->
-  <section class="max-w-3xl mx-auto px-5 lg:px-8 py-24">
-    <div class="space-y-4">
+  <section class="max-w-3xl mx-auto px-5 sm:px-6 lg:px-8 py-20 sm:py-24">
+    <div class="space-y-3">
       {faqItems.map((item, index) => (
-        <details class={`group bg-white rounded-sm border border-w-linen/50 shadow-sm overflow-hidden fade-up delay-${(index % 5) * 100}`}>
-          <summary class="flex items-center justify-between gap-4 px-8 py-6 cursor-pointer list-none select-none hover:bg-w-cream transition-colors">
-            <span class="font-medium text-w-dark text-lg group-hover:text-w-gold transition-colors">{item.question}</span>
+        <details class={`group card overflow-hidden fade-up delay-${(index % 5) * 100}`}>
+          <summary class="flex items-center justify-between gap-4 px-6 sm:px-8 py-5 sm:py-6 cursor-pointer list-none select-none hover:bg-w-cream/70 transition-colors">
+            <span class="font-serif text-lg sm:text-xl font-medium text-w-dark group-hover:text-w-gold transition-colors">{item.question}</span>
             <span class="flex-shrink-0 w-8 h-8 rounded-full bg-w-cream flex items-center justify-center text-w-gold group-open:rotate-45 transition-transform duration-300">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/>
-              </svg>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
             </span>
           </summary>
-          <div class="px-8 pb-8 pt-2">
-            <p class="text-w-dark/70 leading-relaxed text-base border-t border-w-linen/50 pt-6">{item.answer}</p>
+          <div class="px-6 sm:px-8 pb-7 pt-1">
+            <p class="text-w-dark/75 leading-[1.8] text-[15px] sm:text-base border-t border-w-linen/70 pt-5 font-light">{item.answer}</p>
           </div>
         </details>
       ))}
     </div>
 
-    <div class="mt-16 text-center bg-w-cream border border-w-linen/50 rounded-sm p-12 fade-up">
-      <p class="font-serif text-2xl text-w-dark font-medium mb-2">Noch Fragen?</p>
-      <p class="text-w-stone text-base mb-8 font-light">Rufen Sie uns einfach an oder schreiben Sie uns eine Nachricht.</p>
-      <a href="/kontakt" class="inline-flex items-center justify-center gap-2 px-8 py-4 bg-w-gold text-white font-medium tracking-wide rounded-sm hover:bg-w-gold-light transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5">
-        Zum Kontakt
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-        </svg>
+    <div class="mt-16 text-center card p-10 sm:p-12 fade-up">
+      <p class="eyebrow mb-3">{copy.help_eyebrow}</p>
+      <p class="font-serif text-2xl sm:text-3xl text-w-dark font-medium mb-3">{copy.help_title}</p>
+      <p class="text-w-stone text-base mb-8 font-light max-w-md mx-auto">{copy.help_text}</p>
+      <a href={copy.help_cta_href} class="btn btn-primary">
+        {copy.help_cta_label}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </a>
     </div>
   </section>

@@ -1,15 +1,25 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getEvents, md } from '../lib/directus';
+import PageHeader from '../components/PageHeader.astro';
+import { getEvents, getPageHeader, getUiCopy, md } from '../lib/directus';
 import { applyPreviewList } from '../lib/preview';
 
-let events = await getEvents();
+let [events, header, ui] = await Promise.all([getEvents(), getPageHeader('events'), getUiCopy()]);
 const { preview } = Astro.locals;
 events = applyPreviewList(events, preview, 'events');
 
 function formatDate(d: string | null) {
   if (!d) return null;
   return new Date(d).toLocaleDateString('de-AT', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+function dayParts(d: string | null) {
+  if (!d) return null;
+  const date = new Date(d);
+  return {
+    day: date.toLocaleDateString('de-AT', { day: '2-digit' }),
+    month: date.toLocaleDateString('de-AT', { month: 'short' }).replace('.', ''),
+    year: date.toLocaleDateString('de-AT', { year: 'numeric' }),
+  };
 }
 function dateRange(ev: typeof events[0]) {
   if (ev.is_recurring) return ev.recurrence_note;
@@ -21,49 +31,64 @@ function dateRange(ev: typeof events[0]) {
 }
 ---
 
-<Layout title="Events" description="Saisonale Highlights, Stammtisch und besondere Abende im Gasthaus Adlerwirt.">
-  <!-- Header -->
-  <div class="relative py-32 px-5 lg:px-8 bg-w-green overflow-hidden">
-    <img src="/images/hero-events.png" alt="Events" class="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay" />
-    <div class="absolute inset-0 bg-gradient-to-t from-w-dark/90 via-w-dark/30 to-transparent"></div>
-    <div class="max-w-7xl mx-auto relative z-10 fade-up">
-      <p class="text-w-gold text-sm font-semibold tracking-[0.25em] uppercase mb-4 flex items-center gap-3">
-        <span class="w-8 h-px bg-w-gold/80"></span>Aktuelles & Termine
-      </p>
-      <h1 class="font-serif text-5xl sm:text-7xl text-white font-medium tracking-tight">Events & Saisonales</h1>
-      <p class="text-white/80 mt-6 max-w-xl text-lg font-light leading-relaxed fade-up delay-100">Von der Spargelzeit bis zu den Wildwochen — was uns durch das Jahr begleitet.</p>
-    </div>
-  </div>
+<Layout title={header?.title} description={header?.seo_description}>
+  <PageHeader header={header} />
 
   <!-- Events list -->
-  <div class="max-w-5xl mx-auto px-5 lg:px-8 py-24 space-y-12">
-    {events.map((ev, i) => (
-      <article class={`grid grid-cols-1 md:grid-cols-12 gap-0 bg-white rounded-sm overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-w-linen/50 group fade-up delay-${(i % 3) * 100}`}>
-        <!-- Colored sidebar -->
-        <div class="md:col-span-4 bg-w-dark p-10 flex flex-col justify-center relative overflow-hidden text-w-cream">
-          <div class="absolute inset-0 opacity-[0.03]"
-               style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:16px 16px"></div>
-          <div class="relative z-10">
-            {ev.is_recurring && (
-              <span class="inline-block px-3 py-1 rounded-sm bg-w-gold/10 text-w-gold text-[10px] uppercase tracking-[0.2em] font-semibold mb-6">
-                wiederkehrend
-              </span>
-            )}
-            <p class="font-serif text-3xl font-medium leading-snug mb-2 group-hover:text-w-gold transition-colors">{ev.title}</p>
-            {ev.subtitle && <p class="text-white/60 text-sm font-light mt-1">{ev.subtitle}</p>}
-            {dateRange(ev) && (
-              <p class="text-w-gold text-sm font-medium tracking-wide uppercase mt-8 border-t border-white/10 pt-4">{dateRange(ev)}</p>
-            )}
+  <div class="max-w-5xl mx-auto px-5 sm:px-6 lg:px-8 py-20 sm:py-24 space-y-8 sm:space-y-10">
+    {events.map((ev, i) => {
+      const parts = dayParts(ev.starts_on);
+      return (
+        <article class={`card card-hover overflow-hidden grid grid-cols-1 md:grid-cols-12 fade-up delay-${(i % 3) * 100}`}>
+          <!-- Date / sidebar -->
+          <div class="md:col-span-4 bg-w-dark text-w-cream relative overflow-hidden p-8 sm:p-10 flex flex-col justify-center">
+            <div class="absolute inset-0 opacity-[0.03] pointer-events-none"
+                 style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:16px 16px"></div>
+            <div class="relative z-10">
+              {ev.is_recurring ? (
+                <div>
+                  <span class="inline-block px-3 py-1 rounded-sm bg-w-gold/15 text-w-gold text-[10px] uppercase tracking-[0.22em] font-semibold mb-5">
+                    {ui.recurring_label}
+                  </span>
+                  <p class="font-serif text-2xl sm:text-3xl font-medium leading-snug text-white">{ev.title}</p>
+                  {ev.subtitle && <p class="text-white/55 text-sm font-light mt-2">{ev.subtitle}</p>}
+                  {ev.recurrence_note && (
+                    <p class="text-w-gold text-[11px] font-semibold tracking-[0.22em] uppercase mt-6 pt-5 border-t border-white/10">
+                      {ev.recurrence_note}
+                    </p>
+                  )}
+                </div>
+              ) : parts ? (
+                <div>
+                  <div class="flex items-baseline gap-3 mb-5">
+                    <span class="font-serif text-5xl sm:text-6xl font-medium text-w-gold leading-none tabular-nums">{parts.day}</span>
+                    <div class="leading-tight">
+                      <p class="text-w-gold text-sm font-semibold uppercase tracking-[0.22em]">{parts.month}</p>
+                      <p class="text-white/55 text-xs">{parts.year}</p>
+                    </div>
+                  </div>
+                  <p class="font-serif text-2xl sm:text-3xl font-medium leading-snug text-white">{ev.title}</p>
+                  {ev.subtitle && <p class="text-white/55 text-sm font-light mt-2">{ev.subtitle}</p>}
+                  {dateRange(ev) && (
+                    <p class="text-w-gold text-[11px] font-semibold tracking-[0.22em] uppercase mt-6 pt-5 border-t border-white/10">
+                      {dateRange(ev)}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p class="font-serif text-2xl sm:text-3xl font-medium leading-snug text-white">{ev.title}</p>
+              )}
+            </div>
           </div>
-        </div>
-        <!-- Content -->
-        <div class="md:col-span-8 p-10 flex items-center">
-          {ev.description
-            ? <div class="prose prose-stone text-base font-light text-w-dark/80 max-w-none leading-relaxed" set:html={md(ev.description)} />
-            : <p class="text-w-stone/70 italic text-base font-light">Weitere Details folgen in Kürze.</p>
-          }
-        </div>
-      </article>
-    ))}
+          <!-- Content -->
+          <div class="md:col-span-8 p-8 sm:p-10 flex items-center">
+            {ev.description
+              ? <div class="prose prose-stone text-base font-light text-w-dark/80 max-w-none leading-relaxed" set:html={md(ev.description)} />
+              : <p class="text-w-stone/70 italic text-base font-light">{ui.no_details_text}</p>
+            }
+          </div>
+        </article>
+      );
+    })}
   </div>
 </Layout>
