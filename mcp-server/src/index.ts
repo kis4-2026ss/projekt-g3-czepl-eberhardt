@@ -31,6 +31,11 @@ function makeClient(req: http.IncomingMessage): DirectusClient {
 }
 
 const WEBSITE_URL = (process.env.WEBSITE_URL ?? "http://localhost:4321").replace(/\/$/, "");
+const DIRECTUS_UPSTREAM = (process.env.DIRECTUS_URL ?? "http://localhost:8055").replace(/\/$/, "");
+const MCP_PUBLIC_URL = (process.env.MCP_PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 3001}`).replace(/\/$/, "");
+const PREVIEW_PROXY_PORT = Number(process.env.PREVIEW_PROXY_PORT ?? 4322);
+const PREVIEW_WEBSITE_URL = (process.env.PREVIEW_WEBSITE_URL ?? `http://localhost:${PREVIEW_PROXY_PORT}`).replace(/\/$/, "");
+const PREVIEW_WEBSITE_INTERNAL_URL = (process.env.PREVIEW_WEBSITE_INTERNAL_URL ?? "http://localhost:4321").replace(/\/$/, "");
 
 /** Tool schema hint: Directus returns HTTP 403 for invalid /items/.../id paths (easy to mistake for RBAC). */
 const ITEM_PK_DESCRIPTION =
@@ -58,9 +63,405 @@ function storePreview(entry: PreviewEntry): string {
   return token;
 }
 
-function buildPreviewResponse(token: string, entry: PreviewEntry): Record<string, unknown> {
-  const preview_url = `${WEBSITE_URL}?preview_token=${token}`;
-  return { ...entry, preview_token: token, preview_url };
+function buildPreviewResponse(token: string, entry: PreviewEntry): string {
+  const preview_url = PREVIEW_WEBSITE_URL;
+  const review_url = `${MCP_PUBLIC_URL}/review/${token}`;
+  const diffSummary = entry.diff && entry.diff.length > 0
+    ? entry.diff.map((d) => `  ${d.field}: ${JSON.stringify(d.before)} → ${JSON.stringify(d.after)}`).join("\n")
+    : entry.after
+      ? `  data: ${JSON.stringify(entry.after)}`
+      : "";
+  return [
+    `Staged (not yet written): ${entry.action} on ${entry.collection}${entry.id != null ? ` #${entry.id}` : ""}.`,
+    ...(diffSummary ? [`Changes:\n${diffSummary}`] : []),
+    `preview_token: ${token}`,
+    ``,
+    `If you still have more changes to stage, call the next write tool now — do NOT pause to ask the user yet.`,
+    `Only after ALL changes are staged, show the user this summary:`,
+    `  Preview (live site): ${preview_url}`,
+    `  Review all changes:  ${review_url}`,
+    `Then ask the user to confirm or discard. Use confirm_all_previews / discard_all_previews for bulk, or confirm_preview / discard_preview per token.`,
+  ].join("\n");
+}
+
+// ── Proxy helpers ─────────────────────────────────────────────────────────────
+
+function applyPreviewsToResponse(body: unknown, collection: string): unknown {
+  if (!body || typeof body !== "object") return body;
+  const b = body as { data: unknown };
+
+  if (Array.isArray(b.data)) {
+    let items = b.data as unknown[];
+    for (const { entry } of previewStore.values()) {
+      if (entry.collection !== collection) continue;
+      switch (entry.action) {
+        case "create":
+          items = [...items, { ...entry.after, id: "__preview_new__" }];
+          break;
+        case "update":
+          if (entry.id != null) {
+            items = items.map((item) => {
+              const i = item as Record<string, unknown>;
+              return String(i["id"]) === String(entry.id) ? { ...i, ...entry.data } : i;
+            });
+          }
+          break;
+        case "delete":
+          if (entry.id != null) {
+            items = items.filter((item) => {
+              const i = item as Record<string, unknown>;
+              return String(i["id"]) !== String(entry.id);
+            });
+          }
+          break;
+      }
+    }
+    return { ...b, data: items };
+  }
+
+  if (b.data && typeof b.data === "object" && !Array.isArray(b.data)) {
+    let data = b.data as Record<string, unknown>;
+    for (const { entry } of previewStore.values()) {
+      if (entry.collection !== collection) continue;
+      if ((entry.action === "update_singleton" || entry.action === "update") && entry.after) {
+        data = { ...data, ...entry.after };
+      }
+    }
+    return { ...b, data };
+  }
+
+  return body;
+}
+
+function escHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+type StoredPreview = PreviewEntry & { preview_token: string };
+
+function renderEntryCard(p: StoredPreview, highlighted: boolean): string {
+  const actionLabel: Record<string, string> = {
+    create: "Neuer Eintrag", update: "Änderung",
+    update_singleton: "Aktualisierung", delete: "Löschung",
+  };
+  const actionClass: Record<string, string> = {
+    create: "label-create", update: "label-update",
+    update_singleton: "label-update", delete: "label-delete",
+  };
+  const diffRows = p.diff && p.diff.length > 0
+    ? `<table style="margin-top:1rem">
+        <thead><tr><th>Feld</th><th>Vorher</th><th>Nachher</th></tr></thead>
+        <tbody>${p.diff.map((d) => `
+          <tr>
+            <td style="font-family:monospace">${escHtml(d.field)}</td>
+            <td class="before">${escHtml(JSON.stringify(d.before))}</td>
+            <td class="after">${escHtml(JSON.stringify(d.after))}</td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`
+    : p.after
+      ? `<pre style="margin-top:1rem;font-size:.8rem;overflow:auto;background:#f3f1ec;padding:1rem;border-radius:4px">${escHtml(JSON.stringify(p.after, null, 2))}</pre>`
+      : "";
+
+  return `
+  <div class="card${highlighted ? " card-highlight" : ""}">
+    <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+      <span class="label ${escHtml(actionClass[p.action] ?? "label-update")}">${escHtml(actionLabel[p.action] ?? p.action)}</span>
+      <strong>${escHtml(p.collection)}${p.id != null ? ` <span style="color:#6b7280">#${escHtml(String(p.id))}</span>` : ""}</strong>
+      <div style="margin-left:auto;display:flex;gap:.5rem">
+        <button class="btn btn-confirm btn-sm" data-confirm="${escHtml(p.preview_token)}">✓ Übernehmen</button>
+        <button class="btn btn-discard btn-sm" data-discard="${escHtml(p.preview_token)}">✗ Verwerfen</button>
+      </div>
+    </div>
+    ${diffRows}
+    <div class="status" id="s-${escHtml(p.preview_token)}" style="display:none;margin-top:.75rem"></div>
+  </div>`;
+}
+
+function buildReviewPage(focusToken: string, allPreviews: StoredPreview[]): string {
+  const found = allPreviews.length > 0;
+  const hasMany = allPreviews.length > 1;
+
+  const cards = found
+    ? allPreviews.map((p) => renderEntryCard(p, p.preview_token === focusToken)).join("")
+    : `<div class="card"><p style="color:#6b7280">Vorschau nicht gefunden oder abgelaufen.</p></div>`;
+
+  const bulkBar = hasMany ? `
+  <div class="card" style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">
+    <strong style="font-size:.9rem">${allPreviews.length} Änderungen gesamt</strong>
+    <div style="margin-left:auto;display:flex;gap:.5rem">
+      <button class="btn btn-confirm" id="confirm-all">✓ Alle übernehmen</button>
+      <button class="btn btn-discard" id="discard-all">✗ Alle verwerfen</button>
+    </div>
+    <div class="status" id="s-all" style="display:none;width:100%"></div>
+  </div>` : "";
+
+  return `<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Vorschau überprüfen</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#f9f7f4;color:#1a1816;padding:2rem;max-width:920px;margin:0 auto}
+    h1{font-size:1.25rem;font-weight:700;margin-bottom:.25rem}
+    .meta{color:#6b7280;font-size:.8rem;margin-bottom:1.5rem}
+    .card{background:#fff;border:1px solid #e5e1da;border-radius:6px;padding:1.25rem 1.5rem;margin-bottom:1rem;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    .card-highlight{border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.15)}
+    .label{display:inline-block;padding:.2rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+    .label-create{background:#dcfce7;color:#16a34a}
+    .label-update{background:#fef9c3;color:#ca8a04}
+    .label-delete{background:#fee2e2;color:#dc2626}
+    table{width:100%;border-collapse:collapse;font-size:.85rem}
+    th{text-align:left;padding:.5rem .75rem;background:#f3f1ec;font-weight:600;border:1px solid #e5e1da}
+    td{padding:.5rem .75rem;border:1px solid #e5e1da;vertical-align:top}
+    .before{color:#dc2626;text-decoration:line-through;background:#fef2f2;font-family:monospace}
+    .after{color:#16a34a;background:#f0fdf4;font-weight:600;font-family:monospace}
+    .btn{display:inline-flex;align-items:center;padding:.55rem 1.1rem;border-radius:4px;font-weight:600;font-size:.875rem;cursor:pointer;border:none;text-decoration:none;transition:opacity 150ms}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .btn-sm{padding:.3rem .75rem;font-size:.8rem}
+    .btn-confirm{background:#16a34a;color:#fff}.btn-confirm:hover:not(:disabled){background:#15803d}
+    .btn-discard{background:#dc2626;color:#fff}.btn-discard:hover:not(:disabled){background:#b91c1c}
+    .btn-preview{background:#1a1816;color:#fff}.btn-preview:hover{background:#374151}
+    .status{padding:.6rem .9rem;border-radius:4px;font-weight:600;font-size:.85rem}
+    .ok{background:#dcfce7;color:#16a34a}
+    .err{background:#fee2e2;color:#dc2626}
+    a.btn{display:inline-flex}
+  </style>
+</head>
+<body>
+  <div style="display:flex;align-items:baseline;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+    <h1>Vorschau überprüfen</h1>
+    <a href="${escHtml(PREVIEW_WEBSITE_URL)}" class="btn btn-preview" target="_blank" style="font-size:.8rem;padding:.35rem .9rem">Live-Vorschau ↗</a>
+  </div>
+  ${bulkBar}
+  ${cards}
+  <script>
+    async function act(url, method, statusId, okMsg) {
+      const el = document.getElementById(statusId);
+      const r = await fetch(url, { method });
+      if (el) {
+        el.style.display = 'block';
+        el.className = 'status ' + (r.ok ? 'ok' : 'err');
+        el.textContent = r.ok ? okMsg : 'Fehler (' + r.status + ')';
+      }
+    }
+
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-confirm],button[data-discard],#confirm-all,#discard-all');
+      if (!btn || btn.disabled) return;
+      btn.disabled = true;
+
+      if (btn.id === 'confirm-all') {
+        const tokens = ${JSON.stringify(allPreviews.map((p) => p.preview_token))};
+        await Promise.all(tokens.map(t => fetch('/confirm/' + t, { method: 'POST' })));
+        const el = document.getElementById('s-all');
+        if (el) { el.style.display='block'; el.className='status ok'; el.textContent='✓ Alle Änderungen übernommen.'; }
+      } else if (btn.id === 'discard-all') {
+        const tokens = ${JSON.stringify(allPreviews.map((p) => p.preview_token))};
+        await Promise.all(tokens.map(t => fetch('/preview/' + t, { method: 'DELETE' })));
+        const el = document.getElementById('s-all');
+        if (el) { el.style.display='block'; el.className='status ok'; el.textContent='✗ Alle Änderungen verworfen.'; }
+      } else if (btn.dataset.confirm) {
+        await act('/confirm/' + btn.dataset.confirm, 'POST', 's-' + btn.dataset.confirm, '✓ Übernommen und gespeichert.');
+      } else if (btn.dataset.discard) {
+        await act('/preview/' + btn.dataset.discard, 'DELETE', 's-' + btn.dataset.discard, '✗ Verworfen.');
+      }
+    });
+  </script>
+</body>
+</html>`;
+}
+
+// ── Preview banner injection ──────────────────────────────────────────────────
+//
+// The banner is injected by the MCP proxy into every HTML page it serves.
+// The website code has zero knowledge of this banner.
+//
+// Highlighting uses a position:fixed floating bar (not position:absolute) so it
+// works even when the annotated element has overflow:hidden (events cards, faq).
+//
+// Navigation guard: Astro ViewTransitions re-executes body scripts on every
+// navigation. window.__pbLoaded ensures full init runs only once; astro:page-load
+// re-queries DOM refs and re-applies highlights after each swap.
+
+function buildBannerInjection(mcpUrl: string): string {
+  const mcp = JSON.stringify(mcpUrl);
+  return `<style>
+#pb-root{position:fixed;bottom:0;left:0;right:0;z-index:9999;box-shadow:0 -4px 24px rgba(0,0,0,.12)}
+#pb-float{position:fixed;z-index:9998;display:none;align-items:center;gap:4px;background:rgba(15,15,15,.9);border-radius:6px;padding:4px 6px;box-shadow:0 2px 10px rgba(0,0,0,.45);pointer-events:auto}
+.pb-fl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.6);padding:0 4px;white-space:nowrap}
+.pb-fb{border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700;color:#fff;white-space:nowrap;line-height:1.4}
+.pb-fb:hover{opacity:.82}.pb-fc{background:#16a34a}.pb-fd{background:#dc2626}
+</style>
+<div id="pb-root"></div>
+<div id="pb-float"><span class="pb-fl" id="pb-fl"></span><button class="pb-fb pb-fc" id="pb-fc">✓ Übernehmen</button><button class="pb-fb pb-fd" id="pb-fd">✗ Verwerfen</button></div>
+<script>
+(function(){
+  if(window.__pbLoaded)return;
+  window.__pbLoaded=true;
+
+  var MCP=${mcp};
+  var previews=[],open=false,bound=false,hlBound=false,curToken=null;
+  var pbFloat,pbFl,pbFc,pbFd;
+
+  var ACT={create:'Neu',update:'Änderung',update_singleton:'Aktualisierung',delete:'Löschung'};
+  var COL={create:{bg:'#dcfce7',fg:'#16a34a'},update:{bg:'#fef9c3',fg:'#92400e'},update_singleton:{bg:'#dbeafe',fg:'#1e40af'},delete:{bg:'#fee2e2',fg:'#dc2626'}};
+  var BRD={create:'#16a34a',update:'#d97706',update_singleton:'#2563eb',delete:'#dc2626'};
+
+  /* ---- DOM refs ---- */
+  function getDom(){
+    pbFloat=document.getElementById('pb-float');
+    pbFl=document.getElementById('pb-fl');
+    pbFc=document.getElementById('pb-fc');
+    pbFd=document.getElementById('pb-fd');
+    if(pbFc)pbFc.onclick=async function(){
+      if(!curToken)return;
+      pbFc.disabled=true;
+      await fetch(MCP+'/confirm/'+curToken,{method:'POST'}).catch(Object);
+      pbFc.disabled=false;
+      hideFloat();load();
+    };
+    if(pbFd)pbFd.onclick=async function(){
+      if(!curToken)return;
+      pbFd.disabled=true;
+      await fetch(MCP+'/preview/'+curToken,{method:'DELETE'}).catch(Object);
+      pbFd.disabled=false;
+      hideFloat();load();
+    };
+  }
+
+  /* ---- Floating action bar ---- */
+  function showFloat(el,token,action){
+    if(!pbFloat||!pbFl)return;
+    curToken=token;
+    pbFl.textContent=ACT[action]||action;
+    var r=el.getBoundingClientRect();
+    pbFloat.style.top=Math.max(4,r.top+4)+'px';
+    pbFloat.style.right=Math.max(4,window.innerWidth-r.right+4)+'px';
+    pbFloat.style.left='auto';
+    pbFloat.style.display='flex';
+  }
+  function hideFloat(){if(pbFloat)pbFloat.style.display='none';curToken=null;}
+
+  /* ---- Highlights ---- */
+  function clearHighlights(){
+    document.querySelectorAll('.pb-hl').forEach(function(el){
+      el.classList.remove('pb-hl');
+      el.style.removeProperty('outline');el.style.removeProperty('outline-offset');
+      delete el.dataset.pbToken;delete el.dataset.pbAction;
+    });
+  }
+
+  function applyHighlights(){
+    clearHighlights();
+    if(!previews.length){hideFloat();return;}
+    previews.forEach(function(p){
+      if(p.id==null)return;
+      var el=document.querySelector('[data-preview-collection="'+p.collection+'"][data-preview-id="'+p.id+'"]');
+      if(!el)return;
+      el.classList.add('pb-hl');
+      el.dataset.pbToken=p.preview_token;
+      el.dataset.pbAction=p.action;
+      el.style.outline='3px solid '+(BRD[p.action]||BRD.update);
+      el.style.outlineOffset='3px';
+    });
+    if(hlBound)return;
+    hlBound=true;
+    document.addEventListener('mouseover',function(e){
+      var el=e.target&&e.target.closest&&e.target.closest('.pb-hl');
+      if(el)showFloat(el,el.dataset.pbToken,el.dataset.pbAction);
+    });
+    document.addEventListener('mouseout',function(e){
+      var rt=e.relatedTarget;
+      if(rt&&rt.closest&&(rt.closest('.pb-hl')||(pbFloat&&(rt===pbFloat||pbFloat.contains(rt)))))return;
+      hideFloat();
+    });
+    if(pbFloat)pbFloat.addEventListener('mouseout',function(e){
+      var rt=e.relatedTarget;
+      if(rt&&(rt.closest&&rt.closest('.pb-hl')||pbFloat.contains(rt)))return;
+      hideFloat();
+    });
+  }
+
+  /* ---- Bottom banner ---- */
+  function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function diffText(p){
+    if(p.diff&&p.diff.length)return p.diff.map(function(d){return d.field+': '+JSON.stringify(d.before)+' → '+JSON.stringify(d.after);}).join(' · ');
+    return p.after?JSON.stringify(p.after).slice(0,120):'';
+  }
+  function badge(p){var c=COL[p.action]||COL.update;return'<span style="background:'+c.bg+';color:'+c.fg+';padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;text-transform:uppercase;white-space:nowrap">'+(ACT[p.action]||p.action)+'</span>';}
+
+  function buildHTML(){
+    var n=previews.length,lbl=n===1?'1 Änderung':n+' Änderungen';
+    var rows=open?'<div style="background:#fffbeb;border-top:2px solid #fcd34d;max-height:280px;overflow-y:auto">'
+      +previews.map(function(p){return'<div style="display:flex;align-items:center;gap:10px;padding:9px 20px;border-bottom:1px solid #fef3c7;font-size:13px;flex-wrap:wrap">'
+        +badge(p)+'<span style="font-weight:600;color:#1a1816;white-space:nowrap">'+escH(p.collection)+(p.id!=null?' #'+escH(String(p.id)):'')+'</span>'
+        +'<span style="color:#6b7280;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">'+escH(diffText(p))+'</span>'
+        +'<button data-pb="confirm-one" data-token="'+escH(p.preview_token)+'" style="padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600">✓ Übernehmen</button>'
+        +'<button data-pb="discard-one" data-token="'+escH(p.preview_token)+'" style="padding:3px 10px;background:#dc2626;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600">✗ Verwerfen</button>'
+        +'</div>';}).join('')+'</div>':'';
+    return'<style>@keyframes pb-p{0%,100%{opacity:1}50%{opacity:.35}}</style>'+rows
+      +'<div style="background:#fbbf24;border-top:2px solid #f59e0b;padding:8px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      +'<span style="display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:13px;color:#78350f">'
+      +'<span style="width:8px;height:8px;border-radius:50%;background:#92400e;animation:pb-p 1.5s ease-in-out infinite;flex-shrink:0"></span>'
+      +'Vorschau — '+escH(lbl)+' staged</span>'
+      +'<button data-pb="toggle" style="padding:4px 10px;background:transparent;border:1px solid rgba(120,53,15,.4);border-radius:99px;cursor:pointer;font-size:12px;font-weight:600;color:#78350f">'+(open?'Schließen':'Details anzeigen')+'</button>'
+      +'<div style="margin-left:auto;display:flex;gap:8px">'
+      +'<button data-pb="confirm-all" style="padding:5px 14px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600">✓ Alle übernehmen</button>'
+      +'<button data-pb="discard-all" style="padding:5px 14px;background:#dc2626;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600">✗ Alle verwerfen</button>'
+      +'</div></div>';
+  }
+
+  async function onBannerClick(e){
+    var btn=e.target.closest('[data-pb]');
+    if(!btn||btn.disabled)return;
+    btn.disabled=true;
+    var a=btn.dataset.pb,t=btn.dataset.token;
+    if(a==='toggle'){open=!open;render();return;}
+    if(a==='confirm-all')await Promise.all(previews.map(function(p){return fetch(MCP+'/confirm/'+p.preview_token,{method:'POST'}).catch(Object);}));
+    else if(a==='discard-all')await Promise.all(previews.map(function(p){return fetch(MCP+'/preview/'+p.preview_token,{method:'DELETE'}).catch(Object);}));
+    else if(a==='confirm-one')await fetch(MCP+'/confirm/'+t,{method:'POST'}).catch(Object);
+    else if(a==='discard-one')await fetch(MCP+'/preview/'+t,{method:'DELETE'}).catch(Object);
+    if(a==='confirm-all'||a==='discard-all')open=false;
+    load();
+  }
+
+  function render(){
+    var root=document.getElementById('pb-root');if(!root)return;
+    if(!previews.length){root.innerHTML='';document.body.style.paddingBottom='';hideFloat();return;}
+    root.innerHTML=buildHTML();
+    document.body.style.paddingBottom='52px';
+    if(!bound){root.addEventListener('click',onBannerClick);bound=true;}
+  }
+
+  async function load(){
+    try{var r=await fetch(MCP+'/previews');previews=r.ok?await r.json():[];}catch(e){previews=[];}
+    render();applyHighlights();
+  }
+
+  /* ---- Init & navigation ---- */
+  getDom();
+  load();
+
+  // Re-query DOM refs after each Astro ViewTransitions swap and reload data.
+  // hlBound stays true across navigations — the delegated listeners on document
+  // persist and still work after the body swap.
+  document.addEventListener('astro:page-load',function(){
+    bound=false;
+    getDom();
+    load();
+  });
+})();
+</script>`;
+}
+
+function injectBanner(html: string, mcpUrl: string): string {
+  const injection = buildBannerInjection(mcpUrl);
+  const idx = html.lastIndexOf("</body>");
+  if (idx === -1) return html + injection;
+  return html.slice(0, idx) + injection + html.slice(idx);
 }
 
 // ── Tool definitions ──────────────────────────────────────────────────────────
@@ -158,11 +559,54 @@ const TOOLS: Tool[] = [
     },
   },
 
-  // Write
+  // Write (all write tools always stage a preview — nothing is written until the user confirms via the review link)
+  {
+    name: "confirm_preview",
+    description:
+      "Apply a staged change to Directus. Call this only after the user has explicitly confirmed they want to apply the change. Pass the preview_token from the staging tool response. Returns a success message when the change has been written.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        token: { type: "string", description: "The preview_token returned by create_item, update_item, update_items, update_singleton, or delete_item." },
+      },
+      required: ["token"],
+    },
+  },
+  {
+    name: "discard_preview",
+    description:
+      "Discard a staged change without writing anything. Call this when the user wants to cancel the pending change. Pass the preview_token from the staging tool response.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        token: { type: "string", description: "The preview_token returned by the staging tool." },
+      },
+      required: ["token"],
+    },
+  },
+  {
+    name: "list_previews",
+    description:
+      "List all currently staged (unconfirmed) changes. Use this to show the user what is pending before a bulk confirm or discard.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "confirm_all_previews",
+    description:
+      "Confirm and apply every staged change at once. Call this only after the user has explicitly approved applying all pending changes.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "discard_all_previews",
+    description:
+      "Discard every staged change without writing anything. Nothing is written to Directus.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+  },
+
   {
     name: "create_item",
     description:
-      "Create a new item in a collection. Set dry_run=true to preview what would be created and get a preview URL before writing.",
+      "Stage a new item for creation. If you need to create multiple items, call this tool for each one before presenting anything to the user. Nothing is written until confirmed.",
     inputSchema: {
       type: "object",
       properties: {
@@ -171,10 +615,6 @@ const TOOLS: Tool[] = [
           type: "object",
           description: "Item data as key-value pairs matching the collection's fields",
         },
-        dry_run: {
-          type: "boolean",
-          description: "If true, store a preview and return a preview_url without writing anything",
-        },
       },
       required: ["collection", "data"],
     },
@@ -182,7 +622,7 @@ const TOOLS: Tool[] = [
   {
     name: "update_item",
     description:
-      "Update one or more fields of an existing item by primary key. Set dry_run=true to get a before/after diff and a preview URL before writing.",
+      "Stage an update to an existing item. If you need to update multiple items, call this tool for each one before presenting anything to the user. Nothing is written until confirmed.",
     inputSchema: {
       type: "object",
       properties: {
@@ -192,10 +632,6 @@ const TOOLS: Tool[] = [
           type: "object",
           description: "Fields to update as key-value pairs (partial update)",
         },
-        dry_run: {
-          type: "boolean",
-          description: "If true, return a before/after diff and preview_url without writing",
-        },
       },
       required: ["collection", "id", "data"],
     },
@@ -203,7 +639,7 @@ const TOOLS: Tool[] = [
   {
     name: "update_items",
     description:
-      "Bulk-update multiple items in a collection in one request. Provide the list of IDs and the fields to change. Use this instead of calling update_item in a loop.",
+      "Stage a bulk update for multiple items in a collection. Returns a preview_token for in-chat confirmation and a preview_url for visual inspection. Nothing is written until confirm_preview is called. Use this instead of calling update_item in a loop.",
     inputSchema: {
       type: "object",
       properties: {
@@ -224,7 +660,7 @@ const TOOLS: Tool[] = [
   {
     name: "update_singleton",
     description:
-      "Update fields of a singleton collection (e.g. 'site_settings', 'hero', 'about'). Set dry_run=true to get a diff and preview URL before writing.",
+      "Stage an update to a singleton collection (e.g. 'site_settings', 'hero', 'about'). Returns a before/after diff, a preview_token for in-chat confirmation, and a preview_url for visual inspection. Nothing is written until confirm_preview is called.",
     inputSchema: {
       type: "object",
       properties: {
@@ -233,10 +669,6 @@ const TOOLS: Tool[] = [
           type: "object",
           description: "Fields to update as key-value pairs",
         },
-        dry_run: {
-          type: "boolean",
-          description: "If true, return a before/after diff and preview_url without writing",
-        },
       },
       required: ["collection", "data"],
     },
@@ -244,16 +676,12 @@ const TOOLS: Tool[] = [
   {
     name: "delete_item",
     description:
-      "Permanently delete an item by primary key. Set dry_run=true to preview what would be deleted and get a preview URL.",
+      "Stage a deletion. If you need to delete multiple items, call this tool for each one before presenting anything to the user. Nothing is deleted until confirmed.",
     inputSchema: {
       type: "object",
       properties: {
         collection: { type: "string", description: "Collection name" },
         id: { description: ITEM_PK_DESCRIPTION },
-        dry_run: {
-          type: "boolean",
-          description: "If true, return the item that would be deleted and a preview_url without deleting",
-        },
       },
       required: ["collection", "id"],
     },
@@ -264,6 +692,10 @@ const TOOLS: Tool[] = [
 
 function ok(data: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+}
+
+function text(s: string) {
+  return { content: [{ type: "text" as const, text: s }] };
 }
 
 function err(message: string) {
@@ -330,85 +762,138 @@ function makeServer(client: DirectusClient): Server {
         // ── Write ────────────────────────────────────────────────────────────
 
         case "create_item": {
-          const { collection, data, dry_run = false } = args as {
+          const { collection, data } = args as {
             collection: string;
             data: Record<string, unknown>;
-            dry_run?: boolean;
           };
-          if (dry_run) {
-            const entry: PreviewEntry = { action: "create", collection, after: data, data };
-            const token = storePreview(entry);
-            return ok(buildPreviewResponse(token, entry));
-          }
-          return ok(await client.createItem(collection, data));
+          const entry: PreviewEntry = { action: "create", collection, after: data, data };
+          const token = storePreview(entry);
+          return text(buildPreviewResponse(token, entry));
         }
 
         case "update_item": {
-          const { collection, id, data, dry_run = false } = args as {
+          const { collection, id, data } = args as {
             collection: string;
             id: string | number;
             data: Record<string, unknown>;
-            dry_run?: boolean;
           };
-          if (dry_run) {
-            const res = await client.readItem(collection, id) as { data: Record<string, unknown> };
-            const before = res.data;
-            const after = { ...before, ...data };
-            const entry: PreviewEntry = {
-              action: "update", collection, id,
-              before, after, diff: computeDiff(before, data), data,
-            };
-            const token = storePreview(entry);
-            return ok(buildPreviewResponse(token, entry));
-          }
-          return ok(await client.updateItem(collection, id, data));
+          const res = await client.readItem(collection, id) as { data: Record<string, unknown> };
+          const before = res.data;
+          const after = { ...before, ...data };
+          const entry: PreviewEntry = {
+            action: "update", collection, id,
+            before, after, diff: computeDiff(before, data), data,
+          };
+          const token = storePreview(entry);
+          return text(buildPreviewResponse(token, entry));
         }
 
         case "update_items": {
-          const { collection, ids, data } = args as {
+          const { collection, data } = args as {
             collection: string;
-            ids: (string | number)[];
             data: Record<string, unknown>;
           };
-          return ok(await client.updateItems(collection, ids, data));
+          const rawIds = (args as { ids: unknown }).ids;
+          const ids: (string | number)[] = Array.isArray(rawIds)
+            ? rawIds as (string | number)[]
+            : typeof rawIds === "string"
+              ? rawIds.split(",").map((s) => s.trim()).filter(Boolean)
+              : typeof rawIds === "number"
+                ? [rawIds]
+                : [];
+          const entry: PreviewEntry = {
+            action: "update", collection, after: data, data,
+            before: Object.fromEntries(ids.map((id) => [id, {}])),
+          };
+          const token = storePreview(entry);
+          return text(buildPreviewResponse(token, entry));
         }
 
         case "update_singleton": {
-          const { collection, data, dry_run = false } = args as {
+          const { collection, data } = args as {
             collection: string;
             data: Record<string, unknown>;
-            dry_run?: boolean;
           };
-          if (dry_run) {
-            const res = await client.readSingleton(collection) as { data: Record<string, unknown> };
-            const before = res.data;
-            const after = { ...before, ...data };
-            const entry: PreviewEntry = {
-              action: "update_singleton", collection,
-              before, after, diff: computeDiff(before, data), data,
-            };
-            const token = storePreview(entry);
-            return ok(buildPreviewResponse(token, entry));
-          }
-          return ok(await client.updateSingleton(collection, data));
+          const res = await client.readSingleton(collection) as { data: Record<string, unknown> };
+          const before = res.data;
+          const after = { ...before, ...data };
+          const entry: PreviewEntry = {
+            action: "update_singleton", collection,
+            before, after, diff: computeDiff(before, data), data,
+          };
+          const token = storePreview(entry);
+          return text(buildPreviewResponse(token, entry));
         }
 
         case "delete_item": {
-          const { collection, id, dry_run = false } = args as {
+          const { collection, id } = args as {
             collection: string;
             id: string | number;
-            dry_run?: boolean;
           };
-          if (dry_run) {
-            const res = await client.readItem(collection, id) as { data: Record<string, unknown> };
-            const entry: PreviewEntry = {
-              action: "delete", collection, id, before: res.data,
-            };
-            const token = storePreview(entry);
-            return ok(buildPreviewResponse(token, entry));
+          const res = await client.readItem(collection, id) as { data: Record<string, unknown> };
+          const entry: PreviewEntry = {
+            action: "delete", collection, id, before: res.data,
+          };
+          const token = storePreview(entry);
+          return text(buildPreviewResponse(token, entry));
+        }
+
+        case "confirm_preview": {
+          const { token } = args as { token: string };
+          const stored = previewStore.get(token);
+          if (!stored) return err("Preview not found — it may have already been confirmed, discarded, or expired.");
+          const { entry } = stored;
+          clearTimeout(stored.timer);
+          previewStore.delete(token);
+          switch (entry.action) {
+            case "create":           await client.createItem(entry.collection, entry.data!); break;
+            case "update":           await client.updateItem(entry.collection, entry.id!, entry.data!); break;
+            case "update_singleton": await client.updateSingleton(entry.collection, entry.data!); break;
+            case "delete":           await client.deleteItem(entry.collection, entry.id!); break;
           }
-          await client.deleteItem(collection, id);
-          return ok({ success: true, deleted: { collection, id } });
+          return text(`✓ Done. ${entry.action} on ${entry.collection}${entry.id != null ? ` #${entry.id}` : ""} has been written to Directus.`);
+        }
+
+        case "discard_preview": {
+          const { token } = args as { token: string };
+          const stored = previewStore.get(token);
+          if (!stored) return err("Preview not found — it may have already been confirmed, discarded, or expired.");
+          clearTimeout(stored.timer);
+          previewStore.delete(token);
+          return text(`✗ Discarded. Nothing was written to Directus.`);
+        }
+
+        case "list_previews": {
+          if (previewStore.size === 0) return text("No staged changes.");
+          const lines = Array.from(previewStore.entries()).map(([token, { entry }]) => {
+            const diff = entry.diff?.map((d) => `${d.field}: ${JSON.stringify(d.before)} → ${JSON.stringify(d.after)}`).join(", ") ?? "";
+            return `- [${entry.action}] ${entry.collection}${entry.id != null ? ` #${entry.id}` : ""}${diff ? `  (${diff})` : ""}  token: ${token}`;
+          });
+          return text(`Staged changes (${previewStore.size}):\n${lines.join("\n")}`);
+        }
+
+        case "confirm_all_previews": {
+          const entries = Array.from(previewStore.entries());
+          if (!entries.length) return text("No staged changes to confirm.");
+          for (const [token, { entry, timer }] of entries) {
+            clearTimeout(timer);
+            previewStore.delete(token);
+            switch (entry.action) {
+              case "create":           await client.createItem(entry.collection, entry.data!); break;
+              case "update":           await client.updateItem(entry.collection, entry.id!, entry.data!); break;
+              case "update_singleton": await client.updateSingleton(entry.collection, entry.data!); break;
+              case "delete":           await client.deleteItem(entry.collection, entry.id!); break;
+            }
+          }
+          return text(`✓ All ${entries.length} change(s) confirmed and written to Directus.`);
+        }
+
+        case "discard_all_previews": {
+          const count = previewStore.size;
+          if (!count) return text("No staged changes to discard.");
+          for (const { timer } of previewStore.values()) clearTimeout(timer);
+          previewStore.clear();
+          return text(`✗ All ${count} staged change(s) discarded. Nothing was written to Directus.`);
         }
 
         default:
@@ -462,6 +947,17 @@ httpServer.on("request", (req, res) => {
       res.on("close", () => transport.close().catch(() => {}));
       await server.connect(transport);
       await transport.handleRequest(req, res, body);
+      return;
+    }
+
+    // ── GET /previews ─────────────────────────────────────────────────────────
+    if (method === "GET" && path === "/previews") {
+      const entries = Array.from(previewStore.entries()).map(([token, { entry }]) => ({
+        ...entry,
+        preview_token: token,
+      }));
+      res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
+        .end(JSON.stringify(entries));
       return;
     }
 
@@ -527,6 +1023,65 @@ httpServer.on("request", (req, res) => {
       return;
     }
 
+    // ── GET /review/:token ────────────────────────────────────────────────────
+    if (method === "GET" && path.startsWith("/review/")) {
+      const token = path.slice("/review/".length);
+      const allPreviews = Array.from(previewStore.entries()).map(([t, { entry }]) => ({
+        ...entry,
+        preview_token: t,
+      }));
+      const html = buildReviewPage(token, allPreviews);
+      res.writeHead(previewStore.has(token) ? 200 : 404, { "Content-Type": "text/html; charset=utf-8" })
+        .end(html);
+      return;
+    }
+
+    // ── /directus-proxy/* ─────────────────────────────────────────────────────
+    if (path.startsWith("/directus-proxy")) {
+      const directusPath = path.slice("/directus-proxy".length) || "/";
+      const directusUrl = `${DIRECTUS_UPSTREAM}${directusPath}${url.search || ""}`;
+
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve, reject) => {
+        req.on("data", (chunk: Buffer) => chunks.push(chunk));
+        req.on("end", resolve);
+        req.on("error", reject);
+      });
+      const reqBody = chunks.length ? Buffer.concat(chunks) : undefined;
+
+      const forwardHeaders: Record<string, string> = {};
+      const auth = req.headers["authorization"];
+      if (auth) forwardHeaders["Authorization"] = Array.isArray(auth) ? auth[0]! : auth;
+      const ct = req.headers["content-type"];
+      if (ct) forwardHeaders["Content-Type"] = Array.isArray(ct) ? ct[0]! : ct;
+
+      const upstream = await fetch(directusUrl, {
+        method,
+        headers: forwardHeaders,
+        body: reqBody?.length ? reqBody : undefined,
+      });
+
+      // Intercept GET /items/:collection and apply staged previews
+      const itemsMatch = /^\/items\/([^/]+)(?:\/[^/]+)?$/.exec(directusPath);
+      if (method === "GET" && itemsMatch && upstream.ok) {
+        const collection = itemsMatch[1]!;
+        const body = await upstream.json() as unknown;
+        const modified = applyPreviewsToResponse(body, collection);
+        res.writeHead(upstream.status, { "Content-Type": "application/json", ...CORS_HEADERS })
+          .end(JSON.stringify(modified));
+        return;
+      }
+
+      // Pass everything else through unchanged
+      const resContentType = upstream.headers.get("content-type") ?? "application/octet-stream";
+      const resBody = Buffer.from(await upstream.arrayBuffer());
+      const cacheControl = upstream.headers.get("cache-control");
+      const extraHeaders: Record<string, string> = { "Content-Type": resContentType, ...CORS_HEADERS };
+      if (cacheControl) extraHeaders["Cache-Control"] = cacheControl;
+      res.writeHead(upstream.status, extraHeaders).end(resBody);
+      return;
+    }
+
     res.writeHead(404, { "Content-Type": "application/json" })
       .end(JSON.stringify({ error: "Not found" }));
   })().catch((e: unknown) => {
@@ -537,4 +1092,66 @@ httpServer.on("request", (req, res) => {
 
 httpServer.listen(PORT, () => {
   process.stderr.write(`directus-mcp listening on http://0.0.0.0:${PORT}/mcp\n`);
+});
+
+// ── Preview proxy server ──────────────────────────────────────────────────────
+// Proxies the Astro website-preview instance and injects the banner into HTML.
+// This keeps all preview UI logic out of the website codebase.
+
+const previewProxyServer = http.createServer();
+
+previewProxyServer.on("request", (req, res) => {
+  void (async () => {
+    const url = new URL(req.url ?? "/", `http://localhost:${PREVIEW_PROXY_PORT}`);
+    const method = req.method ?? "GET";
+
+    if (method === "OPTIONS") {
+      res.writeHead(204, CORS_HEADERS).end();
+      return;
+    }
+
+    const targetUrl = `${PREVIEW_WEBSITE_INTERNAL_URL}${url.pathname}${url.search || ""}`;
+
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("end", resolve);
+      req.on("error", reject);
+    });
+    const reqBody = chunks.length ? Buffer.concat(chunks) : undefined;
+
+    const forwardHeaders: Record<string, string> = {};
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (["host", "connection", "transfer-encoding"].includes(key.toLowerCase())) continue;
+      forwardHeaders[key] = Array.isArray(value) ? value[0]! : (value ?? "");
+    }
+
+    const upstream = await fetch(targetUrl, {
+      method,
+      headers: forwardHeaders,
+      body: reqBody?.length ? reqBody : undefined,
+    });
+
+    const contentType = upstream.headers.get("content-type") ?? "";
+
+    if (method === "GET" && contentType.includes("text/html") && upstream.ok) {
+      const html = injectBanner(await upstream.text(), MCP_PUBLIC_URL);
+      res.writeHead(upstream.status, { "Content-Type": "text/html; charset=utf-8" }).end(html);
+      return;
+    }
+
+    const resBody = Buffer.from(await upstream.arrayBuffer());
+    const outHeaders: Record<string, string> = { "Content-Type": contentType };
+    const cacheControl = upstream.headers.get("cache-control");
+    if (cacheControl) outHeaders["Cache-Control"] = cacheControl;
+    res.writeHead(upstream.status, outHeaders).end(resBody);
+  })().catch((e: unknown) => {
+    const msg = e instanceof Error ? e.message : String(e);
+    process.stderr.write(`Preview proxy error: ${msg}\n`);
+    if (!res.headersSent) res.writeHead(502).end(`Preview proxy error: ${msg}`);
+  });
+});
+
+previewProxyServer.listen(PREVIEW_PROXY_PORT, () => {
+  process.stderr.write(`preview-proxy listening on http://0.0.0.0:${PREVIEW_PROXY_PORT}/\n`);
 });

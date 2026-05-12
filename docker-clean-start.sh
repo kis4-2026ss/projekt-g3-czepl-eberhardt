@@ -2,14 +2,13 @@
 set -e
 cd "$(dirname "$0")"
 
-# Volumes wiped on a normal clean restart (CMS data, uploads, chat profiles).
-WIPE="db_data directus_uploads chat_app_data"
+# Volumes wiped on a normal clean restart (CMS data and uploads).
+WIPE="db_data directus_uploads"
 
 # Volumes preserved by default — slow to rebuild and rarely the source of bugs:
-#   ollama_data            ~ 4–10 GB of pulled LLM weights
-#   website_node_modules   ~ Astro dev deps
-#   chat_app_node_modules  ~ chat-app deps (incl. compiled better-sqlite3)
-KEEP="ollama_data website_node_modules chat_app_node_modules"
+#   website_node_modules         ~ Astro deps for the main site
+#   website_preview_node_modules ~ Astro deps for the preview instance
+KEEP="website_node_modules website_preview_node_modules"
 
 FULL=0
 for arg in "$@"; do
@@ -19,7 +18,7 @@ for arg in "$@"; do
       echo "Usage: $0 [--full]"
       echo ""
       echo "  Resets the stack to a clean state and re-seeds Directus."
-      echo "  By default the Ollama model cache and node_modules volumes are preserved."
+      echo "  By default node_modules volumes are preserved."
       echo ""
       echo "  --full    Also wipe: $KEEP"
       exit 0 ;;
@@ -32,7 +31,7 @@ echo "Stopping containers..."
 docker compose down --remove-orphans
 
 if [ "$FULL" -eq 1 ]; then
-  echo "Full reset — wiping everything including the Ollama model cache."
+  echo "Full reset — wiping everything."
   WIPE="$WIPE $KEEP"
   KEEP=""
 fi
@@ -47,7 +46,7 @@ if [ -n "$KEEP" ]; then
 fi
 
 echo "Starting stack..."
-docker compose up -d database cache directus website mcp-server ollama chat-app
+docker compose up -d --build database cache directus website website-preview mcp-server
 
 echo "Waiting for Directus..."
 until curl -sf http://localhost:8055/server/health >/dev/null 2>&1; do sleep 2; done
@@ -58,7 +57,24 @@ docker compose run --rm seed
 
 echo ""
 echo "Done."
-echo "  Directus    → http://localhost:8055  (admin@gmail.at / admin)"
-echo "  Website     → http://localhost:4321"
-echo "  MCP Server  → http://localhost:3001/mcp"
-echo "  MCP Console → http://localhost:4322"
+echo "  Directus        → http://localhost:8055  (admin@gmail.at / admin)"
+echo "  Website         → http://localhost:4321"
+echo "  Website Preview → http://localhost:4323"
+echo "  MCP Server      → http://localhost:3001/mcp"
+echo "──────────────────────────────────────────────────────────────"
+echo "Claude Desktop setup"
+echo ""
+echo "Add to ~/Library/Application Support/Claude/claude_desktop_config.json"
+echo "(Windows: %APPDATA%\\Claude\\claude_desktop_config.json)"
+echo ""
+echo '  {'
+echo '    "mcpServers": {'
+echo '      "directus": {'
+echo '        "command": "npx",'
+echo '        "args": ["-y", "mcp-remote", "http://localhost:3001/mcp"]'
+echo '      }'
+echo '    }'
+echo '  }'
+echo ""
+echo "Then restart Claude Desktop."
+echo "──────────────────────────────────────────────────────────────"

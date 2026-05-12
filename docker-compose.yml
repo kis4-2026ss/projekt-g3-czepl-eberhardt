@@ -74,7 +74,24 @@ services:
       DIRECTUS_TOKEN: "adlerwirt-dev-token"
       ADMIN_EMAIL: "admin@gmail.at"
       ADMIN_PASSWORD: "admin"
-      MCP_SERVER_URL: "http://mcp-server:3001"
+    command: sh /app/docker-start.sh
+
+  website-preview:
+    image: node:22-alpine
+    container_name: adlerwirt-website-preview
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./website:/app
+      - website_preview_node_modules:/app/node_modules
+    depends_on:
+      - mcp-server
+    environment:
+      DIRECTUS_URL: "http://mcp-server:3001/directus-proxy"
+      PUBLIC_DIRECTUS_URL: "http://localhost:8055"
+      DIRECTUS_TOKEN: "adlerwirt-dev-token"
+      ADMIN_EMAIL: "admin@gmail.at"
+      ADMIN_PASSWORD: "admin"
     command: sh /app/docker-start.sh
 
   mcp-server:
@@ -83,6 +100,7 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
+      - "4322:4322"
     depends_on:
       - directus
     environment:
@@ -91,47 +109,10 @@ services:
       DIRECTUS_PASSWORD: "admin"
       PORT: "3001"
       WEBSITE_URL: "http://localhost:4321"
-
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-
-  chat-app:
-    image: node:22-alpine
-    container_name: mcp-console
-    restart: unless-stopped
-    working_dir: /app
-    volumes:
-      - ./chat-app:/app
-      - chat_app_node_modules:/app/node_modules
-      - chat_app_data:/app/data
-    ports:
-      - "4322:4322"
-    depends_on:
-      - mcp-server
-      - ollama
-    environment:
-      MCP_URL: "http://mcp-server:3001/mcp"
-      OLLAMA_HOST: "http://ollama:11434"
-      OLLAMA_MODEL: "llama3.1:8b"
-      CHAT_DB_PATH: "/app/data/chat.db"
-      # Seeded as the default profile on first run. Edit/remove from the UI later.
-      DEFAULT_PROFILE_NAME:   "Docker Directus"
-      DEFAULT_DIRECTUS_URL:   "http://directus:8055"
-      DEFAULT_DIRECTUS_TOKEN: "adlerwirt-dev-token"
-      HOST: "0.0.0.0"
-      PORT: "4322"
-    command: sh /app/docker-start.sh
+      PREVIEW_WEBSITE_URL: "http://localhost:4322"
+      PREVIEW_WEBSITE_INTERNAL_URL: "http://website-preview:4321"
+      PREVIEW_PROXY_PORT: "4322"
+      MCP_PUBLIC_URL: "http://localhost:3001"
 
   seed:
     image: python:3.12-alpine
@@ -157,6 +138,4 @@ volumes:
   db_data:
   directus_uploads:
   website_node_modules:
-  chat_app_node_modules:
-  chat_app_data:
-  ollama_data:
+  website_preview_node_modules:

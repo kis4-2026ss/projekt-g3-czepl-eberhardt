@@ -10,9 +10,29 @@ function looksLikeDirectusItemKey(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 }
 
-/** MCP / LLM callers often pass one comma-separated string instead of a JSON string array. */
+function assertValidId(id: string | number, collection: string): void {
+  if (typeof id === "number") return;
+  if (looksLikeDirectusItemKey(id)) return;
+  throw new Error(
+    `Invalid primary key "${id}" for collection "${collection}". ` +
+    `Primary keys must be a plain integer (e.g. 3) or a UUID. ` +
+    `Call read_items with a filter to find the real id first, ` +
+    `then pass data[0].id to this tool.`,
+  );
+}
+
+/** MCP / LLM callers often pass a comma-separated string or JSON-encoded array instead of a real array. */
 function coerceStringList(value: unknown): string[] | undefined {
   if (value == null) return undefined;
+  // LLMs sometimes pass '["id","name"]' as a JSON string — parse it first.
+  if (typeof value === "string" && value.trimStart().startsWith("[")) {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      if (Array.isArray(parsed)) return coerceStringList(parsed);
+    } catch {
+      // fall through to comma-split
+    }
+  }
   const out: string[] = [];
   if (Array.isArray(value)) {
     for (const v of value) {
@@ -179,7 +199,13 @@ export class DirectusClient {
     if (params.limit != null) q.set("limit", String(params.limit));
     if (params.offset != null) q.set("offset", String(params.offset));
     if (params.search) q.set("search", params.search);
-    if (params.filter) q.set("filter", JSON.stringify(params.filter));
+    if (params.filter) {
+      // LLMs sometimes pass the filter already JSON-encoded as a string.
+      const filterStr = typeof params.filter === "string"
+        ? params.filter
+        : JSON.stringify(params.filter);
+      q.set("filter", filterStr);
+    }
 
     const qs = q.toString();
     return this.request<unknown>(`/items/${collection}${qs ? `?${qs}` : ""}`);
@@ -190,6 +216,7 @@ export class DirectusClient {
     id: string | number,
     fields?: string[] | string,
   ): Promise<unknown> {
+    assertValidId(id, collection);
     const f = coerceStringList(fields);
     const qs = f?.length ? `?fields=${f.join(",")}` : "";
     return this.request<unknown>(`/items/${collection}/${id}${qs}`);
@@ -207,6 +234,7 @@ export class DirectusClient {
     id: string | number,
     data: Record<string, unknown>,
   ): Promise<unknown> {
+    assertValidId(id, collection);
     return this.request<unknown>(`/items/${collection}/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
@@ -225,6 +253,7 @@ export class DirectusClient {
   }
 
   async deleteItem(collection: string, id: string | number): Promise<void> {
+    assertValidId(id, collection);
     await this.request<void>(`/items/${collection}/${id}`, { method: "DELETE" });
   }
 

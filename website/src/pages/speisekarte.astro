@@ -2,18 +2,13 @@
 import Layout from '../layouts/Layout.astro';
 import PageHeader from '../components/PageHeader.astro';
 import { getMenuItems, getCategories, getPageHeader, getSpeisekarteCopy, getUiCopy } from '../lib/directus';
-import { applyPreviewList } from '../lib/preview';
-
-let [items, categories, header, copy, ui] = await Promise.all([
+const [items, categories, header, copy, ui] = await Promise.all([
   getMenuItems(),
   getCategories(),
   getPageHeader('speisekarte'),
   getSpeisekarteCopy(),
   getUiCopy(),
 ]);
-const { preview } = Astro.locals;
-items = applyPreviewList(items, preview, 'menu_items');
-categories = applyPreviewList(categories, preview, 'categories');
 
 const byCategory = categories.map(cat => ({
   ...cat,

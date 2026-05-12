@@ -5,18 +5,13 @@ import {
   getPageHeader, getSiteSettings, getOpeningHours,
   getKontaktCopy, getUiCopy,
 } from '../lib/directus';
-import { applyPreviewSingleton, applyPreviewList } from '../lib/preview';
-
-let [settings, hours, header, copy, ui] = await Promise.all([
+const [settings, hours, header, copy, ui] = await Promise.all([
   getSiteSettings(),
   getOpeningHours(),
   getPageHeader('kontakt'),
   getKontaktCopy(),
   getUiCopy(),
 ]);
-const { preview } = Astro.locals;
-settings = applyPreviewSingleton(settings, preview, 'site_settings');
-hours = applyPreviewList(hours, preview, 'opening_hours');
 
 function tmpl(s: string, vars: Record<string, string>) {
   return s.replace(/\{(\w+)\}/g, (_m, k) => vars[k] ?? '');

@@ -2,18 +2,14 @@
 import { ViewTransitions } from 'astro:transitions';
 import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
-import PreviewBanner from '../components/PreviewBanner.astro';
 import { getSiteSettings, getNavigation, getUiCopy } from '../lib/directus';
-import { applyPreviewSingleton } from '../lib/preview';
 
 interface Props {
   title?: string | undefined;
   description?: string | undefined;
 }
 
-let [settings, nav, ui] = await Promise.all([getSiteSettings(), getNavigation(), getUiCopy()]);
-const { preview, previewToken } = Astro.locals;
-settings = applyPreviewSingleton(settings, preview, 'site_settings');
+const [settings, nav, ui] = await Promise.all([getSiteSettings(), getNavigation(), getUiCopy()]);
 
 const { title = settings.site_name, description = settings.tagline } = Astro.props;
 const pageTitle = title === settings.site_name
@@ -43,28 +39,6 @@ const pageTitle = title === settings.site_name
       <slot />
     </main>
     <Footer settings={settings} nav={nav} ui={ui} />
-
-    {preview && previewToken && (
-      <PreviewBanner preview={preview} token={previewToken} />
-    )}
-
-    {previewToken && (
-      <script define:vars={{ previewToken }}>
-        function injectPreviewToken() {
-          document.querySelectorAll('a[href]').forEach(a => {
-            try {
-              const url = new URL(a.href);
-              if (url.origin === location.origin && !url.searchParams.has('preview_token')) {
-                url.searchParams.set('preview_token', previewToken);
-                a.href = url.toString();
-              }
-            } catch {}
-          });
-        }
-        injectPreviewToken();
-        document.addEventListener('astro:page-load', injectPreviewToken);
-      </script>
-    )}
 
     <style is:global>
       :root {
