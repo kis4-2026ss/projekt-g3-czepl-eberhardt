@@ -523,6 +523,9 @@ function buildBannerInjection(mcpUrl: string): string {
     if(!previews.length){hideFloat();return;}
     var totalMarked=0;
     previews.forEach(function(p){
+      // Don't try to mark elements that live on a different page.
+      if(p.preview_page&&p.preview_page!==location.pathname)return;
+
       // Pass 1: mark only actually-changed text (from diff string fields)
       var texts=changedCandidates(p);
       var hitsThisPreview=0;
@@ -604,12 +607,18 @@ function buildBannerInjection(mcpUrl: string): string {
         +'</span>'
       :'';
     var rows=open?'<div style="background:#fffbeb;border-top:2px solid #fcd34d;max-height:280px;overflow-y:auto">'
-      +previews.map(function(p){return'<div style="display:flex;align-items:center;gap:10px;padding:9px 20px;border-bottom:1px solid #fef3c7;font-size:13px;flex-wrap:wrap">'
-        +badge(p)+'<span style="font-weight:600;color:#1a1816;white-space:nowrap">'+escH(p.collection)+(p.id!=null?' #'+escH(String(p.id)):'')+'</span>'
-        +'<span style="color:#6b7280;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">'+escH(diffText(p))+'</span>'
-        +'<button data-pb="confirm-one" data-token="'+escH(p.preview_token)+'" style="padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600">✓ Übernehmen</button>'
-        +'<button data-pb="discard-one" data-token="'+escH(p.preview_token)+'" style="padding:3px 10px;background:#dc2626;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600">✗ Verwerfen</button>'
-        +'</div>';}).join('')+'</div>':'';
+      +previews.map(function(p){
+        var onThisPage=!p.preview_page||p.preview_page===location.pathname;
+        var jumpLink=!onThisPage
+          ?'<a href="'+escH(p.preview_page)+'?pb_focus='+escH(p.preview_token)+'" style="padding:3px 10px;background:#2563eb;color:#fff;border-radius:3px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;display:inline-block">↗ Zur Seite</a>'
+          :'';
+        return'<div style="display:flex;align-items:center;gap:10px;padding:9px 20px;border-bottom:1px solid #fef3c7;font-size:13px;flex-wrap:wrap">'
+          +badge(p)+'<span style="font-weight:600;color:#1a1816;white-space:nowrap">'+escH(p.collection)+(p.id!=null?' #'+escH(String(p.id)):'')+'</span>'
+          +'<span style="color:#6b7280;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">'+escH(diffText(p))+'</span>'
+          +jumpLink
+          +'<button data-pb="confirm-one" data-token="'+escH(p.preview_token)+'" style="padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600">✓ Übernehmen</button>'
+          +'<button data-pb="discard-one" data-token="'+escH(p.preview_token)+'" style="padding:3px 10px;background:#dc2626;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600">✗ Verwerfen</button>'
+          +'</div>';}).join('')+'</div>':'';
     return'<style>@keyframes pb-p{0%,100%{opacity:1}50%{opacity:.35}}</style>'+rows
       +'<div style="background:#fbbf24;border-top:2px solid #f59e0b;padding:8px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
       +'<span style="display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:13px;color:#78350f">'
@@ -679,6 +688,7 @@ function buildBannerInjection(mcpUrl: string): string {
   // persist and still work after the body swap.
   document.addEventListener('astro:page-load',function(){
     bound=false;
+    pbFocusDone=false;
     getDom();
     load();
   });
@@ -1184,6 +1194,7 @@ httpServer.on("request", (req, res) => {
       const entries = Array.from(previewStore.entries()).map(([token, { entry }]) => ({
         ...entry,
         preview_token: token,
+        preview_page: previewPageForCollection(entry.collection),
       }));
       res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
         .end(JSON.stringify(entries));
