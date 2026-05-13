@@ -46,33 +46,33 @@ function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '
   <!-- Menu sections -->
   <div class="max-w-5xl mx-auto px-5 sm:px-6 lg:px-8 py-20 sm:py-24 space-y-20 sm:space-y-24">
     {byCategory.map((cat) => (
-      <section id={slug(cat.name)} class="scroll-mt-40 fade-up">
+      <section id={slug(cat.name)} data-cms-collection="categories" data-cms-id={String(cat.id)} class="scroll-mt-40 fade-up">
         <div class="mb-10 sm:mb-12 text-center">
-          <h2 class="font-serif text-3xl sm:text-4xl text-w-dark font-medium tracking-tight">{cat.name}</h2>
+          <h2 data-cms-field="name" class="font-serif text-3xl sm:text-4xl text-w-dark font-medium tracking-tight">{cat.name}</h2>
           <div class="mt-5 flex items-center justify-center gap-3 text-w-gold/60">
             <span class="h-px w-10 bg-w-gold/40"></span>
             <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.39 7.36H22l-6.18 4.49L18.21 22 12 17.27 5.79 22l2.39-8.15L2 9.36h7.61z" opacity="0.55"/></svg>
             <span class="h-px w-10 bg-w-gold/40"></span>
           </div>
-          {cat.description && <p class="text-w-stone text-base mt-5 italic max-w-2xl mx-auto font-light">{cat.description}</p>}
+          {cat.description && <p data-cms-field="description" class="text-w-stone text-base mt-5 italic max-w-2xl mx-auto font-light">{cat.description}</p>}
         </div>
 
         <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 sm:gap-y-8">
           {cat.items.map(item => (
-            <li class="group">
+            <li data-cms-collection="menu_items" data-cms-id={String(item.id)} class="group">
               <article class="py-5 px-1 border-b border-w-linen/70 hover:border-w-gold/30 transition-colors">
                 <div class="flex items-baseline gap-3">
-                  <h3 class="font-serif font-medium text-w-dark text-lg sm:text-xl leading-snug group-hover:text-w-gold transition-colors">{item.name}</h3>
+                  <h3 data-cms-field="name" class="font-serif font-medium text-w-dark text-lg sm:text-xl leading-snug group-hover:text-w-gold transition-colors">{item.name}</h3>
                   <span class="flex-1 border-b border-dotted border-w-stone/35 translate-y-[-4px]"></span>
-                  <span class="font-medium text-w-gold text-base sm:text-lg whitespace-nowrap tabular-nums">€{Number(item.price).toFixed(2)}</span>
+                  <span data-cms-field="price" class="font-medium text-w-gold text-base sm:text-lg whitespace-nowrap tabular-nums">€{Number(item.price).toFixed(2)}</span>
                 </div>
-                {item.description && <p class="text-w-stone/90 text-[14px] sm:text-[15px] mt-1.5 leading-relaxed font-light pr-4">{item.description}</p>}
+                {item.description && <p data-cms-field="description" class="text-w-stone/90 text-[14px] sm:text-[15px] mt-1.5 leading-relaxed font-light pr-4">{item.description}</p>}
                 {(item.is_vegan || item.is_vegetarian || (item.allergens && item.allergens.length > 0)) && (
                   <div class="flex flex-wrap gap-1.5 mt-3">
-                    {item.is_vegan       && <span class="text-[10px] px-2 py-0.5 rounded-sm uppercase tracking-[0.18em] bg-w-green/8 text-w-green font-semibold">{ui.vegan_label}</span>}
-                    {item.is_vegetarian && !item.is_vegan && <span class="text-[10px] px-2 py-0.5 rounded-sm uppercase tracking-[0.18em] bg-w-green/8 text-w-green font-semibold">{ui.vegetarian_label}</span>}
+                    {item.is_vegan       && <span data-cms-collection="ui_copy" data-cms-field="vegan_label" class="text-[10px] px-2 py-0.5 rounded-sm uppercase tracking-[0.18em] bg-w-green/8 text-w-green font-semibold">{ui.vegan_label}</span>}
+                    {item.is_vegetarian && !item.is_vegan && <span data-cms-collection="ui_copy" data-cms-field="vegetarian_label" class="text-[10px] px-2 py-0.5 rounded-sm uppercase tracking-[0.18em] bg-w-green/8 text-w-green font-semibold">{ui.vegetarian_label}</span>}
                     {item.allergens?.map(a => (
-                      <span class="text-[10px] px-2 py-0.5 rounded-sm uppercase tracking-[0.18em] bg-w-stone/10 text-w-stone font-medium">{a}</span>
+                      <span data-cms-field="allergens" class="text-[10px] px-2 py-0.5 rounded-sm uppercase tracking-[0.18em] bg-w-stone/10 text-w-stone font-medium">{a}</span>
                     ))}
                   </div>
                 )}
@@ -87,7 +87,9 @@ function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '
   <!-- Allergen note -->
   <div class="max-w-5xl mx-auto px-5 sm:px-6 lg:px-8 pb-20">
     <p class="text-w-stone text-xs leading-relaxed border-t border-w-linen pt-6 max-w-2xl font-light">
-      <strong class="font-semibold text-w-dark/70">{copy.allergen_title}:</strong> {copy.allergen_note} {copy.allergen_disclaimer}
+      <strong data-cms-collection="speisekarte_copy" data-cms-field="allergen_title" class="font-semibold text-w-dark/70">{copy.allergen_title}</strong>:
+      <span data-cms-collection="speisekarte_copy" data-cms-field="allergen_note">{copy.allergen_note}</span>
+      <span data-cms-collection="speisekarte_copy" data-cms-field="allergen_disclaimer">{copy.allergen_disclaimer}</span>
     </p>
   </div>
 

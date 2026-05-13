@@ -5,14 +5,26 @@ interface Props {
   align?: 'center' | 'left';
   ornament?: boolean;
   class?: string;
+  /** Directus collection (e.g. 'home_copy') the eyebrow/title bind to — wired through for the preview banner's data-cms-* attributes. */
+  cmsCollection?: string;
+  cmsEyebrowField?: string;
+  cmsTitleField?: string;
+  cmsId?: string;
 }
-const { eyebrow, title, align = 'center', ornament = true, class: className = '' } = Astro.props;
+const {
+  eyebrow, title, align = 'center', ornament = true, class: className = '',
+  cmsCollection, cmsEyebrowField, cmsTitleField, cmsId,
+} = Astro.props;
 
 const wrap = align === 'center' ? 'text-center mx-auto' : 'text-left';
 ---
 <div class:list={[wrap, 'max-w-3xl', className, 'fade-up']}>
   {eyebrow && (
-    <p class:list={[
+    <p
+      data-cms-collection={cmsCollection && cmsEyebrowField ? cmsCollection : undefined}
+      data-cms-id={cmsCollection && cmsEyebrowField ? cmsId : undefined}
+      data-cms-field={cmsCollection && cmsEyebrowField ? cmsEyebrowField : undefined}
+      class:list={[
       'text-w-gold text-xs font-semibold tracking-[0.28em] uppercase mb-5',
       align === 'center' ? 'inline-flex items-center gap-3 justify-center' : 'inline-flex items-center gap-3',
     ]}>
@@ -21,7 +33,11 @@ const wrap = align === 'center' ? 'text-center mx-auto' : 'text-left';
       {align === 'center' && <span class="w-8 h-px bg-w-gold/70 hidden sm:inline-block"></span>}
     </p>
   )}
-  <h2 class="font-serif text-3xl sm:text-4xl lg:text-[2.75rem] leading-[1.15] text-w-dark font-medium tracking-tight">
+  <h2
+    data-cms-collection={cmsCollection && cmsTitleField ? cmsCollection : undefined}
+    data-cms-id={cmsCollection && cmsTitleField ? cmsId : undefined}
+    data-cms-field={cmsCollection && cmsTitleField ? cmsTitleField : undefined}
+    class="font-serif text-3xl sm:text-4xl lg:text-[2.75rem] leading-[1.15] text-w-dark font-medium tracking-tight">
     {title}
   </h2>
   {ornament && (

@@ -16,11 +16,18 @@ const lead     = header?.lead    || fallbackLead;
 const imageUrl = assetUrl(header?.image);
 ---
 
-<header class="relative bg-w-green text-white overflow-hidden">
+<header
+  class="relative bg-w-green text-white overflow-hidden"
+  data-cms-collection={header ? 'page_headers' : undefined}
+  data-cms-id={header ? String(header.id) : undefined}
+>
   {imageUrl && (
     <img
       src={imageUrl}
       alt={title}
+      data-cms-collection={header ? 'page_headers' : undefined}
+      data-cms-id={header ? String(header.id) : undefined}
+      data-cms-field={header ? 'image' : undefined}
       class="absolute inset-0 w-full h-full object-cover opacity-30"
       loading="eager"
     />
@@ -32,16 +39,28 @@ const imageUrl = assetUrl(header?.image);
   <div class="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-36 sm:pt-44 pb-20 sm:pb-24">
     <div class="max-w-3xl fade-up">
       {eyebrow && (
-        <p class="inline-flex items-center gap-3 text-w-gold text-xs font-semibold tracking-[0.28em] uppercase mb-6">
+        <p
+          data-cms-collection={header ? 'page_headers' : undefined}
+          data-cms-id={header ? String(header.id) : undefined}
+          data-cms-field={header ? 'eyebrow' : undefined}
+          class="inline-flex items-center gap-3 text-w-gold text-xs font-semibold tracking-[0.28em] uppercase mb-6">
           <span class="w-8 h-px bg-w-gold/70"></span>
           <span>{eyebrow}</span>
         </p>
       )}
-      <h1 class="font-serif text-4xl sm:text-5xl lg:text-6xl xl:text-7xl text-white font-medium tracking-tight leading-[1.05]">
+      <h1
+        data-cms-collection={header ? 'page_headers' : undefined}
+        data-cms-id={header ? String(header.id) : undefined}
+        data-cms-field={header ? 'title' : undefined}
+        class="font-serif text-4xl sm:text-5xl lg:text-6xl xl:text-7xl text-white font-medium tracking-tight leading-[1.05]">
         {title}
       </h1>
       {lead && (
-        <p class="text-white/80 mt-6 sm:mt-8 max-w-2xl text-base sm:text-lg font-light leading-relaxed fade-up delay-100">
+        <p
+          data-cms-collection={header ? 'page_headers' : undefined}
+          data-cms-id={header ? String(header.id) : undefined}
+          data-cms-field={header ? 'lead' : undefined}
+          class="text-white/80 mt-6 sm:mt-8 max-w-2xl text-base sm:text-lg font-light leading-relaxed fade-up delay-100">
           {lead}
         </p>
       )}

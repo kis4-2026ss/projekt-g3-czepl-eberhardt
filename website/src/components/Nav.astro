@@ -32,10 +32,10 @@ function isActive(href: string) {
           {settings.site_name.charAt(0)}
         </span>
         <span class="flex flex-col leading-tight">
-          <span class="font-serif text-white text-xl sm:text-2xl font-medium tracking-wide group-hover:text-w-gold transition-colors duration-300">
+          <span data-cms-collection="site_settings" data-cms-field="site_name" class="font-serif text-white text-xl sm:text-2xl font-medium tracking-wide group-hover:text-w-gold transition-colors duration-300">
             {settings.site_name}
           </span>
-          <span class="text-w-gold/80 text-[10px] tracking-[0.28em] uppercase mt-0.5">{settings.tagline}</span>
+          <span data-cms-collection="site_settings" data-cms-field="tagline" class="text-w-gold/80 text-[10px] tracking-[0.28em] uppercase mt-0.5">{settings.tagline}</span>
         </span>
       </a>
 
@@ -44,6 +44,9 @@ function isActive(href: string) {
         {navWithoutKontakt.map(l => (
           <a
             href={l.href}
+            data-cms-collection="navigation_links"
+            data-cms-id={String(l.id)}
+            data-cms-field="label"
             class:list={[
               'group relative px-3 py-2 text-[13px] font-medium uppercase tracking-[0.18em] transition-colors duration-300',
               isActive(l.href) ? 'text-w-gold' : 'text-white/85 hover:text-white',
@@ -58,6 +61,9 @@ function isActive(href: string) {
         ))}
         <a
           href={kontakt?.href || ui.nav_cta_href}
+          data-cms-collection={kontakt ? 'navigation_links' : 'ui_copy'}
+          data-cms-id={kontakt ? String(kontakt.id) : undefined}
+          data-cms-field={kontakt ? 'label' : 'nav_cta_label'}
           class="ml-4 btn btn-primary !py-2.5 !px-5"
         >
           {kontakt?.label || ui.nav_cta_label}
@@ -76,7 +82,11 @@ function isActive(href: string) {
   <div id="nav-drawer" class="hidden md:hidden absolute top-full inset-x-0 border-t border-white/10 bg-w-green/97 backdrop-blur-xl origin-top">
     <nav class="flex flex-col px-5 py-6 gap-1 max-h-[calc(100vh-5rem)] overflow-auto">
       {navWithoutKontakt.map(l => (
-        <a href={l.href} class:list={[
+        <a href={l.href}
+           data-cms-collection="navigation_links"
+           data-cms-id={String(l.id)}
+           data-cms-field="label"
+           class:list={[
           'flex items-center justify-between py-4 text-lg font-serif border-b border-white/5 transition-colors',
           isActive(l.href) ? 'text-w-gold' : 'text-white/90 hover:text-w-gold',
         ]}>
@@ -84,7 +94,11 @@ function isActive(href: string) {
           <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/></svg>
         </a>
       ))}
-      <a href={kontakt?.href || ui.nav_cta_href} class="mt-6 btn btn-primary">
+      <a href={kontakt?.href || ui.nav_cta_href}
+         data-cms-collection={kontakt ? 'navigation_links' : 'ui_copy'}
+         data-cms-id={kontakt ? String(kontakt.id) : undefined}
+         data-cms-field={kontakt ? 'label' : 'nav_cta_label'}
+         class="mt-6 btn btn-primary">
         {kontakt?.label || ui.nav_cta_label}
       </a>
     </nav>

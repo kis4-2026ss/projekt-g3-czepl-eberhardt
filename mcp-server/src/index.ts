@@ -327,6 +327,11 @@ function buildBannerInjection(mcpUrl: string): string {
 .pb-anchor[data-pb-action=create]{outline-color:#16a34a!important;animation-name:pb-pulse-c}
 .pb-anchor[data-pb-action=update_singleton]{outline-color:#2563eb!important;animation-name:pb-pulse-s}
 .pb-anchor[data-pb-action=delete]{outline-color:#dc2626!important;animation-name:pb-pulse-d}
+.pb-field{outline:3px solid #d97706!important;outline-offset:3px!important;border-radius:3px!important;background-color:rgba(254,240,138,.22)!important;position:relative;z-index:1;cursor:pointer;animation:pb-pulse 2s ease-in-out infinite}
+.pb-field[data-pb-anchor]{outline-style:dashed!important;background-color:transparent!important}
+.pb-field[data-pb-action=create]{outline-color:#16a34a!important;background-color:rgba(187,247,208,.28)!important;animation-name:pb-pulse-c}
+.pb-field[data-pb-action=update_singleton]{outline-color:#2563eb!important;background-color:rgba(191,219,254,.28)!important;animation-name:pb-pulse-s}
+.pb-field[data-pb-action=delete]{outline-color:#dc2626!important;background-color:rgba(254,202,202,.28)!important;text-decoration:line-through!important;animation-name:pb-pulse-d}
 @keyframes pb-pulse{0%,100%{box-shadow:0 0 0 1px rgba(217,119,6,.4),0 2px 8px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 5px rgba(217,119,6,.4),0 2px 16px rgba(0,0,0,.22)}}
 @keyframes pb-pulse-c{0%,100%{box-shadow:0 0 0 1px rgba(22,163,74,.4),0 2px 8px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 5px rgba(22,163,74,.4),0 2px 16px rgba(0,0,0,.22)}}
 @keyframes pb-pulse-s{0%,100%{box-shadow:0 0 0 1px rgba(37,99,235,.4),0 2px 8px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 5px rgba(37,99,235,.4),0 2px 16px rgba(0,0,0,.22)}}
@@ -508,12 +513,96 @@ function buildBannerInjection(mcpUrl: string): string {
     return total;
   }
 
+  /* ---- Attribute-based marking ----
+   * The website templates annotate every CMS-bound element with
+   *   data-cms-collection="<col>" data-cms-field="<field>" [data-cms-id="<id>"]
+   * and every item-container with data-cms-collection + data-cms-id (no field).
+   * This lets us mark the EXACT element rendering a changed value without
+   * fragile text matching. The MCP code owns the review/preview logic;
+   * the website only declares which collection/field each element binds to.
+   * Returns the number of marks applied — 0 means fall back to text-search.
+   */
+  function cssEscapeStr(s){return String(s).replace(/[\\"'\\\\]/g,function(c){return'\\\\'+c;});}
+  function markByAttributes(p){
+    var col=p.collection;
+    var token=p.preview_token;
+    var action=p.action;
+    // For non-singleton actions we filter by id. Creates show up in the DOM
+    // with the placeholder id "__preview_new__" thanks to applyPreviewsToResponse().
+    var rawId=p.id!=null?String(p.id):null;
+    var matchId=action==='create'?'__preview_new__':rawId;
+    var needId=action!=='update_singleton';
+
+    // Helper: figure out the collection that scopes this element. An element may
+    // declare data-cms-collection itself, or inherit it from the nearest ancestor.
+    function effectiveCollection(el){
+      var own=el.getAttribute('data-cms-collection');
+      if(own)return own;
+      var anc=el.closest('[data-cms-collection]');
+      return anc?anc.getAttribute('data-cms-collection'):null;
+    }
+    // Helper: does this element belong to the right item (by id, if applicable)?
+    function inScope(el){
+      if(!needId||!matchId)return true;
+      var ownId=el.getAttribute('data-cms-id');
+      if(ownId)return ownId===matchId;
+      var anc=el.closest('[data-cms-collection="'+cssEscapeStr(col)+'"][data-cms-id]');
+      return!!anc&&anc.getAttribute('data-cms-id')===matchId;
+    }
+    function tag(el,isAnchor){
+      el.classList.add('pb-field');
+      el.setAttribute('data-pb-token',token);
+      el.setAttribute('data-pb-action',action);
+      if(isAnchor)el.setAttribute('data-pb-anchor','1');
+    }
+
+    var marked=0;
+    // Pass 1: mark each diff field on its dedicated element. We query by field
+    // name only and then verify collection via the element itself or an ancestor
+    // — that way nested items (e.g. <article data-cms-collection="menu_items">
+    // with bare <p data-cms-field="name"> inside) work without repeating the
+    // collection on every leaf.
+    var fields=[];
+    if(p.diff&&p.diff.length)p.diff.forEach(function(d){fields.push(d.field);});
+    fields.forEach(function(field){
+      var sel='[data-cms-field="'+cssEscapeStr(field)+'"]';
+      document.querySelectorAll(sel).forEach(function(el){
+        if(effectiveCollection(el)!==col)return;
+        if(!inScope(el))return;
+        if(el.classList.contains('pb-field'))return;
+        tag(el,false);marked++;
+      });
+    });
+
+    // Pass 2: nothing matched at field level — fall back to the item container.
+    // For create/delete or non-string-diff updates the field elements may not be
+    // present, so the user still gets a visual anchor on the affected item.
+    if(marked===0){
+      var anchorSel=needId&&matchId
+        ?'[data-cms-collection="'+cssEscapeStr(col)+'"][data-cms-id="'+cssEscapeStr(matchId)+'"]:not([data-cms-field])'
+        :'[data-cms-collection="'+cssEscapeStr(col)+'"]:not([data-cms-field])';
+      document.querySelectorAll(anchorSel).forEach(function(el){
+        if(el.classList.contains('pb-field'))return;
+        tag(el,true);marked++;
+      });
+    }
+    return marked;
+  }
+
   /* ---- Clear / Apply marks ---- */
   function clearHighlights(){
+    // Unwrap text-search spans (fallback path)
     document.querySelectorAll('.pb-mark,.pb-anchor').forEach(function(span){
       var p=span.parentNode;if(!p)return;
       p.replaceChild(document.createTextNode(span.textContent||''),span);
       p.normalize();
+    });
+    // Remove in-place marks (attribute path)
+    document.querySelectorAll('.pb-field').forEach(function(el){
+      el.classList.remove('pb-field');
+      el.removeAttribute('data-pb-token');
+      el.removeAttribute('data-pb-action');
+      el.removeAttribute('data-pb-anchor');
     });
   }
 
@@ -523,8 +612,11 @@ function buildBannerInjection(mcpUrl: string): string {
     if(!previews.length){hideFloat();return;}
     var totalMarked=0;
     previews.forEach(function(p){
-      // Pass 1: mark every occurrence of actually-changed text (diff string fields).
-      // No page filter — the DOM search naturally returns 0 for off-page content.
+      // Preferred path: use data-cms-* attributes declared by the website.
+      var attrHits=markByAttributes(p);
+      if(attrHits>0){totalMarked+=attrHits;return;}
+
+      // Fallback: text-search the rendered DOM for changed values.
       var texts=changedCandidates(p);
       var hitsThisPreview=0;
       for(var i=0;i<texts.length;i++){
@@ -546,30 +638,30 @@ function buildBannerInjection(mcpUrl: string): string {
         }
       }
     });
-    console.info('[preview-banner]',previews.length,'preview(s),',totalMarked,'text node(s) marked');
+    console.info('[preview-banner]',previews.length,'preview(s),',totalMarked,'element(s) marked');
     if(hlBound)return;
     hlBound=true;
     document.addEventListener('mouseover',function(e){
-      var el=e.target&&e.target.closest&&(e.target.closest('.pb-mark')||e.target.closest('.pb-anchor'));
+      var el=e.target&&e.target.closest&&(e.target.closest('.pb-mark')||e.target.closest('.pb-anchor')||e.target.closest('.pb-field'));
       if(el)showFloat(el,el.dataset.pbToken,el.dataset.pbAction);
     });
     document.addEventListener('mouseout',function(e){
       var rt=e.relatedTarget;
-      if(rt&&rt.closest&&((rt.closest('.pb-mark')||rt.closest('.pb-anchor'))||(pbFloat&&(rt===pbFloat||pbFloat.contains(rt)))))return;
+      if(rt&&rt.closest&&((rt.closest('.pb-mark')||rt.closest('.pb-anchor')||rt.closest('.pb-field'))||(pbFloat&&(rt===pbFloat||pbFloat.contains(rt)))))return;
       hideFloat();
     });
     if(pbFloat)pbFloat.addEventListener('mouseout',function(e){
       var rt=e.relatedTarget;
-      if(rt&&(rt.closest&&(rt.closest('.pb-mark')||rt.closest('.pb-anchor'))||pbFloat.contains(rt)))return;
+      if(rt&&(rt.closest&&(rt.closest('.pb-mark')||rt.closest('.pb-anchor')||rt.closest('.pb-field'))||pbFloat.contains(rt)))return;
       hideFloat();
     });
   }
 
   // Group marks by preview_token — multiple marks per preview should count as one
-  // navigation stop. Includes both .pb-mark (changed text) and .pb-anchor (locator).
+  // navigation stop. Includes .pb-mark/.pb-anchor (text-fallback) and .pb-field (attribute path).
   function markedTokens(){
     var seen={},order=[];
-    document.querySelectorAll('.pb-mark,.pb-anchor').forEach(function(s){
+    document.querySelectorAll('.pb-mark,.pb-anchor,.pb-field').forEach(function(s){
       var t=s.dataset.pbToken;
       if(!seen[t]){seen[t]=s;order.push(t);}
     });
