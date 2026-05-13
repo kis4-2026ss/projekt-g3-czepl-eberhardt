@@ -35,7 +35,7 @@ function dateRange(ev: typeof events[0]) {
     {events.map((ev, i) => {
       const parts = dayParts(ev.starts_on);
       return (
-        <article data-preview-collection="events" data-preview-id={ev.id} class={`card card-hover overflow-hidden grid grid-cols-1 md:grid-cols-12 fade-up delay-${(i % 3) * 100}`}>
+        <article class={`card card-hover overflow-hidden grid grid-cols-1 md:grid-cols-12 fade-up delay-${(i % 3) * 100}`}>
           <!-- Date / sidebar -->
           <div class="md:col-span-4 bg-w-dark text-w-cream relative overflow-hidden p-8 sm:p-10 flex flex-col justify-center">
             <div class="absolute inset-0 opacity-[0.03] pointer-events-none"

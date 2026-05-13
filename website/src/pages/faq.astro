@@ -12,7 +12,7 @@ const [faqItems, copy, header] = await Promise.all([getFaqItems(), getFaqCopy(),
   <section class="max-w-3xl mx-auto px-5 sm:px-6 lg:px-8 py-20 sm:py-24">
     <div class="space-y-3">
       {faqItems.map((item, index) => (
-        <details data-preview-collection="faq_items" data-preview-id={item.id} class={`group card overflow-hidden fade-up delay-${(index % 5) * 100}`}>
+        <details class={`group card overflow-hidden fade-up delay-${(index % 5) * 100}`}>
           <summary class="flex items-center justify-between gap-4 px-6 sm:px-8 py-5 sm:py-6 cursor-pointer list-none select-none hover:bg-w-cream/70 transition-colors">
             <span class="font-serif text-lg sm:text-xl font-medium text-w-dark group-hover:text-w-gold transition-colors">{item.question}</span>
             <span class="flex-shrink-0 w-8 h-8 rounded-full bg-w-cream flex items-center justify-center text-w-gold group-open:rotate-45 transition-transform duration-300">

@@ -37,6 +37,26 @@ const PREVIEW_PROXY_PORT = Number(process.env.PREVIEW_PROXY_PORT ?? 4322);
 const PREVIEW_WEBSITE_URL = (process.env.PREVIEW_WEBSITE_URL ?? `http://localhost:${PREVIEW_PROXY_PORT}`).replace(/\/$/, "");
 const PREVIEW_WEBSITE_INTERNAL_URL = (process.env.PREVIEW_WEBSITE_INTERNAL_URL ?? "http://localhost:4321").replace(/\/$/, "");
 
+// Maps Directus collections to the website page that renders them.
+// Used to build the "jump to preview" link on the review page.
+const COLLECTION_PAGES: Record<string, string> = {
+  menu_items: "/speisekarte",
+  categories: "/speisekarte",
+  speisekarte_copy: "/speisekarte",
+  events: "/events",
+  team: "/ueber-uns",
+  about: "/ueber-uns",
+  ueber_uns_copy: "/ueber-uns",
+  faq_items: "/faq",
+  faq_copy: "/faq",
+  kontakt_copy: "/kontakt",
+  opening_hours: "/kontakt",
+};
+
+function previewPageForCollection(collection: string): string {
+  return COLLECTION_PAGES[collection] ?? "/";
+}
+
 /** Tool schema hint: Directus returns HTTP 403 for invalid /items/.../id paths (easy to mistake for RBAC). */
 const ITEM_PK_DESCRIPTION =
   "Exact primary key from read_items/read_item (integer or UUID). Never a title, slug, or placeholder; if you only know a name, call read_items with a filter first, then use data[0].id.";
@@ -139,7 +159,7 @@ function escHtml(s: string): string {
 
 type StoredPreview = PreviewEntry & { preview_token: string };
 
-function renderEntryCard(p: StoredPreview, highlighted: boolean): string {
+function renderEntryCard(p: StoredPreview, highlighted: boolean, previewBaseUrl: string): string {
   const actionLabel: Record<string, string> = {
     create: "Neuer Eintrag", update: "Änderung",
     update_singleton: "Aktualisierung", delete: "Löschung",
@@ -163,12 +183,15 @@ function renderEntryCard(p: StoredPreview, highlighted: boolean): string {
       ? `<pre style="margin-top:1rem;font-size:.8rem;overflow:auto;background:#f3f1ec;padding:1rem;border-radius:4px">${escHtml(JSON.stringify(p.after, null, 2))}</pre>`
       : "";
 
+  const jumpUrl = `${previewBaseUrl}${previewPageForCollection(p.collection)}?pb_focus=${encodeURIComponent(p.preview_token)}`;
+
   return `
   <div class="card${highlighted ? " card-highlight" : ""}">
     <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
       <span class="label ${escHtml(actionClass[p.action] ?? "label-update")}">${escHtml(actionLabel[p.action] ?? p.action)}</span>
       <strong>${escHtml(p.collection)}${p.id != null ? ` <span style="color:#6b7280">#${escHtml(String(p.id))}</span>` : ""}</strong>
       <div style="margin-left:auto;display:flex;gap:.5rem">
+        <a href="${escHtml(jumpUrl)}" class="btn btn-jump btn-sm" target="_blank" rel="noopener">↗ Im Vorschau</a>
         <button class="btn btn-confirm btn-sm" data-confirm="${escHtml(p.preview_token)}">✓ Übernehmen</button>
         <button class="btn btn-discard btn-sm" data-discard="${escHtml(p.preview_token)}">✗ Verwerfen</button>
       </div>
@@ -183,7 +206,7 @@ function buildReviewPage(focusToken: string, allPreviews: StoredPreview[]): stri
   const hasMany = allPreviews.length > 1;
 
   const cards = found
-    ? allPreviews.map((p) => renderEntryCard(p, p.preview_token === focusToken)).join("")
+    ? allPreviews.map((p) => renderEntryCard(p, p.preview_token === focusToken, PREVIEW_WEBSITE_URL)).join("")
     : `<div class="card"><p style="color:#6b7280">Vorschau nicht gefunden oder abgelaufen.</p></div>`;
 
   const bulkBar = hasMany ? `
@@ -224,6 +247,7 @@ function buildReviewPage(focusToken: string, allPreviews: StoredPreview[]): stri
     .btn-confirm{background:#16a34a;color:#fff}.btn-confirm:hover:not(:disabled){background:#15803d}
     .btn-discard{background:#dc2626;color:#fff}.btn-discard:hover:not(:disabled){background:#b91c1c}
     .btn-preview{background:#1a1816;color:#fff}.btn-preview:hover{background:#374151}
+    .btn-jump{background:#2563eb;color:#fff}.btn-jump:hover{background:#1d4ed8}
     .status{padding:.6rem .9rem;border-radius:4px;font-weight:600;font-size:.85rem}
     .ok{background:#dcfce7;color:#16a34a}
     .err{background:#fee2e2;color:#dc2626}
@@ -294,6 +318,16 @@ function buildBannerInjection(mcpUrl: string): string {
 .pb-fl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.6);padding:0 4px;white-space:nowrap}
 .pb-fb{border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700;color:#fff;white-space:nowrap;line-height:1.4}
 .pb-fb:hover{opacity:.82}.pb-fc{background:#16a34a}.pb-fd{background:#dc2626}
+.pb-mark{background:#fef08a!important;color:#78350f!important;outline:3px solid #d97706!important;outline-offset:2px!important;border-radius:3px!important;padding:1px 4px!important;margin:0 2px!important;-webkit-box-decoration-break:clone;box-decoration-break:clone;position:relative;z-index:1;cursor:pointer;display:inline;font-weight:600!important;animation:pb-pulse 2s ease-in-out infinite}
+.pb-mark[data-pb-action=create]{background:#bbf7d0!important;color:#14532d!important;outline-color:#16a34a!important;animation-name:pb-pulse-c}
+.pb-mark[data-pb-action=update_singleton]{background:#bfdbfe!important;color:#1e3a8a!important;outline-color:#2563eb!important;animation-name:pb-pulse-s}
+.pb-mark[data-pb-action=delete]{background:#fecaca!important;color:#7f1d1d!important;outline-color:#dc2626!important;text-decoration:line-through!important;animation-name:pb-pulse-d}
+.pb-mark:hover{filter:brightness(1.06)}
+@keyframes pb-pulse{0%,100%{box-shadow:0 0 0 1px rgba(217,119,6,.4),0 2px 8px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 5px rgba(217,119,6,.4),0 2px 16px rgba(0,0,0,.22)}}
+@keyframes pb-pulse-c{0%,100%{box-shadow:0 0 0 1px rgba(22,163,74,.4),0 2px 8px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 5px rgba(22,163,74,.4),0 2px 16px rgba(0,0,0,.22)}}
+@keyframes pb-pulse-s{0%,100%{box-shadow:0 0 0 1px rgba(37,99,235,.4),0 2px 8px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 5px rgba(37,99,235,.4),0 2px 16px rgba(0,0,0,.22)}}
+@keyframes pb-pulse-d{0%,100%{box-shadow:0 0 0 1px rgba(220,38,38,.4),0 2px 8px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 5px rgba(220,38,38,.4),0 2px 16px rgba(0,0,0,.22)}}
+@keyframes pb-p{0%,100%{opacity:1}50%{opacity:.35}}
 </style>
 <div id="pb-root"></div>
 <div id="pb-float"><span class="pb-fl" id="pb-fl"></span><button class="pb-fb pb-fc" id="pb-fc">✓ Übernehmen</button><button class="pb-fb pb-fd" id="pb-fd">✗ Verwerfen</button></div>
@@ -303,7 +337,7 @@ function buildBannerInjection(mcpUrl: string): string {
   window.__pbLoaded=true;
 
   var MCP=${mcp};
-  var previews=[],open=false,bound=false,hlBound=false,curToken=null;
+  var previews=[],open=false,bound=false,hlBound=false,curToken=null,pbFocusDone=false,hlIndex=-1;
   var pbFloat,pbFl,pbFc,pbFd;
 
   var ACT={create:'Neu',update:'Änderung',update_singleton:'Aktualisierung',delete:'Löschung'};
@@ -345,44 +379,165 @@ function buildBannerInjection(mcpUrl: string): string {
   }
   function hideFloat(){if(pbFloat)pbFloat.style.display='none';curToken=null;}
 
-  /* ---- Highlights ---- */
+  /* ---- Direct text-marking ----
+   * Find any text on the page that matches a changed field value and wrap it
+   * with a <span class="pb-mark"> that has a visible coloured border via CSS.
+   * Works for ANY page structure — no need to find "containers" or rely on
+   * specific HTML tags. Completely independent of the website implementation.
+   */
+
+  // Strip markdown bold and pick the longest contiguous chunk that's likely
+  // to appear in the rendered HTML as a single text node.
+  // NOTE: all regex backslashes are doubled because this entire script lives
+  // inside a TS template literal — single \\ → literal \\ in the served JS.
+  function snippets(raw){
+    if(typeof raw!=='string')return [];
+    var clean=raw.replace(/\\*\\*(.+?)\\*\\*/g,'$1').trim();
+    if(!clean)return [];
+    var out=[];
+    // First paragraph only — multi-line text becomes <p>…</p><p>…</p> in HTML
+    var paras=clean.split(/\\n\\n+/);
+    var first=(paras[0]||'').trim();
+    if(first.length>=4)out.push(first.length>180?first.slice(0,180):first);
+    // Plain single-line full string
+    if(!clean.includes('\\n')&&clean.length>=4&&clean.length<=180&&out.indexOf(clean)===-1)out.push(clean);
+    return out;
+  }
+
+  // Collect candidate texts from a preview entry. Prefers the "before" values
+  // (still in the DOM since changes aren't applied yet) then unchanged fields,
+  // then "after" values for creates.
+  function searchTexts(p){
+    var cands=[];
+    var before=p.before||{};var after=p.after||{};
+    // Before values first — these are CURRENTLY visible on the page for update/delete
+    Object.values(before).forEach(function(v){if(typeof v==='string')snippets(v).forEach(function(s){cands.push(s);});});
+    // Unchanged fields (anchor text — name, title, etc.)
+    Object.keys(after).forEach(function(k){
+      var v=after[k];
+      if(typeof v==='string'&&v===before[k])snippets(v).forEach(function(s){cands.push(s);});
+    });
+    // After values — useful for creates
+    Object.values(after).forEach(function(v){if(typeof v==='string')snippets(v).forEach(function(s){cands.push(s);});});
+    var seen={};
+    return cands.filter(function(v){
+      if(seen[v])return false;seen[v]=true;
+      return v.length>=4
+        &&!/^https?:\\/\\//.test(v)
+        &&!/^\\d[\\d.,\\s]*$/.test(v)
+        &&!/^\\d{4}-\\d{2}-\\d{2}/.test(v);
+    }).sort(function(a,b){return b.length-a.length;});
+  }
+
+  // True if this text node is a candidate for marking.
+  function isMarkableNode(n){
+    if(!n.parentElement)return false;
+    var p=n.parentElement;
+    if(p.closest('#pb-root')||p.closest('#pb-float'))return false;
+    if(p.closest('.pb-mark'))return false; // already wrapped
+    var tag=p.tagName;
+    if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT'||tag==='TEMPLATE')return false;
+    return true;
+  }
+
+  // Walk the DOM looking for the first text node containing searchText.
+  // Wrap the matching substring in a span.pb-mark and return it.
+  function markTextInDom(searchText,token,action){
+    if(!searchText||searchText.length<3)return null;
+    var tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null);
+    var node;
+    while((node=tw.nextNode())){
+      if(!node.nodeValue)continue;
+      if(!isMarkableNode(node))continue;
+      var idx=node.nodeValue.indexOf(searchText);
+      if(idx===-1)continue;
+      var parent=node.parentNode;
+      if(!parent)continue;
+
+      var before=node.nodeValue.slice(0,idx);
+      var matched=node.nodeValue.slice(idx,idx+searchText.length);
+      var after=node.nodeValue.slice(idx+searchText.length);
+
+      var span=document.createElement('span');
+      span.className='pb-mark';
+      span.setAttribute('data-pb-token',token);
+      span.setAttribute('data-pb-action',action);
+      span.textContent=matched;
+
+      var frag=document.createDocumentFragment();
+      if(before)frag.appendChild(document.createTextNode(before));
+      frag.appendChild(span);
+      if(after)frag.appendChild(document.createTextNode(after));
+
+      parent.replaceChild(frag,node);
+      return span;
+    }
+    return null;
+  }
+
+  /* ---- Clear / Apply marks ---- */
   function clearHighlights(){
-    document.querySelectorAll('.pb-hl').forEach(function(el){
-      el.classList.remove('pb-hl');
-      el.style.removeProperty('outline');el.style.removeProperty('outline-offset');
-      delete el.dataset.pbToken;delete el.dataset.pbAction;
+    document.querySelectorAll('.pb-mark').forEach(function(span){
+      var p=span.parentNode;if(!p)return;
+      p.replaceChild(document.createTextNode(span.textContent||''),span);
+      p.normalize();
     });
   }
 
   function applyHighlights(){
     clearHighlights();
+    hlIndex=-1;
     if(!previews.length){hideFloat();return;}
+    var totalMarked=0;
     previews.forEach(function(p){
-      if(p.id==null)return;
-      var el=document.querySelector('[data-preview-collection="'+p.collection+'"][data-preview-id="'+p.id+'"]');
-      if(!el)return;
-      el.classList.add('pb-hl');
-      el.dataset.pbToken=p.preview_token;
-      el.dataset.pbAction=p.action;
-      el.style.outline='3px solid '+(BRD[p.action]||BRD.update);
-      el.style.outlineOffset='3px';
+      var texts=searchTexts(p);
+      var hitsThisPreview=0;
+      var maxHits=3;
+      for(var i=0;i<texts.length&&hitsThisPreview<maxHits;i++){
+        if(markTextInDom(texts[i],p.preview_token,p.action)){hitsThisPreview++;totalMarked++;}
+      }
+      if(hitsThisPreview===0){
+        console.warn('[preview-banner] no text matched in DOM for',p.collection,p.id||'',{tried:texts,before:p.before,after:p.after});
+      }
     });
+    console.info('[preview-banner]',previews.length,'preview(s),',totalMarked,'text node(s) marked');
     if(hlBound)return;
     hlBound=true;
     document.addEventListener('mouseover',function(e){
-      var el=e.target&&e.target.closest&&e.target.closest('.pb-hl');
+      var el=e.target&&e.target.closest&&e.target.closest('.pb-mark');
       if(el)showFloat(el,el.dataset.pbToken,el.dataset.pbAction);
     });
     document.addEventListener('mouseout',function(e){
       var rt=e.relatedTarget;
-      if(rt&&rt.closest&&(rt.closest('.pb-hl')||(pbFloat&&(rt===pbFloat||pbFloat.contains(rt)))))return;
+      if(rt&&rt.closest&&(rt.closest('.pb-mark')||(pbFloat&&(rt===pbFloat||pbFloat.contains(rt)))))return;
       hideFloat();
     });
     if(pbFloat)pbFloat.addEventListener('mouseout',function(e){
       var rt=e.relatedTarget;
-      if(rt&&(rt.closest&&rt.closest('.pb-hl')||pbFloat.contains(rt)))return;
+      if(rt&&(rt.closest&&rt.closest('.pb-mark')||pbFloat.contains(rt)))return;
       hideFloat();
     });
+  }
+
+  // Group marks by preview_token — multiple marks per preview should count as one
+  // navigation stop.
+  function markedTokens(){
+    var seen={},order=[];
+    document.querySelectorAll('.pb-mark').forEach(function(s){
+      var t=s.dataset.pbToken;
+      if(!seen[t]){seen[t]=s;order.push(t);}
+    });
+    return order.map(function(t){return seen[t];});
+  }
+
+  function navigateHighlights(dir){
+    var els=markedTokens();
+    if(!els.length)return;
+    hlIndex=(hlIndex+dir+els.length)%els.length;
+    var el=els[hlIndex];
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+    showFloat(el,el.dataset.pbToken,el.dataset.pbAction||'update');
+    render();
   }
 
   /* ---- Bottom banner ---- */
@@ -395,6 +550,17 @@ function buildBannerInjection(mcpUrl: string): string {
 
   function buildHTML(){
     var n=previews.length,lbl=n===1?'1 Änderung':n+' Änderungen';
+    var hlN=markedTokens().length;
+    var navBtn='padding:3px 10px;background:rgba(120,53,15,.12);border:1px solid rgba(120,53,15,.35);border-radius:4px;cursor:pointer;font-size:13px;font-weight:700;color:#78350f;line-height:1';
+    var navHtml=hlN>0
+      ?'<span style="display:inline-flex;align-items:center;gap:3px;margin-left:6px">'
+        +'<button data-pb="prev" style="'+navBtn+'">←</button>'
+        +'<span style="font-size:11px;font-weight:700;color:#78350f;min-width:34px;text-align:center;padding:0 2px">'
+          +(hlIndex>=0?(hlIndex+1)+' / '+hlN:'↕ '+hlN)
+        +'</span>'
+        +'<button data-pb="next" style="'+navBtn+'">→</button>'
+        +'</span>'
+      :'';
     var rows=open?'<div style="background:#fffbeb;border-top:2px solid #fcd34d;max-height:280px;overflow-y:auto">'
       +previews.map(function(p){return'<div style="display:flex;align-items:center;gap:10px;padding:9px 20px;border-bottom:1px solid #fef3c7;font-size:13px;flex-wrap:wrap">'
         +badge(p)+'<span style="font-weight:600;color:#1a1816;white-space:nowrap">'+escH(p.collection)+(p.id!=null?' #'+escH(String(p.id)):'')+'</span>'
@@ -407,6 +573,7 @@ function buildBannerInjection(mcpUrl: string): string {
       +'<span style="display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:13px;color:#78350f">'
       +'<span style="width:8px;height:8px;border-radius:50%;background:#92400e;animation:pb-p 1.5s ease-in-out infinite;flex-shrink:0"></span>'
       +'Vorschau — '+escH(lbl)+' staged</span>'
+      +navHtml
       +'<button data-pb="toggle" style="padding:4px 10px;background:transparent;border:1px solid rgba(120,53,15,.4);border-radius:99px;cursor:pointer;font-size:12px;font-weight:600;color:#78350f">'+(open?'Schließen':'Details anzeigen')+'</button>'
       +'<div style="margin-left:auto;display:flex;gap:8px">'
       +'<button data-pb="confirm-all" style="padding:5px 14px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600">✓ Alle übernehmen</button>'
@@ -420,6 +587,8 @@ function buildBannerInjection(mcpUrl: string): string {
     btn.disabled=true;
     var a=btn.dataset.pb,t=btn.dataset.token;
     if(a==='toggle'){open=!open;render();return;}
+    if(a==='prev'){navigateHighlights(-1);return;}
+    if(a==='next'){navigateHighlights(1);return;}
     if(a==='confirm-all')await Promise.all(previews.map(function(p){return fetch(MCP+'/confirm/'+p.preview_token,{method:'POST'}).catch(Object);}));
     else if(a==='discard-all')await Promise.all(previews.map(function(p){return fetch(MCP+'/preview/'+p.preview_token,{method:'DELETE'}).catch(Object);}));
     else if(a==='confirm-one')await fetch(MCP+'/confirm/'+t,{method:'POST'}).catch(Object);
@@ -436,9 +605,27 @@ function buildBannerInjection(mcpUrl: string): string {
     if(!bound){root.addEventListener('click',onBannerClick);bound=true;}
   }
 
+  /* ---- Jump-to-element from review page ---- */
+  // The review page links to the preview with ?pb_focus=<token>. On load we read
+  // that param, find the element that was highlighted for that token, and scroll to it.
+  // Runs only once per page load (pbFocusDone flag) so repeat load() calls don't re-scroll.
+  function focusFromURL(){
+    if(pbFocusDone)return;
+    var token=(new URLSearchParams(location.search)).get('pb_focus');
+    if(!token)return;
+    pbFocusDone=true;
+    var els=markedTokens();
+    var idx=els.findIndex(function(e){return e.dataset.pbToken===token;});
+    if(idx===-1)return;
+    hlIndex=idx;
+    els[idx].scrollIntoView({behavior:'smooth',block:'center'});
+    showFloat(els[idx],token,els[idx].dataset.pbAction||'update');
+    render(); // update nav counter to show correct position
+  }
+
   async function load(){
     try{var r=await fetch(MCP+'/previews');previews=r.ok?await r.json():[];}catch(e){previews=[];}
-    render();applyHighlights();
+    render();applyHighlights();focusFromURL();
   }
 
   /* ---- Init & navigation ---- */

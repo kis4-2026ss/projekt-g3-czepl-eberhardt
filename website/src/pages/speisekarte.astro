@@ -60,7 +60,7 @@ function slug(name: string) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '
         <ul class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 sm:gap-y-8">
           {cat.items.map(item => (
             <li class="group">
-              <article data-preview-collection="menu_items" data-preview-id={item.id} class="py-5 px-1 border-b border-w-linen/70 hover:border-w-gold/30 transition-colors">
+              <article class="py-5 px-1 border-b border-w-linen/70 hover:border-w-gold/30 transition-colors">
                 <div class="flex items-baseline gap-3">
                   <h3 class="font-serif font-medium text-w-dark text-lg sm:text-xl leading-snug group-hover:text-w-gold transition-colors">{item.name}</h3>
                   <span class="flex-1 border-b border-dotted border-w-stone/35 translate-y-[-4px]"></span>
