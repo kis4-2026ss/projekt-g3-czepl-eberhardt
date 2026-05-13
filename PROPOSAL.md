@@ -48,10 +48,10 @@ Das System kombiniert die Flexibilität eines generischen CMS-Wrappers mit der S
 ## 3. KI-Einsatz im Projektverlauf
 
 | Phase             | Fokus der KI-Unterstützung                                              | Tools           |
-| :---------------- | :---------------------------------------------------------------------- |:----------------|
+| :---------------- | :---------------------------------------------------------------------- | :-------------- |
 | **Konzeption**    | Design der Introspection-Tools (`inspect_collection`, `list_fields`).   | Claude          |
 | **Entwicklung**   | Implementierung der dynamischen API-Abstraktion und des Tool-Handlings. | Cursor, Claude  |
-| **Content Logic** | Optimierung der Strategie, wie das LLM das Schema effizient abfragt.    | Ollama          |
+| **Content Logic** | Optimierung der Strategie, wie das LLM das Schema effizient abfragt.   | Ollama          |
 | **Validation**    | Generierung der Beispiel-Inhalte und Struktur für die Test-Website.     | Cursor / Claude |
 | **Dokumentation** | Erstellung technischer Guides und des AI Decision Logs.                 | Claude          |
 
@@ -59,7 +59,7 @@ Das System kombiniert die Flexibilität eines generischen CMS-Wrappers mit der S
 
 ## 4. Projektplan (Meilensteine)
 
-### Milestone 1: Directus MCP Wrapepr
+### Milestone 1: Directus MCP Wrapper
 
 Implementierung universeller Tools für Lese- und Schreibzugriffe, welche die Kommunikation mit dem CMS ermöglichen.
 
@@ -73,11 +73,13 @@ Anbindung von Ollama. Validierung des Workflows: LLM erkennt Schema -> LLM schl�
 
 ### Milestone 4: Website-Generierung & Validierung
 
-Erstellung einer funktionalen Beispiel-Website, die auf dem Directus-Backend basiert. In diesem Schritt wird die KI beauftragt, die Website-Inhalte (z.B. Texte, Bilder-Referenzen, SEO-Daten) über den MCP-Server zu optimieren. Das finale Ergebnis wird auf der Website validiert, um sicherzustellen, dass der generische Ansatz für reale UI-Komponenten funktioniert.
+Erstellung einer funktionalen Beispiel-Website auf Basis des Directus-Backends. Die KI optimiert die Inhalte (Texte, Bild-Referenzen, SEO-Daten) über den MCP-Server; das Ergebnis wird visuell auf der Website validiert, um zu bestätigen, dass der generische Ansatz mit realen UI-Komponenten funktioniert.
+
+---
 
 ## 5. Aufwandsschätzung & Zeitplan
 
-Der geschätzte Gesamtaufwand beläuft sich auf ca. **24 bis 28 Personenstunden (h)**, verteilt auf die beiden Teammitglieder. Durch den Einsatz von KI-Agents (Cursor) wird die reine Implementierungszeit verkürzt, während die Zeit für Validierung und Prompt-Iteration höher gewichtet ist.
+Der geschätzte Gesamtaufwand beläuft sich auf ca. **24–28 Personenstunden**, verteilt auf beide Teammitglieder. Durch den Einsatz von KI-Agents (Cursor) wird die reine Implementierungszeit verkürzt; Validierung und Prompt-Iteration sind entsprechend höher gewichtet.
 
 | Meilenstein             | Aktivität                                                                                                    | Geschätzter Aufwand (h) |
 |:------------------------| :----------------------------------------------------------------------------------------------------------- |:------------------------|
