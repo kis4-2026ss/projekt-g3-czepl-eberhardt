@@ -39,22 +39,22 @@ const PREVIEW_WEBSITE_INTERNAL_URL = (process.env.PREVIEW_WEBSITE_INTERNAL_URL ?
 
 // Maps Directus collections to the website page that renders them.
 // Used to build the "jump to preview" link on the review page.
-const COLLECTION_PAGES: Record<string, string> = {
-  menu_items: "/speisekarte",
-  categories: "/speisekarte",
-  speisekarte_copy: "/speisekarte",
-  events: "/events",
-  team: "/ueber-uns",
-  about: "/ueber-uns",
-  ueber_uns_copy: "/ueber-uns",
-  faq_items: "/faq",
-  faq_copy: "/faq",
-  kontakt_copy: "/kontakt",
-  opening_hours: "/kontakt",
+const COLLECTION_PAGES: Record<string, string[]> = {
+  menu_items:       ["/speisekarte", "/"],   // full list + featured strip on home
+  categories:       ["/speisekarte"],
+  speisekarte_copy: ["/speisekarte"],
+  events:           ["/events", "/"],        // full list + preview on home
+  team:             ["/ueber-uns"],
+  about:            ["/ueber-uns", "/"],     // full page + teaser section on home
+  ueber_uns_copy:   ["/ueber-uns"],
+  faq_items:        ["/faq"],
+  faq_copy:         ["/faq"],
+  kontakt_copy:     ["/kontakt"],
+  opening_hours:    ["/kontakt", "/"],       // full table + strip on home
 };
 
-function previewPageForCollection(collection: string): string {
-  return COLLECTION_PAGES[collection] ?? "/";
+function previewPagesForCollection(collection: string): string[] {
+  return COLLECTION_PAGES[collection] ?? ["/"];
 }
 
 /** Tool schema hint: Directus returns HTTP 403 for invalid /items/.../id paths (easy to mistake for RBAC). */
@@ -183,7 +183,7 @@ function renderEntryCard(p: StoredPreview, highlighted: boolean, previewBaseUrl:
       ? `<pre style="margin-top:1rem;font-size:.8rem;overflow:auto;background:#f3f1ec;padding:1rem;border-radius:4px">${escHtml(JSON.stringify(p.after, null, 2))}</pre>`
       : "";
 
-  const jumpUrl = `${previewBaseUrl}${previewPageForCollection(p.collection)}?pb_focus=${encodeURIComponent(p.preview_token)}`;
+  const jumpUrl = `${previewBaseUrl}${previewPagesForCollection(p.collection)[0]}?pb_focus=${encodeURIComponent(p.preview_token)}`;
 
   return `
   <div class="card${highlighted ? " card-highlight" : ""}">
@@ -470,42 +470,42 @@ function buildBannerInjection(mcpUrl: string): string {
     return true;
   }
 
-  // Walk the DOM looking for the first text node containing searchText.
-  // Wrap the matching substring in a styled span and return it.
-  // isAnchor=true uses .pb-anchor (dashed outline, no bg) to signal the item
-  // has a change without implying the anchor text itself changed.
+  // Walk the DOM and mark EVERY occurrence of searchText — both across
+  // multiple text nodes and multiple occurrences within a single node.
+  // Collect nodes first so DOM mutations don't invalidate the walker.
+  // Returns the count of spans inserted (0 = not found on this page).
   function markTextInDom(searchText,token,action,isAnchor){
-    if(!searchText||searchText.length<3)return null;
+    if(!searchText||searchText.length<3)return 0;
+    var nodes=[];
     var tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null);
     var node;
     while((node=tw.nextNode())){
-      if(!node.nodeValue)continue;
-      if(!isMarkableNode(node))continue;
-      var idx=node.nodeValue.indexOf(searchText);
-      if(idx===-1)continue;
-      var parent=node.parentNode;
-      if(!parent)continue;
-
-      var before=node.nodeValue.slice(0,idx);
-      var matched=node.nodeValue.slice(idx,idx+searchText.length);
-      var after=node.nodeValue.slice(idx+searchText.length);
-
-      var span=document.createElement('span');
-      span.className=isAnchor?'pb-anchor':'pb-mark';
-      span.setAttribute('data-pb-token',token);
-      span.setAttribute('data-pb-action',action);
-      if(isAnchor)span.setAttribute('data-pb-anchor','1');
-      span.textContent=matched;
-
-      var frag=document.createDocumentFragment();
-      if(before)frag.appendChild(document.createTextNode(before));
-      frag.appendChild(span);
-      if(after)frag.appendChild(document.createTextNode(after));
-
-      parent.replaceChild(frag,node);
-      return span;
+      if(node.nodeValue&&isMarkableNode(node)&&node.nodeValue.indexOf(searchText)!==-1)nodes.push(node);
     }
-    return null;
+    var total=0;
+    nodes.forEach(function(n){
+      if(!n.parentNode)return;
+      var text=n.nodeValue;
+      var frag=document.createDocumentFragment();
+      var pos=0;
+      while(pos<=text.length){
+        var i=text.indexOf(searchText,pos);
+        if(i===-1)break;
+        if(i>pos)frag.appendChild(document.createTextNode(text.slice(pos,i)));
+        var span=document.createElement('span');
+        span.className=isAnchor?'pb-anchor':'pb-mark';
+        span.setAttribute('data-pb-token',token);
+        span.setAttribute('data-pb-action',action);
+        if(isAnchor)span.setAttribute('data-pb-anchor','1');
+        span.textContent=searchText;
+        frag.appendChild(span);
+        total++;
+        pos=i+searchText.length;
+      }
+      if(pos<text.length)frag.appendChild(document.createTextNode(text.slice(pos)));
+      n.parentNode.replaceChild(frag,n);
+    });
+    return total;
   }
 
   /* ---- Clear / Apply marks ---- */
@@ -523,24 +523,25 @@ function buildBannerInjection(mcpUrl: string): string {
     if(!previews.length){hideFloat();return;}
     var totalMarked=0;
     previews.forEach(function(p){
-      // Don't try to mark elements that live on a different page.
-      if(p.preview_page&&p.preview_page!==location.pathname)return;
-
-      // Pass 1: mark only actually-changed text (from diff string fields)
+      // Pass 1: mark every occurrence of actually-changed text (diff string fields).
+      // No page filter — the DOM search naturally returns 0 for off-page content.
       var texts=changedCandidates(p);
       var hitsThisPreview=0;
-      var maxHits=3;
-      for(var i=0;i<texts.length&&hitsThisPreview<maxHits;i++){
-        if(markTextInDom(texts[i],p.preview_token,p.action,false)){hitsThisPreview++;totalMarked++;}
+      for(var i=0;i<texts.length;i++){
+        hitsThisPreview+=markTextInDom(texts[i],p.preview_token,p.action,false);
       }
+      totalMarked+=hitsThisPreview;
       // Pass 2: if no changed text found (e.g. only numeric fields changed),
       // use an anchor mark on the item's name so the user can still locate it.
       if(hitsThisPreview===0){
         var anchors=anchorCandidates(p);
         for(var j=0;j<anchors.length;j++){
-          if(markTextInDom(anchors[j],p.preview_token,p.action,true)){totalMarked++;break;}
+          var n=markTextInDom(anchors[j],p.preview_token,p.action,true);
+          if(n){totalMarked+=n;break;}
         }
-        if(hitsThisPreview===0){
+        // Only warn if the change should be visible on this page but wasn't found
+        var pages=p.preview_pages||[];
+        if(pages.indexOf(location.pathname)!==-1){
           console.warn('[preview-banner] no text matched for',p.collection,p.id||'',{tried:texts,anchors:anchors});
         }
       }
@@ -608,10 +609,11 @@ function buildBannerInjection(mcpUrl: string): string {
       :'';
     var rows=open?'<div style="background:#fffbeb;border-top:2px solid #fcd34d;max-height:280px;overflow-y:auto">'
       +previews.map(function(p){
-        var onThisPage=!p.preview_page||p.preview_page===location.pathname;
-        var jumpLink=!onThisPage
-          ?'<a href="'+escH(p.preview_page)+'?pb_focus='+escH(p.preview_token)+'" style="padding:3px 10px;background:#2563eb;color:#fff;border-radius:3px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;display:inline-block">↗ Zur Seite</a>'
-          :'';
+        var otherPages=(p.preview_pages||[]).filter(function(pg){return pg!==location.pathname;});
+        var jumpLink=otherPages.map(function(pg){
+          var lbl=pg==='/'?'Startseite':pg.slice(1).charAt(0).toUpperCase()+pg.slice(2);
+          return'<a href="'+escH(pg)+'?pb_focus='+escH(p.preview_token)+'" style="padding:3px 10px;background:#2563eb;color:#fff;border-radius:3px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;display:inline-block">↗ '+escH(lbl)+'</a>';
+        }).join('');
         return'<div style="display:flex;align-items:center;gap:10px;padding:9px 20px;border-bottom:1px solid #fef3c7;font-size:13px;flex-wrap:wrap">'
           +badge(p)+'<span style="font-weight:600;color:#1a1816;white-space:nowrap">'+escH(p.collection)+(p.id!=null?' #'+escH(String(p.id)):'')+'</span>'
           +'<span style="color:#6b7280;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">'+escH(diffText(p))+'</span>'
@@ -1194,7 +1196,7 @@ httpServer.on("request", (req, res) => {
       const entries = Array.from(previewStore.entries()).map(([token, { entry }]) => ({
         ...entry,
         preview_token: token,
-        preview_page: previewPageForCollection(entry.collection),
+        preview_pages: previewPagesForCollection(entry.collection),
       }));
       res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
         .end(JSON.stringify(entries));
