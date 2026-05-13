@@ -323,6 +323,10 @@ function buildBannerInjection(mcpUrl: string): string {
 .pb-mark[data-pb-action=update_singleton]{background:#bfdbfe!important;color:#1e3a8a!important;outline-color:#2563eb!important;animation-name:pb-pulse-s}
 .pb-mark[data-pb-action=delete]{background:#fecaca!important;color:#7f1d1d!important;outline-color:#dc2626!important;text-decoration:line-through!important;animation-name:pb-pulse-d}
 .pb-mark:hover{filter:brightness(1.06)}
+.pb-anchor{outline:2px dashed #d97706!important;outline-offset:5px!important;border-radius:3px!important;position:relative;z-index:1;cursor:pointer;animation:pb-pulse 2s ease-in-out infinite}
+.pb-anchor[data-pb-action=create]{outline-color:#16a34a!important;animation-name:pb-pulse-c}
+.pb-anchor[data-pb-action=update_singleton]{outline-color:#2563eb!important;animation-name:pb-pulse-s}
+.pb-anchor[data-pb-action=delete]{outline-color:#dc2626!important;animation-name:pb-pulse-d}
 @keyframes pb-pulse{0%,100%{box-shadow:0 0 0 1px rgba(217,119,6,.4),0 2px 8px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 5px rgba(217,119,6,.4),0 2px 16px rgba(0,0,0,.22)}}
 @keyframes pb-pulse-c{0%,100%{box-shadow:0 0 0 1px rgba(22,163,74,.4),0 2px 8px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 5px rgba(22,163,74,.4),0 2px 16px rgba(0,0,0,.22)}}
 @keyframes pb-pulse-s{0%,100%{box-shadow:0 0 0 1px rgba(37,99,235,.4),0 2px 8px rgba(0,0,0,.12)}50%{box-shadow:0 0 0 5px rgba(37,99,235,.4),0 2px 16px rgba(0,0,0,.22)}}
@@ -370,7 +374,7 @@ function buildBannerInjection(mcpUrl: string): string {
   function showFloat(el,token,action){
     if(!pbFloat||!pbFl)return;
     curToken=token;
-    pbFl.textContent=ACT[action]||action;
+    pbFl.textContent=el.dataset.pbAnchor?'Änderung hier':(ACT[action]||action);
     var r=el.getBoundingClientRect();
     pbFloat.style.top=Math.max(4,r.top+4)+'px';
     pbFloat.style.right=Math.max(4,window.innerWidth-r.right+4)+'px';
@@ -404,29 +408,55 @@ function buildBannerInjection(mcpUrl: string): string {
     return out;
   }
 
-  // Collect candidate texts from a preview entry. Prefers the "before" values
-  // (still in the DOM since changes aren't applied yet) then unchanged fields,
-  // then "after" values for creates.
-  function searchTexts(p){
+  // Only return strings from fields that ACTUALLY CHANGED (from diff).
+  // Numeric changes (e.g. price) are excluded — the template formats them
+  // (e.g. price 100 → "€100.00") so a raw value search won't find them.
+  function changedCandidates(p){
     var cands=[];
-    var before=p.before||{};var after=p.after||{};
-    // Before values first — these are CURRENTLY visible on the page for update/delete
-    Object.values(before).forEach(function(v){if(typeof v==='string')snippets(v).forEach(function(s){cands.push(s);});});
-    // Unchanged fields (anchor text — name, title, etc.)
-    Object.keys(after).forEach(function(k){
-      var v=after[k];
-      if(typeof v==='string'&&v===before[k])snippets(v).forEach(function(s){cands.push(s);});
-    });
-    // After values — useful for creates
-    Object.values(after).forEach(function(v){if(typeof v==='string')snippets(v).forEach(function(s){cands.push(s);});});
+    var diff=p.diff||[];
+    var action=p.action;
+    if(diff.length>0){
+      diff.forEach(function(d){
+        // Preview DOM shows AFTER values (proxy applied them)
+        if(typeof d.after==='string')snippets(d.after).forEach(function(s){cands.push(s);});
+        // Before value may still appear for non-applied contexts
+        if(typeof d.before==='string'&&d.before!==d.after)snippets(d.before).forEach(function(s){cands.push(s);});
+      });
+    } else {
+      // No diff array — fall back to field values based on action type
+      var after=p.after||{};
+      var before=p.before||{};
+      if(action==='delete'){
+        Object.values(before).forEach(function(v){if(typeof v==='string')snippets(v).forEach(function(s){cands.push(s);});});
+      } else {
+        Object.values(after).forEach(function(v){if(typeof v==='string')snippets(v).forEach(function(s){cands.push(s);});});
+      }
+    }
     var seen={};
     return cands.filter(function(v){
       if(seen[v])return false;seen[v]=true;
-      return v.length>=4
+      return v&&v.length>=4
         &&!/^https?:\\/\\//.test(v)
-        &&!/^\\d[\\d.,\\s]*$/.test(v)
         &&!/^\\d{4}-\\d{2}-\\d{2}/.test(v);
     }).sort(function(a,b){return b.length-a.length;});
+  }
+
+  // Unchanged identifying fields used as positional anchor when no changed text
+  // can be found (e.g. only numeric fields changed). Marked with .pb-anchor —
+  // a dashed outline that signals "this item has a change" without implying the
+  // text itself changed.
+  function anchorCandidates(p){
+    var after=p.after||{};var before=p.before||{};
+    var cands=[];
+    ['name','title','bezeichnung','question','first_name','last_name'].forEach(function(k){
+      var v=String(after[k]||before[k]||'');
+      if(v.length>=4)cands.push(v);
+    });
+    Object.keys(after).forEach(function(k){
+      var v=after[k];
+      if(typeof v==='string'&&v===before[k]&&v.length>=4&&cands.indexOf(v)===-1)cands.push(v);
+    });
+    return cands.slice(0,3);
   }
 
   // True if this text node is a candidate for marking.
@@ -434,15 +464,17 @@ function buildBannerInjection(mcpUrl: string): string {
     if(!n.parentElement)return false;
     var p=n.parentElement;
     if(p.closest('#pb-root')||p.closest('#pb-float'))return false;
-    if(p.closest('.pb-mark'))return false; // already wrapped
+    if(p.closest('.pb-mark')||p.closest('.pb-anchor'))return false;
     var tag=p.tagName;
     if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT'||tag==='TEMPLATE')return false;
     return true;
   }
 
   // Walk the DOM looking for the first text node containing searchText.
-  // Wrap the matching substring in a span.pb-mark and return it.
-  function markTextInDom(searchText,token,action){
+  // Wrap the matching substring in a styled span and return it.
+  // isAnchor=true uses .pb-anchor (dashed outline, no bg) to signal the item
+  // has a change without implying the anchor text itself changed.
+  function markTextInDom(searchText,token,action,isAnchor){
     if(!searchText||searchText.length<3)return null;
     var tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null);
     var node;
@@ -459,9 +491,10 @@ function buildBannerInjection(mcpUrl: string): string {
       var after=node.nodeValue.slice(idx+searchText.length);
 
       var span=document.createElement('span');
-      span.className='pb-mark';
+      span.className=isAnchor?'pb-anchor':'pb-mark';
       span.setAttribute('data-pb-token',token);
       span.setAttribute('data-pb-action',action);
+      if(isAnchor)span.setAttribute('data-pb-anchor','1');
       span.textContent=matched;
 
       var frag=document.createDocumentFragment();
@@ -477,7 +510,7 @@ function buildBannerInjection(mcpUrl: string): string {
 
   /* ---- Clear / Apply marks ---- */
   function clearHighlights(){
-    document.querySelectorAll('.pb-mark').forEach(function(span){
+    document.querySelectorAll('.pb-mark,.pb-anchor').forEach(function(span){
       var p=span.parentNode;if(!p)return;
       p.replaceChild(document.createTextNode(span.textContent||''),span);
       p.normalize();
@@ -490,40 +523,49 @@ function buildBannerInjection(mcpUrl: string): string {
     if(!previews.length){hideFloat();return;}
     var totalMarked=0;
     previews.forEach(function(p){
-      var texts=searchTexts(p);
+      // Pass 1: mark only actually-changed text (from diff string fields)
+      var texts=changedCandidates(p);
       var hitsThisPreview=0;
       var maxHits=3;
       for(var i=0;i<texts.length&&hitsThisPreview<maxHits;i++){
-        if(markTextInDom(texts[i],p.preview_token,p.action)){hitsThisPreview++;totalMarked++;}
+        if(markTextInDom(texts[i],p.preview_token,p.action,false)){hitsThisPreview++;totalMarked++;}
       }
+      // Pass 2: if no changed text found (e.g. only numeric fields changed),
+      // use an anchor mark on the item's name so the user can still locate it.
       if(hitsThisPreview===0){
-        console.warn('[preview-banner] no text matched in DOM for',p.collection,p.id||'',{tried:texts,before:p.before,after:p.after});
+        var anchors=anchorCandidates(p);
+        for(var j=0;j<anchors.length;j++){
+          if(markTextInDom(anchors[j],p.preview_token,p.action,true)){totalMarked++;break;}
+        }
+        if(hitsThisPreview===0){
+          console.warn('[preview-banner] no text matched for',p.collection,p.id||'',{tried:texts,anchors:anchors});
+        }
       }
     });
     console.info('[preview-banner]',previews.length,'preview(s),',totalMarked,'text node(s) marked');
     if(hlBound)return;
     hlBound=true;
     document.addEventListener('mouseover',function(e){
-      var el=e.target&&e.target.closest&&e.target.closest('.pb-mark');
+      var el=e.target&&e.target.closest&&(e.target.closest('.pb-mark')||e.target.closest('.pb-anchor'));
       if(el)showFloat(el,el.dataset.pbToken,el.dataset.pbAction);
     });
     document.addEventListener('mouseout',function(e){
       var rt=e.relatedTarget;
-      if(rt&&rt.closest&&(rt.closest('.pb-mark')||(pbFloat&&(rt===pbFloat||pbFloat.contains(rt)))))return;
+      if(rt&&rt.closest&&((rt.closest('.pb-mark')||rt.closest('.pb-anchor'))||(pbFloat&&(rt===pbFloat||pbFloat.contains(rt)))))return;
       hideFloat();
     });
     if(pbFloat)pbFloat.addEventListener('mouseout',function(e){
       var rt=e.relatedTarget;
-      if(rt&&(rt.closest&&rt.closest('.pb-mark')||pbFloat.contains(rt)))return;
+      if(rt&&(rt.closest&&(rt.closest('.pb-mark')||rt.closest('.pb-anchor'))||pbFloat.contains(rt)))return;
       hideFloat();
     });
   }
 
   // Group marks by preview_token — multiple marks per preview should count as one
-  // navigation stop.
+  // navigation stop. Includes both .pb-mark (changed text) and .pb-anchor (locator).
   function markedTokens(){
     var seen={},order=[];
-    document.querySelectorAll('.pb-mark').forEach(function(s){
+    document.querySelectorAll('.pb-mark,.pb-anchor').forEach(function(s){
       var t=s.dataset.pbToken;
       if(!seen[t]){seen[t]=s;order.push(t);}
     });
