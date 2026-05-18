@@ -36,13 +36,61 @@ const pageTitle = title === settings.site_name
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <title>{pageTitle}</title>
+    <script is:inline>document.documentElement.classList.add('js');</script>
     <ViewTransitions />
   </head>
-  <body class="bg-fs-white text-fs-dark font-sans antialiased selection:bg-fs-blue/15 selection:text-fs-dark">
+  <body class="bg-fc-paper text-fc-ink font-sans antialiased selection:bg-fc-lime selection:text-fc-ink">
+
+    <!-- ── SVG sprite: shared marks ───────────────────────────────────── -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <!-- FC monogram mark — bold geometric F + C interlock -->
+        <symbol id="fc-mark" viewBox="0 0 64 64">
+          <g fill="currentColor">
+            <!-- F -->
+            <rect x="8" y="10" width="22" height="6"/>
+            <rect x="8" y="10" width="6" height="44"/>
+            <rect x="8" y="28" width="16" height="6"/>
+            <!-- C arc -->
+            <path d="M56 22a16 16 0 1 0 0 20h-7a10 10 0 1 1 0-20z"/>
+          </g>
+        </symbol>
+
+        <!-- Lightning bolt / energy mark -->
+        <symbol id="fc-bolt" viewBox="0 0 24 32">
+          <path fill="currentColor" d="M14 0L0 18h8l-4 14L24 12h-8l4-12z"/>
+        </symbol>
+
+        <!-- Plus / cross dot used as decorative anchor -->
+        <symbol id="fc-cross" viewBox="0 0 16 16">
+          <path fill="currentColor" d="M7 0h2v7h7v2h-7v7H7V9H0V7h7z"/>
+        </symbol>
+
+        <!-- Dumbbell -->
+        <symbol id="fc-dumbbell" viewBox="0 0 48 24">
+          <g fill="currentColor">
+            <rect x="0" y="6" width="4" height="12" rx="1"/>
+            <rect x="4" y="3" width="6" height="18" rx="1.5"/>
+            <rect x="10" y="10" width="28" height="4"/>
+            <rect x="38" y="3" width="6" height="18" rx="1.5"/>
+            <rect x="44" y="6" width="4" height="12" rx="1"/>
+          </g>
+        </symbol>
+
+        <!-- Arrow up-right (used for CTAs) -->
+        <symbol id="fc-arrow" viewBox="0 0 24 24">
+          <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 17L17 7"/>
+            <path d="M8 7h9v9"/>
+          </g>
+        </symbol>
+      </defs>
+    </svg>
+
     <Nav settings={settings} nav={nav} ui={ui} />
     <main>
       <slot />
@@ -55,20 +103,25 @@ const pageTitle = title === settings.site_name
         text-rendering: optimizeLegibility;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        --section-y: clamp(4rem, 6vw, 7rem);
+        --section-y: clamp(5rem, 7vw, 8rem);
+        --ink: #0e0e0f;
+        --paper: #f5f1e8;
+        --lime: #caf83a;
+        --rust: #ec4d27;
       }
 
-      html, body { min-height: 100vh; }
+      html, body { min-height: 100vh; background-color: #f5f1e8; }
 
       h1, h2, h3, h4, h5, h6 {
-        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-        letter-spacing: -0.02em;
+        font-family: 'Bricolage Grotesque', 'Space Grotesk', system-ui, sans-serif;
+        letter-spacing: -0.025em;
+        font-feature-settings: "ss01", "ss02";
       }
 
       :focus-visible {
-        outline: 2px solid #2563eb;
+        outline: 2px solid var(--ink);
         outline-offset: 3px;
-        border-radius: 4px;
+        border-radius: 2px;
       }
       :focus:not(:focus-visible) { outline: none; }
 
@@ -77,146 +130,182 @@ const pageTitle = title === settings.site_name
       .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-      .line-clamp-2 {
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-      }
-      .line-clamp-3 {
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 3;
-      }
+      .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+      .line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
 
       /* ──────────────────────────────────────────────────────────
-         Design system primitives
+         Editorial / athletic design system
          ────────────────────────────────────────────────────────── */
 
       .section { padding-top: var(--section-y); padding-bottom: var(--section-y); }
       .section-tight { padding-top: calc(var(--section-y) * 0.65); padding-bottom: calc(var(--section-y) * 0.65); }
 
-      .eyebrow {
-        display: inline-block;
-        color: #2563eb;
-        background: #eff6ff;
+      /* Eyebrow — monospaced spec-label style */
+      .eyebrow, .eyebrow-plain {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        color: var(--ink);
         font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.12em;
+        font-weight: 500;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
-        padding: 0.4rem 0.85rem;
-        border-radius: 9999px;
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: .55rem;
       }
-      .eyebrow-plain {
-        color: #2563eb;
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
+      .eyebrow::before, .eyebrow-plain::before {
+        content: '';
+        width: 1.6rem; height: 1px; background: currentColor; opacity: .6;
+      }
+      .eyebrow.on-ink, .eyebrow-plain.on-ink { color: var(--lime); }
+
+      /* Big "kapitel" numerical anchor used at section heads */
+      .index-num {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-weight: 500; font-size: 11px;
+        letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--ink);
       }
 
       h1.display, h2.display {
-        font-weight: 800;
-        line-height: 1.05;
+        font-weight: 700;
+        line-height: 0.96;
+        letter-spacing: -0.035em;
       }
+
+      /* Display headline scale */
+      .h-mega {
+        font-family: 'Bricolage Grotesque', 'Space Grotesk', system-ui, sans-serif;
+        font-weight: 700;
+        line-height: 0.92;
+        letter-spacing: -0.04em;
+        font-variation-settings: "wdth" 105, "wght" 700;
+      }
+      .h-mega em { font-style: normal; font-variation-settings: "wdth" 75, "wght" 600; font-weight: 600; opacity: .96; }
 
       /* Buttons */
       .btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.5rem;
-        padding: 0.7rem 1.25rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        border-radius: 0.5rem;
+        gap: 0.55rem;
+        padding: 0.95rem 1.65rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        border-radius: 999px;
         transition: background-color 200ms, color 200ms, border-color 200ms, transform 200ms, box-shadow 200ms;
         white-space: nowrap;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
       }
       .btn-primary {
-        background-color: #2563eb;
-        color: #ffffff;
-        box-shadow: 0 8px 20px -10px rgba(37,99,235,0.6);
+        background-color: var(--ink);
+        color: #fff;
       }
-      .btn-primary:hover {
-        background-color: #1d4ed8;
-        transform: translateY(-1px);
-        box-shadow: 0 12px 28px -10px rgba(37,99,235,0.7);
+      .btn-primary:hover { background-color: #000; transform: translateY(-1px); box-shadow: 0 12px 24px -10px rgba(14,14,15,.5); }
+      .btn-lime {
+        background-color: var(--lime);
+        color: var(--ink);
+        box-shadow: 0 6px 18px -8px rgba(202,248,58,.7);
       }
+      .btn-lime:hover { background-color: #b9e833; transform: translateY(-1px); }
       .btn-ghost {
         background: transparent;
-        color: #111827;
-        border: 1px solid #e5e7eb;
+        color: var(--ink);
+        border: 1px solid var(--ink);
       }
-      .btn-ghost:hover {
-        border-color: #2563eb;
-        color: #2563eb;
+      .btn-ghost:hover { background: var(--ink); color: var(--lime); }
+      .btn-on-blue-ghost, .btn-on-ink-ghost {
+        background: transparent;
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.45);
       }
-      .btn-on-blue-ghost {
-        background: rgba(255,255,255,0.08);
-        color: #ffffff;
-        border: 1px solid rgba(255,255,255,0.3);
-      }
-      .btn-on-blue-ghost:hover {
-        border-color: rgba(255,255,255,0.7);
-        background: rgba(255,255,255,0.14);
+      .btn-on-blue-ghost:hover, .btn-on-ink-ghost:hover {
+        border-color: var(--lime); color: var(--lime);
       }
 
-      /* Inline link */
+      /* Inline link with arrow */
       .inline-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: #2563eb;
-        font-weight: 600;
-        font-size: 0.875rem;
-        transition: gap 200ms, color 200ms;
+        display: inline-flex; align-items: center; gap: .6rem;
+        color: var(--ink); font-weight: 600;
+        font-size: 0.82rem;
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        letter-spacing: 0.04em; text-transform: uppercase;
+        border-bottom: 2px solid var(--ink);
+        padding-bottom: .35rem;
+        transition: gap 200ms, color 200ms, border-color 200ms;
       }
-      .inline-link:hover { color: #1d4ed8; gap: 0.75rem; }
-      .inline-link.on-blue { color: #ffffff; }
-      .inline-link.on-blue:hover { color: #eff6ff; }
+      .inline-link:hover { gap: .9rem; color: var(--rust); border-color: var(--rust); }
+      .inline-link.on-blue, .inline-link.on-ink { color: #fff; border-color: rgba(255,255,255,.4); }
+      .inline-link.on-blue:hover, .inline-link.on-ink:hover { color: var(--lime); border-color: var(--lime); }
 
-      /* Card */
+      /* Card — flat, with sharp corners + thin line */
       .card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 0.75rem;
-        box-shadow: 0 1px 2px rgba(17,24,39,0.04);
-        transition: transform 280ms cubic-bezier(.16,1,.3,1), box-shadow 280ms cubic-bezier(.16,1,.3,1), border-color 220ms;
+        background: #fff;
+        border: 1px solid var(--ink);
+        border-radius: 4px;
+        transition: transform 280ms cubic-bezier(.16,1,.3,1), box-shadow 280ms cubic-bezier(.16,1,.3,1);
       }
       .card-hover:hover {
         transform: translateY(-4px);
-        box-shadow: 0 16px 36px -18px rgba(17,24,39,0.18);
-        border-color: rgba(37,99,235,0.3);
+        box-shadow: 6px 6px 0 0 var(--ink);
       }
 
-      /* Pill / Badge */
+      /* Pill */
       .pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        background: #eff6ff;
-        color: #2563eb;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.1em;
+        display: inline-flex; align-items: center; gap: .35rem;
+        background: var(--ink); color: var(--lime);
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 10px; font-weight: 500; letter-spacing: .12em;
         text-transform: uppercase;
-        padding: 0.3rem 0.7rem;
-        border-radius: 9999px;
+        padding: .35rem .65rem;
+        border-radius: 0;
+      }
+      .pill-outline {
+        background: transparent; color: var(--ink);
+        border: 1px solid var(--ink);
       }
 
-      /* Fade-up animation */
-      .fade-up {
-        opacity: 0;
-        transform: translateY(16px);
-        transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+      /* Marquee */
+      .marquee {
+        --gap: 3rem;
+        display: flex; gap: var(--gap); width: max-content;
+        animation: marquee 32s linear infinite;
+      }
+      .marquee-wrap:hover .marquee { animation-play-state: paused; }
+      @keyframes marquee {
+        from { transform: translateX(0); }
+        to   { transform: translateX(calc(-50% - var(--gap)/2)); }
+      }
+
+      /* Display numeral — used in stats and section heads */
+      .num-display {
+        font-family: 'Bricolage Grotesque', 'Space Grotesk', system-ui, sans-serif;
+        font-weight: 700;
+        line-height: 0.9;
+        letter-spacing: -0.04em;
+        font-variation-settings: "wdth" 105;
+      }
+
+      /* Mono spec — small uppercase tracking */
+      .spec {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 10.5px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        font-weight: 500;
+      }
+
+      /* Fade-up — only when JS is enabled (no-JS visitors see content) */
+      html.js .fade-up {
+        opacity: 0; transform: translateY(16px);
+        transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
         will-change: opacity, transform;
       }
-      .fade-up.is-visible {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      html.js .fade-up.is-visible { opacity: 1; transform: translateY(0); }
       .delay-100 { transition-delay: 100ms; }
       .delay-200 { transition-delay: 200ms; }
       .delay-300 { transition-delay: 300ms; }
@@ -224,6 +313,7 @@ const pageTitle = title === settings.site_name
 
       @media (prefers-reduced-motion: reduce) {
         .fade-up { opacity: 1 !important; transform: none !important; transition: none !important; }
+        .marquee { animation: none !important; }
         * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
       }
     </style>
@@ -237,10 +327,7 @@ const pageTitle = title === settings.site_name
               observer.unobserve(entry.target);
             }
           });
-        }, {
-          rootMargin: '0px 0px -10% 0px',
-          threshold: 0.1
-        });
+        }, { rootMargin: '0px 0px -10% 0px', threshold: 0.1 });
         document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
       }
 

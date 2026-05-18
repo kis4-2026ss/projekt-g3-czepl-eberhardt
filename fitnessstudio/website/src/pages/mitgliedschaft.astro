@@ -8,24 +8,30 @@ import {
 const [plans, faqs, ui, copy] = await Promise.all([
   getMembershipPlans(), getFaqItems(), getUiCopy(), getMitgliedschaftCopy(),
 ]);
+
+function pad2(n: number) { return String(n).padStart(2, '0'); }
 ---
 
 <Layout title={copy.title} description={copy.lead}>
 
   <!-- Page header -->
-  <section class="bg-fs-surface border-b border-fs-border">
-    <div class="max-w-4xl mx-auto px-5 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-14 text-center fade-up">
-      <span class="eyebrow" data-cms-collection="mitgliedschaft_copy" data-cms-field="eyebrow">{copy.eyebrow}</span>
-      <h1 class="display font-display font-extrabold text-fs-dark text-4xl sm:text-5xl lg:text-6xl mt-5 leading-[1.05] tracking-tight-2"
+  <section class="bg-fc-paper border-b border-fc-ink/15 relative overflow-hidden">
+    <p class="absolute -right-6 top-2 num-display text-[clamp(8rem,22vw,16rem)] leading-[0.85] text-fc-ink/[0.05] select-none pointer-events-none" aria-hidden="true">02</p>
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-14 fade-up relative">
+      <div class="flex items-baseline gap-4 mb-5">
+        <span class="num-display text-4xl sm:text-5xl text-fc-ink">02</span>
+        <span class="eyebrow" data-cms-collection="mitgliedschaft_copy" data-cms-field="eyebrow">{copy.eyebrow}</span>
+      </div>
+      <h1 class="h-mega text-fc-ink text-5xl sm:text-7xl lg:text-[6.5rem] max-w-4xl"
           data-cms-collection="mitgliedschaft_copy" data-cms-field="title">
         {copy.title}
       </h1>
-      <p class="mt-5 text-fs-blue text-xl font-medium"
+      <p class="mt-7 text-fc-rust text-2xl font-display font-medium"
          data-cms-collection="mitgliedschaft_copy" data-cms-field="subtitle">
         {copy.subtitle}
       </p>
       {copy.lead && (
-        <p class="mt-4 text-fs-muted text-base leading-relaxed max-w-2xl mx-auto"
+        <p class="mt-4 text-fc-muted text-base leading-relaxed max-w-2xl"
            data-cms-collection="mitgliedschaft_copy" data-cms-field="lead">
           {copy.lead}
         </p>
@@ -34,75 +40,83 @@ const [plans, faqs, ui, copy] = await Promise.all([
   </section>
 
   <!-- Pricing -->
-  <section class="section bg-fs-white">
+  <section class="section bg-fc-paper">
     <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto pt-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-7 max-w-6xl mx-auto pt-6">
         {plans.map((p, i) => (
           <div class={`fade-up delay-${(i + 1) * 100}`}>
-            <PricingCard plan={p} ui={ui} variant="full" />
+            <PricingCard plan={p} ui={ui} variant="full" index={`/ ${pad2(i + 1)}`} />
           </div>
         ))}
       </div>
-      <p class="text-center mt-8 text-fs-muted text-sm fade-up delay-300"
+      <p class="text-center mt-10 spec text-fc-muted fade-up delay-300"
          data-cms-collection="mitgliedschaft_copy" data-cms-field="footnote">
         {copy.footnote}
       </p>
     </div>
   </section>
 
-  <!-- FAQ -->
-  <section class="section bg-fs-surface">
-    <div class="max-w-3xl mx-auto px-5 sm:px-6 lg:px-8">
-      <div class="text-center mb-10 fade-up">
-        <span class="eyebrow" data-cms-collection="mitgliedschaft_copy" data-cms-field="faq_eyebrow">{copy.faq_eyebrow}</span>
-        <h2 class="font-display font-extrabold text-fs-dark text-3xl sm:text-4xl mt-4 leading-tight tracking-tight-2"
+  <!-- FAQ — editorial accordion -->
+  <section class="section bg-fc-cream relative overflow-hidden">
+    <p class="absolute -left-6 top-6 num-display text-[clamp(8rem,22vw,16rem)] leading-[0.85] text-fc-ink/[0.05] select-none pointer-events-none" aria-hidden="true">FAQ</p>
+    <div class="max-w-3xl mx-auto px-5 sm:px-6 lg:px-8 relative">
+      <div class="mb-10 fade-up">
+        <div class="flex items-baseline gap-4 mb-5">
+          <span class="num-display text-3xl text-fc-ink">FAQ</span>
+          <span class="eyebrow" data-cms-collection="mitgliedschaft_copy" data-cms-field="faq_eyebrow">{copy.faq_eyebrow}</span>
+        </div>
+        <h2 class="h-mega text-fc-ink text-4xl sm:text-5xl"
             data-cms-collection="mitgliedschaft_copy" data-cms-field="faq_title">
           {copy.faq_title}
         </h2>
       </div>
 
-      <div class="bg-white border border-fs-border rounded-2xl divide-y divide-fs-border overflow-hidden fade-up delay-100">
-        {faqs.map((item) => (
-          <details
-            data-cms-collection="faq_items"
-            data-cms-id={String(item.id)}
-            class="group">
-            <summary class="cursor-pointer select-none px-6 sm:px-7 py-5 flex items-center justify-between gap-4 list-none">
-              <span data-cms-field="question" class="font-semibold text-fs-dark text-[15px] leading-snug">{item.question}</span>
-              <svg class="w-5 h-5 flex-shrink-0 text-fs-muted transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-              </svg>
-            </summary>
-            <div class="px-6 sm:px-7 pb-6 pt-0 -mt-1">
-              <p data-cms-field="answer" class="text-fs-muted text-[15px] leading-relaxed">{item.answer}</p>
-            </div>
-          </details>
+      <ul class="divide-y divide-fc-ink/15 border-y border-fc-ink fade-up delay-100">
+        {faqs.map((item, i) => (
+          <li>
+            <details
+              data-cms-collection="faq_items"
+              data-cms-id={String(item.id)}
+              class="group">
+              <summary class="cursor-pointer select-none py-5 sm:py-6 flex items-baseline justify-between gap-5 list-none">
+                <div class="flex items-baseline gap-4 sm:gap-5 flex-1 min-w-0">
+                  <span class="num-display text-fc-rust text-base sm:text-lg tabular-nums">/ {pad2(i + 1)}</span>
+                  <span data-cms-field="question" class="font-display font-bold text-fc-ink text-lg sm:text-xl leading-snug">{item.question}</span>
+                </div>
+                <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center transition-transform duration-200 group-open:rotate-45 text-fc-ink">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+                </span>
+              </summary>
+              <div class="pb-7 pl-9 sm:pl-11 pr-10 -mt-2">
+                <p data-cms-field="answer" class="text-fc-muted text-[15px] leading-[1.75]">{item.answer}</p>
+              </div>
+            </details>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   </section>
 
-  <!-- Trial banner -->
-  <section class="section-tight bg-fs-white">
-    <div class="max-w-3xl mx-auto px-5 sm:px-6 lg:px-8 fade-up">
-      <div class="bg-fs-blue text-white rounded-2xl px-7 sm:px-10 py-8 sm:py-9 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
-             style="background-image:radial-gradient(circle,#ffffff 1px,transparent 1px);background-size:24px 24px"></div>
-        <div class="relative">
-          <h3 class="font-display font-extrabold text-2xl sm:text-3xl tracking-tight-2"
-              data-cms-collection="mitgliedschaft_copy" data-cms-field="banner_title">
-            {copy.banner_title}
-          </h3>
-          <p class="mt-2 text-white/85"
-             data-cms-collection="mitgliedschaft_copy" data-cms-field="banner_text">
-            {copy.banner_text}
-          </p>
-        </div>
+  <!-- Trial banner — bold editorial split -->
+  <section class="bg-fc-ink text-white relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-16 sm:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center fade-up">
+      <div class="lg:col-span-8">
+        <span class="eyebrow on-ink mb-5">[ Trial ]</span>
+        <h3 class="h-mega text-white text-4xl sm:text-5xl lg:text-6xl"
+            data-cms-collection="mitgliedschaft_copy" data-cms-field="banner_title">
+          {copy.banner_title}
+        </h3>
+        <p class="mt-5 text-white/70 text-lg max-w-xl"
+           data-cms-collection="mitgliedschaft_copy" data-cms-field="banner_text">
+          {copy.banner_text}
+        </p>
+      </div>
+      <div class="lg:col-span-4 lg:justify-self-end">
         <a href={copy.banner_link || '/kontakt'}
            data-cms-collection="mitgliedschaft_copy" data-cms-field="banner_cta"
-           class="relative inline-flex items-center justify-center gap-2 bg-white text-fs-blue font-medium rounded-lg px-5 py-3 text-sm hover:bg-fs-blue-bg transition-colors whitespace-nowrap">
+           class="btn btn-lime">
           {copy.banner_cta}
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          <svg class="w-3.5 h-3.5"><use href="#fc-arrow" /></svg>
         </a>
       </div>
     </div>

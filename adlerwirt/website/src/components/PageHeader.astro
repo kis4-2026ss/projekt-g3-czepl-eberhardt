@@ -7,8 +7,10 @@ interface Props {
   fallbackTitle?: string;
   fallbackEyebrow?: string;
   fallbackLead?: string;
+  /** Optional roman numeral for editorial section numbering */
+  numeral?: string;
 }
-const { header, fallbackTitle = '', fallbackEyebrow = '', fallbackLead = '' } = Astro.props;
+const { header, fallbackTitle = '', fallbackEyebrow = '', fallbackLead = '', numeral } = Astro.props;
 
 const title    = header?.title   || fallbackTitle;
 const eyebrow  = header?.eyebrow || fallbackEyebrow;
@@ -28,31 +30,35 @@ const imageUrl = assetUrl(header?.image);
       data-cms-collection={header ? 'page_headers' : undefined}
       data-cms-id={header ? String(header.id) : undefined}
       data-cms-field={header ? 'image' : undefined}
-      class="absolute inset-0 w-full h-full object-cover opacity-30"
+      class="absolute inset-0 w-full h-full object-cover opacity-25"
       loading="eager"
     />
   )}
-  <!-- no gradients: keep a clean header image treatment -->
-  <div class="absolute inset-0 opacity-[0.04]"
-       style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:22px 22px"></div>
+  <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(11,22,14,.55)_0%,rgba(22,42,27,.3)_50%,rgba(22,42,27,.7)_100%)]"></div>
 
-  <div class="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-36 sm:pt-44 pb-20 sm:pb-24">
+  <!-- Faint eagle watermark right side -->
+  <div class="absolute -right-12 top-1/2 -translate-y-1/2 text-w-gold/[0.06] pointer-events-none hidden md:block" aria-hidden="true">
+    <svg class="w-[28rem] h-[28rem]"><use href="#m-eagle" /></svg>
+  </div>
+
+  <div class="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-40 sm:pt-48 pb-20 sm:pb-28">
     <div class="max-w-3xl fade-up">
-      {eyebrow && (
-        <p
-          data-cms-collection={header ? 'page_headers' : undefined}
-          data-cms-id={header ? String(header.id) : undefined}
-          data-cms-field={header ? 'eyebrow' : undefined}
-          class="inline-flex items-center gap-3 text-w-gold text-xs font-semibold tracking-[0.28em] uppercase mb-6">
-          <span class="w-8 h-px bg-w-gold/70"></span>
-          <span>{eyebrow}</span>
-        </p>
-      )}
+      <div class="flex items-baseline gap-4 mb-6 text-w-gold">
+        {numeral && <span class="font-serif italic text-3xl sm:text-4xl leading-none font-medium">{numeral}</span>}
+        {numeral && <span class="h-px w-10 bg-w-gold/55 self-center"></span>}
+        {eyebrow && (
+          <p
+            data-cms-collection={header ? 'page_headers' : undefined}
+            data-cms-id={header ? String(header.id) : undefined}
+            data-cms-field={header ? 'eyebrow' : undefined}
+            class="text-xs font-semibold tracking-[0.4em] uppercase">{eyebrow}</p>
+        )}
+      </div>
       <h1
         data-cms-collection={header ? 'page_headers' : undefined}
         data-cms-id={header ? String(header.id) : undefined}
         data-cms-field={header ? 'title' : undefined}
-        class="font-serif text-4xl sm:text-5xl lg:text-6xl xl:text-7xl text-white font-medium tracking-tight leading-[1.05]">
+        class="h-display text-white text-5xl sm:text-6xl lg:text-7xl xl:text-[5.5rem]">
         {title}
       </h1>
       {lead && (
@@ -60,11 +66,10 @@ const imageUrl = assetUrl(header?.image);
           data-cms-collection={header ? 'page_headers' : undefined}
           data-cms-id={header ? String(header.id) : undefined}
           data-cms-field={header ? 'lead' : undefined}
-          class="text-white/80 mt-6 sm:mt-8 max-w-2xl text-base sm:text-lg font-light leading-relaxed fade-up delay-100">
+          class="text-white/80 mt-8 max-w-2xl text-base sm:text-lg font-light leading-[1.85] fade-up delay-100">
           {lead}
         </p>
       )}
     </div>
   </div>
-  <!-- bottom transition removed (was a gradient) -->
 </header>

@@ -6,8 +6,10 @@ interface Props {
   plan: MembershipPlan;
   ui: UiCopy;
   variant?: 'compact' | 'full';
+  /** Optional index — adds an "01" marker */
+  index?: string;
 }
-const { plan, ui, variant = 'compact' } = Astro.props;
+const { plan, ui, variant = 'compact', index } = Astro.props;
 const highlighted = plan.is_highlighted;
 ---
 
@@ -15,40 +17,54 @@ const highlighted = plan.is_highlighted;
   data-cms-collection="membership_plans"
   data-cms-id={String(plan.id)}
   class:list={[
-    'relative flex flex-col rounded-2xl bg-white p-7 sm:p-8 transition-all duration-300',
+    'relative flex flex-col h-full p-8 sm:p-9 transition-all duration-300',
     highlighted
-      ? 'border-2 border-fs-blue shadow-feature'
-      : 'border border-fs-border shadow-card hover:shadow-card-hover hover:-translate-y-1',
+      ? 'bg-fc-ink text-white shadow-feature'
+      : 'bg-fc-cream text-fc-ink border border-fc-ink',
   ]}>
+
+  <!-- Index marker -->
+  {index && (
+    <span class:list={[
+      'num-display text-3xl absolute top-6 right-6',
+      highlighted ? 'text-fc-lime' : 'text-fc-ink/30',
+    ]}>{index}</span>
+  )}
+
   {highlighted && (
-    <span class="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 bg-fs-blue text-white text-[10px] font-bold tracking-[0.18em] uppercase px-3 py-1.5 rounded-full shadow-sm">
-      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+    <span class="absolute -top-3 left-6 sm:left-8 inline-flex items-center gap-1.5 bg-fc-lime text-fc-ink spec font-semibold px-3 py-1.5">
+      <svg class="w-3 h-3"><use href="#fc-bolt" /></svg>
       <span data-cms-collection="membership_plans" data-cms-field="highlight_label">{plan.highlight_label || ui.popular_label}</span>
     </span>
   )}
 
-  <header class="text-center mb-6">
-    <h3 data-cms-field="name" class="font-display font-extrabold text-fs-dark text-2xl mb-1.5">{plan.name}</h3>
-    {plan.tagline && <p data-cms-field="tagline" class="text-fs-muted text-sm">{plan.tagline}</p>}
+  <header class="mb-8">
+    <h3 data-cms-field="name" class:list={['font-display font-bold text-3xl sm:text-[2rem] leading-[1.05] tracking-tight-3 mb-2', highlighted ? 'text-white' : 'text-fc-ink']}>{plan.name}</h3>
+    {plan.tagline && <p data-cms-field="tagline" class:list={['text-base leading-relaxed', highlighted ? 'text-white/65' : 'text-fc-muted']}>{plan.tagline}</p>}
   </header>
 
-  <div class="text-center pb-6 border-b border-fs-border">
-    <div class="flex items-baseline justify-center gap-1">
-      <span class="text-fs-muted text-2xl font-semibold">€</span>
-      <span data-cms-field="price_monthly" class="font-display font-extrabold text-fs-dark text-5xl tracking-tight-2">{formatPrice(plan.price_monthly)}</span>
+  <div class:list={['pb-7 mb-7 border-b', highlighted ? 'border-white/15' : 'border-fc-line']}>
+    <div class="flex items-end gap-1">
+      <span class:list={['num-display text-6xl sm:text-7xl tabular-nums', highlighted ? 'text-fc-lime' : 'text-fc-ink']}
+            data-cms-field="price_monthly">€{formatPrice(plan.price_monthly)}</span>
     </div>
-    <p class="mt-1.5 text-xs text-fs-muted uppercase tracking-[0.14em] font-semibold">
+    <p class:list={['spec mt-2', highlighted ? 'text-white/55' : 'text-fc-muted']}>
       <span data-cms-collection="membership_plans" data-cms-field="billing_note">{plan.billing_note || ui.per_month_label}</span>
     </p>
   </div>
 
-  <ul class="my-7 space-y-3 flex-1">
+  <ul class="space-y-3.5 flex-1 mb-8">
     {(plan.features || []).map((f) => (
-      <li class="flex items-start gap-3 text-sm">
+      <li class="flex items-start gap-3 text-[15px]">
         {f.included
-          ? <svg class="w-5 h-5 flex-shrink-0 text-fs-blue mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M5 13l4 4L19 7"/></svg>
-          : <svg class="w-5 h-5 flex-shrink-0 text-fs-border mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/></svg>}
-        <span class:list={['leading-snug', f.included ? 'text-fs-dark' : 'text-fs-muted line-through']}>
+          ? <svg class:list={['w-5 h-5 flex-shrink-0 mt-0.5', highlighted ? 'text-fc-lime' : 'text-fc-ink']} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M5 13l4 4L19 7"/></svg>
+          : <svg class:list={['w-5 h-5 flex-shrink-0 mt-0.5', highlighted ? 'text-white/30' : 'text-fc-line']} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12"/></svg>}
+        <span class:list={[
+          'leading-snug',
+          f.included
+            ? (highlighted ? 'text-white' : 'text-fc-ink')
+            : (highlighted ? 'text-white/35 line-through' : 'text-fc-muted line-through'),
+        ]}>
           {f.label}
         </span>
       </li>
@@ -58,8 +74,9 @@ const highlighted = plan.is_highlighted;
   <a href={plan.cta_link || '#'}
      class:list={[
        'block w-full text-center btn',
-       highlighted ? 'btn-primary' : 'btn-ghost',
+       highlighted ? 'btn-lime' : 'btn-primary',
      ]}>
     <span data-cms-collection="membership_plans" data-cms-field="cta_label">{plan.cta_label}</span>
+    <svg class="w-3 h-3"><use href="#fc-arrow" /></svg>
   </a>
 </article>

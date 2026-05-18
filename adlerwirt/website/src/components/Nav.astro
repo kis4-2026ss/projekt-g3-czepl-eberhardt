@@ -21,21 +21,25 @@ function isActive(href: string) {
 
 <header class="fixed top-0 inset-x-0 z-50 transition-all duration-300" id="main-nav">
   <!-- Solid background that fades in on scroll -->
-  <div class="absolute inset-0 bg-w-green/95 backdrop-blur-md border-b border-white/5 opacity-0 transition-opacity duration-300 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.7)]" id="nav-bg"></div>
+  <div class="absolute inset-0 bg-w-green/95 backdrop-blur-md border-b border-w-gold/15 opacity-0 transition-opacity duration-300 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.7)]" id="nav-bg"></div>
 
   <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 relative z-10">
     <div class="flex items-center justify-between h-20 sm:h-24 transition-all duration-300" id="nav-container">
 
-      <!-- Logo / Wordmark -->
-      <a href="/" class="group flex items-center gap-3 leading-tight">
-        <span aria-hidden="true" class="hidden sm:flex w-10 h-10 rounded-full border border-w-gold/60 items-center justify-center text-w-gold font-serif text-lg group-hover:bg-w-gold group-hover:text-w-green transition-colors duration-300">
-          {settings.site_name.charAt(0)}
+      <!-- Wordmark with eagle mark -->
+      <a href="/" class="group flex items-center gap-3.5 leading-tight">
+        <span aria-hidden="true" class="text-w-gold w-9 h-9 sm:w-10 sm:h-10 transition-transform duration-500 group-hover:rotate-[6deg]">
+          <svg class="w-full h-full"><use href="#m-eagle" /></svg>
         </span>
         <span class="flex flex-col leading-tight">
-          <span data-cms-collection="site_settings" data-cms-field="site_name" class="font-serif text-white text-xl sm:text-2xl font-medium tracking-wide group-hover:text-w-gold transition-colors duration-300">
-            {settings.site_name}
+          <span data-cms-collection="site_settings" data-cms-field="site_name"
+                class="font-serif text-white text-[1.35rem] sm:text-[1.6rem] font-medium tracking-[0.01em] group-hover:text-w-gold transition-colors duration-300">
+            {settings.site_name.replace(/^Gasthaus\s+/i, '')}
           </span>
-          <span data-cms-collection="site_settings" data-cms-field="tagline" class="text-w-gold/80 text-[10px] tracking-[0.28em] uppercase mt-0.5">{settings.tagline}</span>
+          <span data-cms-collection="site_settings" data-cms-field="tagline"
+                class="text-w-gold/85 text-[10px] tracking-[0.34em] uppercase mt-0.5 font-medium">
+            {settings.tagline}
+          </span>
         </span>
       </a>
 
@@ -48,13 +52,13 @@ function isActive(href: string) {
             data-cms-id={String(l.id)}
             data-cms-field="label"
             class:list={[
-              'group relative px-3 py-2 text-[13px] font-medium uppercase tracking-[0.18em] transition-colors duration-300',
+              'group relative px-3.5 py-2 text-[12px] font-semibold uppercase tracking-[0.22em] transition-colors duration-300',
               isActive(l.href) ? 'text-w-gold' : 'text-white/85 hover:text-white',
             ]}
           >
             {l.label}
             <span class:list={[
-              'pointer-events-none absolute left-3 right-3 -bottom-0.5 h-px bg-w-gold transition-all duration-300',
+              'pointer-events-none absolute left-3.5 right-3.5 -bottom-0.5 h-px bg-w-gold transition-all duration-300',
               isActive(l.href) ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-50 group-hover:opacity-60 group-hover:scale-x-100',
             ]}></span>
           </a>
@@ -64,7 +68,7 @@ function isActive(href: string) {
           data-cms-collection={kontakt ? 'navigation_links' : 'ui_copy'}
           data-cms-id={kontakt ? String(kontakt.id) : undefined}
           data-cms-field={kontakt ? 'label' : 'nav_cta_label'}
-          class="ml-4 btn btn-primary !py-2.5 !px-5"
+          class="ml-4 btn btn-gold !py-2.5 !px-5 !text-[11px] !tracking-[0.2em]"
         >
           {kontakt?.label || ui.nav_cta_label}
         </a>
@@ -98,7 +102,7 @@ function isActive(href: string) {
          data-cms-collection={kontakt ? 'navigation_links' : 'ui_copy'}
          data-cms-id={kontakt ? String(kontakt.id) : undefined}
          data-cms-field={kontakt ? 'label' : 'nav_cta_label'}
-         class="mt-6 btn btn-primary">
+         class="mt-6 btn btn-gold">
         {kontakt?.label || ui.nav_cta_label}
       </a>
     </nav>

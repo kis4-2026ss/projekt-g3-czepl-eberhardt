@@ -14,6 +14,7 @@ function dayParts(d: string | null) {
   return {
     day: date.toLocaleDateString('de-AT', { day: '2-digit' }),
     month: date.toLocaleDateString('de-AT', { month: 'short' }).replace('.', ''),
+    weekday: date.toLocaleDateString('de-AT', { weekday: 'short' }).replace('.', ''),
     year: date.toLocaleDateString('de-AT', { year: 'numeric' }),
   };
 }
@@ -25,67 +26,69 @@ function dateRange(ev: typeof events[0]) {
   if (from)        return `ab ${from}`;
   return null;
 }
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 ---
 
 <Layout title={header?.title} description={header?.seo_description}>
   <PageHeader header={header} />
 
-  <!-- Events list -->
-  <div class="max-w-5xl mx-auto px-5 sm:px-6 lg:px-8 py-20 sm:py-24 space-y-8 sm:space-y-10">
-    {events.map((ev, i) => {
-      const parts = dayParts(ev.starts_on);
-      return (
-        <article data-cms-collection="events" data-cms-id={String(ev.id)}
-                 class={`card card-hover overflow-hidden grid grid-cols-1 md:grid-cols-12 fade-up delay-${(i % 3) * 100}`}>
-          <!-- Date / sidebar -->
-          <div class="md:col-span-4 bg-w-dark text-w-cream relative overflow-hidden p-8 sm:p-10 flex flex-col justify-center">
-            <div class="absolute inset-0 opacity-[0.03] pointer-events-none"
-                 style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:16px 16px"></div>
-            <div class="relative z-10">
-              {ev.is_recurring ? (
-                <div>
-                  <span data-cms-collection="ui_copy" data-cms-field="recurring_label" class="inline-block px-3 py-1 rounded-sm bg-w-gold/15 text-w-gold text-[10px] uppercase tracking-[0.22em] font-semibold mb-5">
-                    {ui.recurring_label}
-                  </span>
-                  <p data-cms-field="title" class="font-serif text-2xl sm:text-3xl font-medium leading-snug text-white">{ev.title}</p>
-                  {ev.subtitle && <p data-cms-field="subtitle" class="text-white/55 text-sm font-light mt-2">{ev.subtitle}</p>}
-                  {ev.recurrence_note && (
-                    <p data-cms-field="recurrence_note" class="text-w-gold text-[11px] font-semibold tracking-[0.22em] uppercase mt-6 pt-5 border-t border-white/10">
-                      {ev.recurrence_note}
-                    </p>
-                  )}
-                </div>
-              ) : parts ? (
-                <div>
-                  <div class="flex items-baseline gap-3 mb-5">
-                    <span data-cms-field="starts_on" class="font-serif text-5xl sm:text-6xl font-medium text-w-gold leading-none tabular-nums">{parts.day}</span>
-                    <div class="leading-tight">
-                      <p data-cms-field="starts_on" class="text-w-gold text-sm font-semibold uppercase tracking-[0.22em]">{parts.month}</p>
-                      <p data-cms-field="starts_on" class="text-white/55 text-xs">{parts.year}</p>
-                    </div>
+  <!-- Events list — editorial timeline -->
+  <div class="max-w-5xl mx-auto px-5 sm:px-6 lg:px-8 py-20 sm:py-24">
+    <div class="relative">
+      <!-- Vertical timeline rule -->
+      <div class="absolute left-[7.25rem] sm:left-[8.5rem] top-0 bottom-0 w-px bg-w-linen hidden sm:block" aria-hidden="true"></div>
+
+      <ol class="space-y-14 sm:space-y-16">
+        {events.map((ev, i) => {
+          const parts = dayParts(ev.starts_on);
+          return (
+            <li data-cms-collection="events" data-cms-id={String(ev.id)} class={`fade-up delay-${(i % 3) * 100} relative`}>
+              <div class="grid sm:grid-cols-[8.5rem_1fr] gap-6 sm:gap-12">
+
+                <!-- Date marker -->
+                <div class="relative sm:text-right pr-0 sm:pr-2">
+                  <div class="flex items-baseline sm:justify-end gap-2 text-w-gold-dark mb-3">
+                    <span class="font-serif italic text-base">{ROMAN[i] ?? i + 1}.</span>
+                    <span class="h-px w-8 bg-w-gold/30 self-center hidden sm:inline-block"></span>
                   </div>
-                  <p data-cms-field="title" class="font-serif text-2xl sm:text-3xl font-medium leading-snug text-white">{ev.title}</p>
-                  {ev.subtitle && <p data-cms-field="subtitle" class="text-white/55 text-sm font-light mt-2">{ev.subtitle}</p>}
-                  {dateRange(ev) && (
-                    <p class="text-w-gold text-[11px] font-semibold tracking-[0.22em] uppercase mt-6 pt-5 border-t border-white/10">
-                      {dateRange(ev)}
-                    </p>
-                  )}
+                  {ev.is_recurring ? (
+                    <div>
+                      <p class="font-serif italic text-w-dark text-3xl sm:text-4xl leading-tight">jede</p>
+                      <p data-cms-field="recurrence_note" class="text-[10px] uppercase tracking-[0.28em] text-w-stone font-semibold mt-2">{ev.recurrence_note}</p>
+                    </div>
+                  ) : parts ? (
+                    <div>
+                      <p data-cms-field="starts_on" class="text-[10px] uppercase tracking-[0.36em] text-w-stone font-semibold mb-1">{parts.weekday}</p>
+                      <p data-cms-field="starts_on" class="font-serif text-5xl sm:text-6xl font-medium text-w-dark leading-[0.95] tabular-nums">{parts.day}</p>
+                      <p data-cms-field="starts_on" class="text-w-gold-dark text-[11px] uppercase tracking-[0.32em] font-semibold mt-2">{parts.month}</p>
+                      <p data-cms-field="starts_on" class="text-w-stone/70 text-[10px] tracking-[0.32em] uppercase font-medium mt-1">{parts.year}</p>
+                    </div>
+                  ) : null}
                 </div>
-              ) : (
-                <p data-cms-field="title" class="font-serif text-2xl sm:text-3xl font-medium leading-snug text-white">{ev.title}</p>
-              )}
-            </div>
-          </div>
-          <!-- Content -->
-          <div class="md:col-span-8 p-8 sm:p-10 flex items-center">
-            {ev.description
-              ? <div data-cms-field="description" class="prose prose-stone text-base font-light text-w-dark/80 max-w-none leading-relaxed" set:html={md(ev.description)} />
-              : <p data-cms-collection="ui_copy" data-cms-field="no_details_text" class="text-w-stone/70 italic text-base font-light">{ui.no_details_text}</p>
-            }
-          </div>
-        </article>
-      );
-    })}
+
+                <!-- Content -->
+                <article class="relative pl-0 sm:pl-10 sm:before:absolute sm:before:left-[-7px] sm:before:top-3 sm:before:w-3 sm:before:h-3 sm:before:rounded-full sm:before:bg-w-gold sm:before:ring-4 sm:before:ring-w-cream">
+                  {ev.is_recurring && (
+                    <span data-cms-collection="ui_copy" data-cms-field="recurring_label" class="inline-block px-2.5 py-1 border border-w-gold/40 text-w-gold-dark text-[10px] uppercase tracking-[0.32em] font-semibold mb-3">
+                      {ui.recurring_label}
+                    </span>
+                  )}
+                  <h2 data-cms-field="title" class="font-serif text-2xl sm:text-[1.85rem] font-medium text-w-dark leading-tight">{ev.title}</h2>
+                  {ev.subtitle && <p data-cms-field="subtitle" class="text-w-gold-dark text-base italic font-serif mt-1.5">{ev.subtitle}</p>}
+                  {ev.description ? (
+                    <div data-cms-field="description" class="prose prose-stone text-base font-light text-w-dark/75 max-w-none leading-[1.85] mt-4" set:html={md(ev.description)} />
+                  ) : (
+                    <p data-cms-collection="ui_copy" data-cms-field="no_details_text" class="text-w-stone/70 italic text-base font-light mt-4">{ui.no_details_text}</p>
+                  )}
+                  {dateRange(ev) && !ev.is_recurring && (
+                    <p class="text-w-stone text-[11px] mt-5 uppercase tracking-[0.32em] font-semibold">{dateRange(ev)}</p>
+                  )}
+                </article>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   </div>
 </Layout>

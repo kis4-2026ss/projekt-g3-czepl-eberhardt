@@ -13,32 +13,47 @@ const year = new Date().getFullYear();
 function tmpl(s: string, vars: Record<string, string>) {
   return s.replace(/\{(\w+)\}/g, (_m, k) => vars[k] ?? '');
 }
+
+const shortName = settings.site_name.replace(/^Gasthaus\s+/i, '');
 ---
 
 <footer class="bg-w-dark text-white relative overflow-hidden">
   <!-- Decorative gold hairline -->
   <div class="h-px w-full bg-gradient-to-r from-transparent via-w-gold/60 to-transparent"></div>
 
+  <!-- Editorial top strip: wordmark in the middle of a thin rule, like a masthead -->
+  <div class="relative py-14 sm:py-16 border-b border-white/8">
+    <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-white/[0.07] pointer-events-none"></div>
+    <div class="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+      <a href="/" class="group inline-flex items-center gap-5 mx-auto bg-w-dark px-6">
+        <span class="text-w-gold w-12 h-12 sm:w-14 sm:h-14 transition-transform duration-500 group-hover:rotate-[6deg]">
+          <svg class="w-full h-full"><use href="#m-eagle" /></svg>
+        </span>
+        <span class="flex flex-col leading-tight">
+          <span data-cms-collection="site_settings" data-cms-field="site_name"
+                class="font-serif text-white text-2xl sm:text-3xl font-medium tracking-wide">
+            {shortName}
+          </span>
+          <span data-cms-collection="site_settings" data-cms-field="tagline"
+                class="text-w-gold/90 text-[11px] tracking-[0.36em] uppercase mt-1.5 font-semibold">
+            {settings.tagline}
+          </span>
+        </span>
+      </a>
+    </div>
+  </div>
+
   <div class="absolute inset-0 opacity-[0.025] pointer-events-none"
        style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:24px 24px"></div>
 
-  <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 relative z-10 pt-20 sm:pt-24 pb-10">
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-16 mb-16">
+  <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 relative z-10 pt-16 sm:pt-20 pb-10">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-16 mb-14">
 
-      <!-- Brand -->
+      <!-- About column -->
       <div class="md:col-span-5">
-        <a href="/" class="group flex items-center gap-4 leading-tight mb-6">
-          <span aria-hidden="true" class="w-12 h-12 rounded-full border border-w-gold/60 flex items-center justify-center text-w-gold font-serif text-xl">
-            {settings.site_name.charAt(0)}
-          </span>
-          <span class="flex flex-col leading-tight">
-            <span data-cms-collection="site_settings" data-cms-field="site_name" class="font-serif text-white text-2xl sm:text-3xl font-medium tracking-wide group-hover:text-w-gold transition-colors duration-300">
-              {settings.site_name}
-            </span>
-            <span data-cms-collection="site_settings" data-cms-field="tagline" class="text-w-gold/90 text-[11px] tracking-[0.28em] uppercase mt-1">{settings.tagline}</span>
-          </span>
-        </a>
-        <p data-cms-collection="site_settings" data-cms-field="footer_note" class="text-base font-light leading-relaxed text-white/60 max-w-md mb-8">{settings.footer_note}</p>
+        <p class="font-serif italic text-w-gold text-base mb-4">— Familie Adler</p>
+        <p data-cms-collection="site_settings" data-cms-field="footer_note"
+           class="text-[15px] font-light leading-[1.85] text-white/60 max-w-md mb-8">{settings.footer_note}</p>
         <div class="flex gap-3">
           {settings.instagram_url && (
             <a href={settings.instagram_url} target="_blank" rel="noopener" aria-label="Instagram"
@@ -61,7 +76,7 @@ function tmpl(s: string, vars: Record<string, string>) {
 
       <!-- Nav -->
       <div class="md:col-span-3">
-        <p data-cms-collection="ui_copy" data-cms-field="footer_nav_title" class="text-w-gold text-xs font-semibold tracking-[0.28em] uppercase mb-6">{ui.footer_nav_title}</p>
+        <p data-cms-collection="ui_copy" data-cms-field="footer_nav_title" class="text-w-gold text-[11px] font-semibold tracking-[0.36em] uppercase mb-6">{ui.footer_nav_title}</p>
         <ul class="space-y-3.5">
           {nav.map(l => (
             <li>
@@ -80,7 +95,7 @@ function tmpl(s: string, vars: Record<string, string>) {
 
       <!-- Contact -->
       <div class="md:col-span-4">
-        <p data-cms-collection="ui_copy" data-cms-field="footer_contact_title" class="text-w-gold text-xs font-semibold tracking-[0.28em] uppercase mb-6">{ui.footer_contact_title}</p>
+        <p data-cms-collection="ui_copy" data-cms-field="footer_contact_title" class="text-w-gold text-[11px] font-semibold tracking-[0.36em] uppercase mb-6">{ui.footer_contact_title}</p>
         <address class="not-italic space-y-5 text-[15px] text-white/70 font-light">
           <div class="flex items-start gap-3">
             <svg class="w-4 h-4 mt-1 flex-shrink-0 text-w-gold/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -98,7 +113,7 @@ function tmpl(s: string, vars: Record<string, string>) {
             </svg>
             <a href={`tel:${settings.contact_phone.replace(/\s/g, '')}`}
                data-cms-collection="site_settings" data-cms-field="contact_phone"
-               class="hover:text-white transition-colors">{settings.contact_phone}</a>
+               class="hover:text-white transition-colors tabular-nums">{settings.contact_phone}</a>
           </div>
           <div class="flex items-start gap-3">
             <svg class="w-4 h-4 mt-1 flex-shrink-0 text-w-gold/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,14 +135,14 @@ function tmpl(s: string, vars: Record<string, string>) {
       </div>
     </div>
 
-    <div class="pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4 text-[13px] text-white/45 font-light">
-      <p data-cms-collection="ui_copy" data-cms-field="footer_rights_template">
+    <div class="pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-3 text-[12px] text-white/45 font-light">
+      <p data-cms-collection="ui_copy" data-cms-field="footer_rights_template" class="tracking-wide">
         {tmpl(ui.footer_rights_template, {
           year: String(year),
           site_name: settings.site_name,
         })}
       </p>
-      <p data-cms-collection="ui_copy" data-cms-field="footer_since_line" class="italic">{ui.footer_since_line}</p>
+      <p data-cms-collection="ui_copy" data-cms-field="footer_since_line" class="italic font-serif text-w-gold/70 tracking-wider">{ui.footer_since_line}</p>
     </div>
   </div>
 </footer>

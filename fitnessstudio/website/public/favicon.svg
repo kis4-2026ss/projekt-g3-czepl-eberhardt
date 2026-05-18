@@ -1,4 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" fill="#2563eb"/>
-  <text x="16" y="22" text-anchor="middle" font-family="-apple-system, system-ui, sans-serif" font-weight="800" font-size="18" fill="#ffffff">F</text>
+  <rect width="32" height="32" fill="#0e0e0f"/>
+  <g fill="#caf83a">
+    <rect x="5" y="6" width="11" height="3"/>
+    <rect x="5" y="6" width="3" height="22"/>
+    <rect x="5" y="15" width="8" height="3"/>
+    <path d="M28 12a8 8 0 100 8h-3.5a4.5 4.5 0 110-8z"/>
+  </g>
 </svg>

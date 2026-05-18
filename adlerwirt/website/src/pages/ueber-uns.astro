@@ -19,61 +19,91 @@ const storyHtml = md(about.story);
 <Layout title={header?.title} description={header?.seo_description || about.subtitle}>
   <PageHeader header={header} fallbackTitle={about.title} fallbackLead={about.subtitle} />
 
-  <!-- Story -->
-  <section class="section bg-w-cream">
-    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-10 lg:gap-16">
-      <!-- Text -->
-      <div class="lg:col-span-2 fade-up">
-        <p data-cms-collection="ueber_uns_copy" data-cms-field="story_eyebrow" class="eyebrow mb-4">{copy.story_eyebrow}</p>
-        <h2 data-cms-collection="about" data-cms-field="title" class="font-serif text-3xl sm:text-4xl text-w-dark font-medium tracking-tight mb-8">{about.title}</h2>
-        <div data-cms-collection="about" data-cms-field="story" class="prose prose-stone max-w-none text-w-dark/80 leading-[1.85] font-light text-[17px] sm:text-lg" set:html={storyHtml} />
-      </div>
+  <!-- ── Story — editorial single-column with seal & signature ────── -->
+  <section class="section bg-w-cream relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start">
 
-      <!-- Sidebar stats + philosophy -->
-      <aside class="space-y-6 sm:space-y-8 fade-up delay-200">
-        <div class="grid grid-cols-2 gap-4 sm:gap-6">
-          <div class="card p-7 sm:p-8 text-center">
-            <p data-cms-collection="about" data-cms-field="founded_year" class="font-serif text-4xl sm:text-5xl font-medium text-w-gold leading-none">{about.founded_year}</p>
-            <p data-cms-collection="home_copy" data-cms-field="founded_label" class="text-w-stone text-[11px] mt-3 tracking-[0.25em] uppercase">{home.founded_label}</p>
-          </div>
-          <div class="card p-7 sm:p-8 text-center">
-            <p data-cms-collection="about" data-cms-field="generations" class="font-serif text-4xl sm:text-5xl font-medium text-w-gold leading-none">{about.generations}.</p>
-            <p data-cms-collection="home_copy" data-cms-field="generation_label" class="text-w-stone text-[11px] mt-3 tracking-[0.25em] uppercase">{home.generation_label}</p>
+      <!-- Sidebar: seal + philosophy -->
+      <aside class="lg:col-span-4 fade-up lg:sticky lg:top-32 self-start">
+        <div class="flex justify-center lg:justify-start mb-8">
+          <div class="seal">
+            <span class="seal-top">Familienbetrieb</span>
+            <span class="seal-num" data-cms-collection="about" data-cms-field="founded_year">{about.founded_year}</span>
+            <span class="seal-bot">Anno · in Linz</span>
           </div>
         </div>
-        <blockquote class="bg-w-dark rounded-md p-8 sm:p-10 text-white relative overflow-hidden">
-          <div class="absolute inset-0 opacity-[0.03] pointer-events-none"
-               style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:16px 16px"></div>
-          <div class="absolute -right-4 -top-4 opacity-[0.07] text-w-gold pointer-events-none">
-            <svg class="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+        <div class="grid grid-cols-2 gap-3 mb-8">
+          <div class="text-center py-6 px-4 border border-w-gold/30 bg-w-paper/60">
+            <p data-cms-collection="about" data-cms-field="founded_year" class="font-serif text-3xl sm:text-4xl font-medium text-w-gold-dark leading-none">{about.founded_year}</p>
+            <p data-cms-collection="home_copy" data-cms-field="founded_label" class="text-w-stone text-[10px] mt-2.5 tracking-[0.32em] uppercase font-semibold">{home.founded_label}</p>
           </div>
-          <p data-cms-collection="ueber_uns_copy" data-cms-field="philosophy_eyebrow" class="eyebrow mb-4 relative z-10">{copy.philosophy_eyebrow}</p>
-          <p data-cms-collection="about" data-cms-field="philosophy" class="text-white/95 leading-[1.8] text-lg sm:text-xl italic font-serif relative z-10">"{about.philosophy}"</p>
+          <div class="text-center py-6 px-4 border border-w-gold/30 bg-w-paper/60">
+            <p data-cms-collection="about" data-cms-field="generations" class="font-serif text-3xl sm:text-4xl font-medium text-w-gold-dark leading-none">{about.generations}.</p>
+            <p data-cms-collection="home_copy" data-cms-field="generation_label" class="text-w-stone text-[10px] mt-2.5 tracking-[0.32em] uppercase font-semibold">{home.generation_label}</p>
+          </div>
+        </div>
+        <blockquote class="bg-w-dark rounded-sm p-8 sm:p-10 text-white relative overflow-hidden">
+          <div class="absolute -right-6 -bottom-6 opacity-[0.06] text-w-gold pointer-events-none">
+            <svg class="w-40 h-40"><use href="#m-eagle" /></svg>
+          </div>
+          <p data-cms-collection="ueber_uns_copy" data-cms-field="philosophy_eyebrow" class="eyebrow on-dark mb-4 relative z-10">{copy.philosophy_eyebrow}</p>
+          <p data-cms-collection="about" data-cms-field="philosophy" class="text-white/95 leading-[1.7] text-lg italic font-serif relative z-10">{about.philosophy}</p>
         </blockquote>
       </aside>
+
+      <!-- Story column -->
+      <article class="lg:col-span-8 fade-up delay-200">
+        <p data-cms-collection="ueber_uns_copy" data-cms-field="story_eyebrow" class="eyebrow mb-5 inline-flex items-baseline gap-3">
+          <span class="font-serif italic text-3xl leading-none text-w-gold-dark">I.</span>
+          <span class="h-px w-12 bg-w-gold/50 self-center"></span>
+          <span>{copy.story_eyebrow}</span>
+        </p>
+        <h2 data-cms-collection="about" data-cms-field="title" class="h-display text-w-dark text-4xl sm:text-5xl lg:text-[3.4rem] mb-8">{about.title}</h2>
+        <p data-cms-collection="about" data-cms-field="subtitle" class="text-w-gold-dark text-xl italic font-serif mb-10">{about.subtitle}</p>
+        <div data-cms-collection="about" data-cms-field="story" class="prose prose-stone max-w-none text-w-dark/80 leading-[1.85] font-light text-[17px] sm:text-lg [&_p:first-child]:drop-cap" set:html={storyHtml} />
+
+        <!-- Signature -->
+        <div class="mt-12 pt-8 border-t border-w-linen flex items-end gap-8">
+          <div class="text-w-gold-dark">
+            <svg class="w-48 h-12 sm:w-56" aria-hidden="true"><use href="#m-signature" /></svg>
+            <p class="text-[10px] tracking-[0.32em] uppercase font-semibold text-w-stone mt-1">Familie Adler</p>
+          </div>
+        </div>
+      </article>
     </div>
   </section>
 
-  <!-- Team -->
-  <section class="section bg-w-linen/30">
+  <!-- ── Team ──────────────────────────────────────────────────── -->
+  <section class="section bg-w-paper relative overflow-hidden">
     <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
       <div class="flex justify-center mb-14 sm:mb-16">
-        <SectionHeader eyebrow={copy.team_eyebrow} title={copy.team_title}
+        <SectionHeader numeral="II." eyebrow={copy.team_eyebrow} title={copy.team_title} align="center"
                        cmsCollection="ueber_uns_copy" cmsEyebrowField="team_eyebrow" cmsTitleField="team_title" />
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10">
         {team.map((member, index) => (
-          <article data-cms-collection="team" data-cms-id={String(member.id)} class={`card card-hover p-8 sm:p-10 text-center fade-up delay-${(index % 3 + 1) * 100}`}>
-            <div class="w-20 h-20 mx-auto rounded-full bg-w-dark flex items-center justify-center mb-6 ring-4 ring-w-gold/15">
-              <span class="font-serif text-2xl font-medium text-w-gold">
-                {member.first_name.charAt(0)}{member.last_name.charAt(0)}
+          <article data-cms-collection="team" data-cms-id={String(member.id)}
+                   class={`text-center fade-up delay-${(index % 3 + 1) * 100} group`}>
+            <div class="relative inline-block mb-6">
+              <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-w-dark flex items-center justify-center transition-transform duration-500 group-hover:scale-105">
+                <span class="font-serif text-3xl font-medium text-w-gold">
+                  {member.first_name.charAt(0)}{member.last_name.charAt(0)}
+                </span>
+              </div>
+              <span class="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-w-paper border border-w-gold/40 flex items-center justify-center text-w-gold-dark font-serif italic text-sm leading-none">
+                {index + 1}
               </span>
             </div>
             <h3 class="font-serif font-medium text-w-dark text-xl sm:text-2xl">
               <span data-cms-field="first_name">{member.first_name}</span> <span data-cms-field="last_name">{member.last_name}</span>
             </h3>
-            <p data-cms-field="role" class="text-w-gold text-[10px] font-semibold tracking-[0.22em] uppercase mt-2 mb-5">{member.role}</p>
-            {member.bio && <p data-cms-field="bio" class="text-w-stone/95 text-[15px] leading-relaxed font-light">{member.bio}</p>}
+            <p data-cms-field="role" class="text-w-gold-dark text-[10px] font-semibold tracking-[0.32em] uppercase mt-2 mb-5">{member.role}</p>
+            <div class="flex items-center justify-center gap-3 text-w-gold/40 mb-5">
+              <span class="h-px w-8 bg-w-gold/30"></span>
+              <span class="font-serif italic text-xs">·</span>
+              <span class="h-px w-8 bg-w-gold/30"></span>
+            </div>
+            {member.bio && <p data-cms-field="bio" class="text-w-stone text-[15px] leading-[1.75] font-light max-w-xs mx-auto">{member.bio}</p>}
           </article>
         ))}
       </div>

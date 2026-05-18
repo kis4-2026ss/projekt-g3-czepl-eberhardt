@@ -27,13 +27,70 @@ const pageTitle = title === settings.site_name
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap"
       rel="stylesheet"
     />
     <title>{pageTitle}</title>
+    <script is:inline>document.documentElement.classList.add('js');</script>
     <ViewTransitions />
   </head>
   <body class="bg-w-cream text-w-dark font-sans antialiased selection:bg-w-gold/30 selection:text-w-dark">
+
+    <!-- ── SVG sprite: shared marks (eagle / signature / seal / ornaments) ───── -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <!-- Adler (eagle) silhouette mark, stylized & heraldic -->
+        <symbol id="m-adler" viewBox="0 0 64 64">
+          <path fill="currentColor" d="M32 6c-1.5 0-2.6 1.1-2.6 2.5 0 1 .5 1.8 1.3 2.3-.9.5-1.5 1.4-1.5 2.5 0 .9.4 1.7 1 2.2-3.6.7-6.5 2.8-8.6 5.4-1.4-.7-3-1.3-4.7-1.8-2.8-.8-5.7-1.1-7.6-1.2-.7 0-1.1.7-.8 1.3.8 1.4 2.6 3.7 5.7 5.1 1.5.7 3.1 1.1 4.7 1.2-1.1 1.7-1.9 3.5-2.4 5.3-1.5-.5-3.2-.9-4.9-1.1-2.4-.3-4.5-.2-5.8 0-.6.1-.9.7-.6 1.2 1 1.7 3 4 6 5 1.7.6 3.6.8 5.2.7l.1 1.6c-2 .1-4.1.6-5.9 1.5-2 1-3.4 2.4-4.2 3.5-.4.5-.1 1.2.6 1.3 1.7.2 4.3.3 6.7-.6 1.6-.6 3.1-1.6 4.2-2.6.7 1.5 1.6 2.9 2.7 4.1-1.1.8-2.2 1.9-3.1 3.1-1.4 1.9-2 3.8-2.3 5-.2.6.4 1.1 1 1 1.5-.3 4-.9 5.9-2.5 1.5-1.3 2.5-3 3.1-4.4 2 1.4 4.2 2.4 6.6 2.9V51c-.6.5-1 1.3-1 2.2 0 1.6 1.3 2.8 2.9 2.8s2.9-1.2 2.9-2.8c0-.9-.4-1.7-1-2.2v-1.4c2.4-.5 4.6-1.5 6.6-2.9.6 1.4 1.6 3.1 3.1 4.4 1.9 1.6 4.4 2.2 5.9 2.5.6.1 1.2-.4 1-1-.3-1.2-.9-3.1-2.3-5-.9-1.2-2-2.3-3.1-3.1 1.1-1.2 2-2.6 2.7-4.1 1.1 1 2.6 2 4.2 2.6 2.4.9 5 .8 6.7.6.7-.1 1-.8.6-1.3-.8-1.1-2.2-2.5-4.2-3.5-1.8-.9-3.9-1.4-5.9-1.5l.1-1.6c1.6.1 3.5-.1 5.2-.7 3-1 5-3.3 6-5 .3-.5 0-1.1-.6-1.2-1.3-.2-3.4-.3-5.8 0-1.7.2-3.4.6-4.9 1.1-.5-1.8-1.3-3.6-2.4-5.3 1.6-.1 3.2-.5 4.7-1.2 3.1-1.4 4.9-3.7 5.7-5.1.3-.6-.1-1.3-.8-1.3-1.9.1-4.8.4-7.6 1.2-1.7.5-3.3 1.1-4.7 1.8-2.1-2.6-5-4.7-8.6-5.4.6-.5 1-1.3 1-2.2 0-1.1-.6-2-1.5-2.5.8-.5 1.3-1.3 1.3-2.3 0-1.4-1.1-2.5-2.6-2.5zm0 23.5c1.4 0 2.5 1.1 2.5 2.5 0 1.2-.8 2.1-1.9 2.4-.4 1.1-1.7 5.5-1.7 8.1 0 .9.6 1.6 1.4 1.6.4 0 .7-.2.9-.6.3.5.9.8 1.4.8.8 0 1.4-.6 1.4-1.4 0-.8-.7-1.4-1.4-1.4-.2 0-.3 0-.5.1.2-.4.3-.9.3-1.4 0-2.3 1-6 1.4-7.3 1.2-.3 2-1.3 2-2.5 0-1.4-1.1-2.5-2.5-2.5-.8 0-1.5.4-2 .9-.5-.5-1.2-.9-2-.9-1.4 0-2.5 1.1-2.5 2.5 0 1.2.8 2.2 2 2.5.4 1.3 1.4 5 1.4 7.3 0 .5.1 1 .3 1.4-.2-.1-.3-.1-.5-.1-.7 0-1.4.6-1.4 1.4 0 .8.6 1.4 1.4 1.4.5 0 1.1-.3 1.4-.8.2.4.5.6.9.6.8 0 1.4-.7 1.4-1.6 0-2.6-1.3-7-1.7-8.1-1.1-.3-1.9-1.2-1.9-2.4 0-1.4 1.1-2.5 2.5-2.5z"/>
+        </symbol>
+
+        <!-- Simpler Adler mark (heraldic spread eagle, lineart) -->
+        <symbol id="m-eagle" viewBox="0 0 100 80">
+          <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+            <!-- body -->
+            <path d="M50 22c-2 0-3.5 1.5-3.5 3.5 0 1.2.6 2.2 1.5 2.9-1.3.4-2.3 1.4-2.6 2.7H42c-1 0-1.8.8-1.8 1.8s.8 1.8 1.8 1.8h2.7c-.8 1.3-1.3 2.8-1.3 4.5 0 .8.1 1.6.3 2.3-.8.8-1.6 1.7-2.3 2.7-2.5 3.4-4.4 7.5-5.4 11.5-.2.7.4 1.4 1.1 1.2 4-.7 7.7-2.2 10.8-4.2-.6 2-1 4.1-1 6 0 .8.7 1.4 1.5 1.3.8-.1 1.5-.4 2.2-.8.6.6 1.4 1 2.4 1 1 0 1.8-.4 2.4-1 .7.4 1.4.7 2.2.8.8.1 1.5-.5 1.5-1.3 0-1.9-.4-4-1-6 3.1 2 6.8 3.5 10.8 4.2.7.2 1.3-.5 1.1-1.2-1-4-2.9-8.1-5.4-11.5-.7-1-1.5-1.9-2.3-2.7.2-.7.3-1.5.3-2.3 0-1.7-.5-3.2-1.3-4.5h2.7c1 0 1.8-.8 1.8-1.8s-.8-1.8-1.8-1.8h-3.4c-.3-1.3-1.3-2.3-2.6-2.7.9-.7 1.5-1.7 1.5-2.9 0-2-1.5-3.5-3.5-3.5z"/>
+            <!-- wings spread -->
+            <path d="M44 32c-4 .5-9 2-13 4.5-3.5 2.1-6.5 4.8-8.5 7.5-.4.6.1 1.4.8 1.3 4.5-.6 9.4-2.2 13.3-4.5 3.3-2 5.9-4.4 7.4-6.7"/>
+            <path d="M56 32c4 .5 9 2 13 4.5 3.5 2.1 6.5 4.8 8.5 7.5.4.6-.1 1.4-.8 1.3-4.5-.6-9.4-2.2-13.3-4.5-3.3-2-5.9-4.4-7.4-6.7"/>
+            <!-- wing feathers -->
+            <path d="M37 36c-2 1-4 2.5-5.5 4M33 40c-1.5 1-3 2.5-4 4M63 36c2 1 4 2.5 5.5 4M67 40c1.5 1 3 2.5 4 4"/>
+            <!-- tail -->
+            <path d="M47 50c-1 4-1 8 .5 11 .5 1 1 1.5 2.5 1.5s2-.5 2.5-1.5c1.5-3 1.5-7 .5-11"/>
+            <!-- legs/talons -->
+            <path d="M48 56l-1.5 6M52 56l1.5 6"/>
+          </g>
+        </symbol>
+
+        <!-- Wheat ornament -->
+        <symbol id="m-wheat" viewBox="0 0 24 32">
+          <g fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round">
+            <path d="M12 2v28"/>
+            <path d="M12 8c-2-1.5-4-2-5.5-2M12 8c2-1.5 4-2 5.5-2"/>
+            <path d="M12 13c-2.5-1.7-4.5-2.2-6.2-2.2M12 13c2.5-1.7 4.5-2.2 6.2-2.2"/>
+            <path d="M12 18c-2.5-1.7-4.5-2.2-6.2-2.2M12 18c2.5-1.7 4.5-2.2 6.2-2.2"/>
+            <path d="M12 23c-2.2-1.5-4-2-5.5-2M12 23c2.2-1.5 4 2 5.5-2"/>
+          </g>
+        </symbol>
+
+        <!-- Chef family signature (free-form script SVG path) -->
+        <symbol id="m-signature" viewBox="0 0 220 60">
+          <g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 38 C 14 22, 22 18, 24 30 C 25 36, 18 42, 22 44 C 28 46, 36 24, 40 26 C 44 28, 36 44, 42 44 C 50 44, 52 28, 56 28 C 60 28, 56 44, 62 44 C 70 44, 68 22, 78 22 C 86 22, 78 42, 86 42 C 94 42, 92 16, 96 14"/>
+            <path d="M100 26 C 106 22, 112 24, 114 30 C 116 36, 108 40, 104 38"/>
+            <path d="M120 14 C 116 30, 116 42, 124 42 C 132 42, 132 22, 138 22 C 144 22, 140 42, 148 42"/>
+            <path d="M154 28 C 158 22, 166 24, 168 30 C 170 38, 160 42, 158 38 C 158 36, 168 38, 174 32"/>
+            <path d="M180 14 C 178 26, 180 42, 188 42 C 196 42, 198 26, 200 18"/>
+            <path d="M198 22 L 212 22"/>
+          </g>
+        </symbol>
+
+        <!-- Ornamental "I" rule cap -->
+        <symbol id="m-rule-cap" viewBox="0 0 16 8">
+          <path fill="currentColor" d="M0 4h6l2-3 2 3h6v0H10l-2 3-2-3H0z"/>
+        </symbol>
+      </defs>
+    </svg>
+
     <Nav settings={settings} nav={nav} ui={ui} />
     <main>
       <slot />
@@ -47,13 +104,18 @@ const pageTitle = title === settings.site_name
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         --section-y: clamp(5rem, 7vw, 8rem);
+        --paper: #fdfbf7;
+        --paper-2: #f6f1e7;
+        --ink: #1a1816;
+        --ink-soft: rgba(26,24,22,.72);
+        --gold: #c69c6d;
+        --gold-deep: #a47948;
+        --moss: #162a1b;
       }
 
-      body {
-        min-height: 100vh;
-      }
+      body { min-height: 100vh; }
 
-      /* Subtle paper-ish texture for warmth */
+      /* Subtle, off-white paper texture with deckled edges */
       body::before {
         content: '';
         position: fixed;
@@ -63,8 +125,17 @@ const pageTitle = title === settings.site_name
         background:
           radial-gradient(1100px 700px at 12% -10%, rgba(198,156,109,0.08), transparent 55%),
           radial-gradient(900px 600px at 90% 10%, rgba(22,42,27,0.06), transparent 55%),
-          radial-gradient(700px 500px at 50% 120%, rgba(198,156,109,0.05), transparent 55%),
-          linear-gradient(to bottom, rgba(242,239,233,0.45), rgba(253,251,247,0.35));
+          radial-gradient(700px 500px at 50% 120%, rgba(198,156,109,0.05), transparent 55%);
+      }
+      body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        opacity: .03;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        mix-blend-mode: multiply;
       }
 
       /* Focus rings */
@@ -78,27 +149,21 @@ const pageTitle = title === settings.site_name
       /* Anchor scroll-margin under fixed nav */
       :where(section, div, article)[id] { scroll-margin-top: 7rem; }
 
-      /* Hide scrollbar utility */
-      .scrollbar-hide {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
+      .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-      .line-clamp-2 {
-        overflow: hidden;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-      }
+      .line-clamp-2 { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+      .line-clamp-3 { overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; }
 
       a { text-underline-offset: 0.2em; }
 
+      /* ── Display serif — Fraunces for editorial moments (kept rare) ── */
+      .font-display { font-family: 'Fraunces', 'Playfair Display', Georgia, serif; font-optical-sizing: auto; font-variation-settings: "opsz" 144, "SOFT" 50; }
+
       /* ──────────────────────────────────────────────────────────
-         Design system primitives – consistent across every page
+         Design system primitives
          ────────────────────────────────────────────────────────── */
 
-      /* Section vertical rhythm */
       .section { padding-top: var(--section-y); padding-bottom: var(--section-y); }
       .section-tight { padding-top: calc(var(--section-y) * 0.7); padding-bottom: calc(var(--section-y) * 0.7); }
 
@@ -106,7 +171,7 @@ const pageTitle = title === settings.site_name
       .card {
         background-color: rgba(255,255,255,0.96);
         border: 1px solid rgba(242,239,233,0.9);
-        border-radius: 6px;
+        border-radius: 4px;
         box-shadow: 0 1px 2px rgba(26,24,22,0.04), 0 12px 32px -24px rgba(26,24,22,0.18);
         transition: transform 350ms cubic-bezier(.16,1,.3,1), box-shadow 350ms cubic-bezier(.16,1,.3,1), border-color 250ms;
       }
@@ -118,91 +183,135 @@ const pageTitle = title === settings.site_name
 
       /* Buttons */
       .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
+        display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem;
         padding: 0.95rem 1.75rem;
-        font-size: 0.8125rem;
-        font-weight: 500;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        border-radius: 4px;
+        font-size: 0.78rem; font-weight: 500; letter-spacing: 0.16em; text-transform: uppercase;
+        border-radius: 2px;
         transition: background-color 250ms, color 250ms, border-color 250ms, transform 250ms, box-shadow 250ms;
         white-space: nowrap;
       }
       .btn-primary {
-        background-color: #c69c6d;
-        color: #ffffff;
-        box-shadow: 0 8px 24px -12px rgba(198,156,109,0.7);
+        background-color: var(--moss); color: #fff;
+        box-shadow: 0 10px 24px -14px rgba(22,42,27,0.55);
       }
-      .btn-primary:hover {
-        background-color: #b08856;
-        transform: translateY(-1px);
-        box-shadow: 0 12px 28px -10px rgba(198,156,109,0.8);
-      }
-      .btn-ghost {
-        background: transparent;
-        color: #ffffff;
-        border: 1px solid rgba(255,255,255,0.35);
-      }
-      .btn-ghost:hover {
-        border-color: rgba(255,255,255,0.85);
-        background-color: rgba(255,255,255,0.08);
-      }
-      .btn-outline {
-        background: transparent;
-        color: #1a1816;
-        border: 1px solid rgba(26,24,22,0.18);
-      }
-      .btn-outline:hover {
-        border-color: #c69c6d;
-        color: #b08856;
-      }
+      .btn-primary:hover { background-color: #0e1f12; transform: translateY(-1px); box-shadow: 0 14px 28px -12px rgba(22,42,27,0.7); }
+      .btn-gold { background-color: var(--gold); color: #fff; }
+      .btn-gold:hover { background-color: var(--gold-deep); transform: translateY(-1px); }
+      .btn-ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.4); }
+      .btn-ghost:hover { border-color: rgba(255,255,255,0.95); background-color: rgba(255,255,255,0.08); }
+      .btn-outline { background: transparent; color: #1a1816; border: 1px solid rgba(26,24,22,0.22); }
+      .btn-outline:hover { border-color: var(--gold); color: var(--gold-deep); }
 
       /* Inline link with underline & arrow */
       .inline-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: #c69c6d;
-        font-weight: 500;
-        font-size: 0.8125rem;
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        color: var(--gold-deep); font-weight: 500; font-size: 0.78rem;
+        letter-spacing: 0.18em; text-transform: uppercase;
         border-bottom: 1px solid rgba(198,156,109,0.5);
         padding-bottom: 0.35rem;
         transition: color 250ms, border-color 250ms, gap 250ms;
       }
-      .inline-link:hover {
-        color: #1a1816;
-        border-color: #1a1816;
-        gap: 0.75rem;
-      }
-      .inline-link.on-dark { color: #c69c6d; border-color: rgba(198,156,109,0.5); }
-      .inline-link.on-dark:hover { color: #ffffff; border-color: #ffffff; }
+      .inline-link:hover { color: #1a1816; border-color: #1a1816; gap: 0.75rem; }
+      .inline-link.on-dark { color: var(--gold); border-color: rgba(198,156,109,0.5); }
+      .inline-link.on-dark:hover { color: #fff; border-color: #fff; }
 
       /* Eyebrow */
       .eyebrow {
-        color: #c69c6d;
-        font-size: 0.75rem;
-        font-weight: 600;
-        letter-spacing: 0.28em;
+        color: var(--gold-deep);
+        font-size: 0.72rem; font-weight: 600; letter-spacing: 0.32em; text-transform: uppercase;
+      }
+      .on-dark .eyebrow, .eyebrow.on-dark { color: var(--gold); }
+
+      /* Editorial "Kapitel" — Roman numeral + label, replaces star ornament */
+      .kapitel {
+        display: inline-flex; align-items: baseline; gap: .9rem;
+        font-family: 'Playfair Display', Georgia, serif; font-style: italic; color: var(--gold-deep);
+      }
+      .kapitel-num {
+        font-size: 2.6rem; line-height: 1; letter-spacing: .02em; font-weight: 500;
+      }
+      .kapitel-rule { display: inline-block; height: 1px; width: 2.5rem; background: rgba(198,156,109,.55); }
+      .kapitel-label { font-style: normal; font-family: 'Inter', system-ui, sans-serif; font-weight: 600;
+        letter-spacing: .32em; text-transform: uppercase; font-size: .72rem; }
+
+      /* Display headline scale — used for hero & big editorial titles */
+      .h-display {
+        font-family: 'Playfair Display', Georgia, serif;
+        font-weight: 500;
+        letter-spacing: -0.018em;
+        line-height: 0.96;
+      }
+      .h-display em { font-family: 'Fraunces', 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 400;
+        font-variation-settings: "SOFT" 100; color: var(--gold-deep); }
+
+      /* Vertical text — for ANNO 1897 strip */
+      .v-text {
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        letter-spacing: .42em;
         text-transform: uppercase;
+        font-size: .68rem;
+        font-weight: 600;
       }
 
-      /* Decorative ornament line */
-      .ornament {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.75rem;
-        color: rgba(198,156,109,0.7);
+      /* Wax-seal style anno mark */
+      .seal {
+        position: relative;
+        width: 6.5rem; height: 6.5rem;
+        border-radius: 9999px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        color: var(--gold);
+        border: 1px solid rgba(198,156,109,.55);
+        background: rgba(255,255,255,.02);
       }
-      .ornament::before, .ornament::after {
-        content: '';
-        height: 1px;
-        width: 2.5rem;
-        background-color: rgba(198,156,109,0.4);
+      .seal::before, .seal::after {
+        content: ''; position: absolute; inset: .35rem; border-radius: 9999px;
+        border: 1px dashed rgba(198,156,109,.45);
+      }
+      .seal::after { inset: .8rem; border-style: solid; border-color: rgba(198,156,109,.3); }
+      .seal-top { font-family: 'Inter', sans-serif; font-size: .58rem; letter-spacing: .42em;
+        font-weight: 600; text-transform: uppercase; }
+      .seal-num { font-family: 'Playfair Display', serif; font-size: 1.55rem; letter-spacing: .04em;
+        font-weight: 500; line-height: 1; margin-top: .15rem; }
+      .seal-bot { font-family: 'Inter', sans-serif; font-size: .52rem; letter-spacing: .32em;
+        font-weight: 500; text-transform: uppercase; opacity: .75; margin-top: .25rem; }
+
+      /* Dotted leader (used in menu rows) — refined */
+      .leader { flex: 1; height: 0; border-bottom: 1px dotted rgba(156,142,126,.45); transform: translateY(-4px); }
+
+      /* Marquee */
+      .marquee {
+        --gap: 3.5rem;
+        display: flex; gap: var(--gap); width: max-content;
+        animation: marquee 38s linear infinite;
+      }
+      .marquee-wrap:hover .marquee { animation-play-state: paused; }
+      @keyframes marquee {
+        from { transform: translateX(0); }
+        to   { transform: translateX(calc(-50% - var(--gap) / 2)); }
+      }
+
+      /* Editorial drop-cap */
+      .drop-cap::first-letter {
+        font-family: 'Playfair Display', Georgia, serif;
+        font-size: 4.4rem;
+        line-height: .85;
+        float: left;
+        margin: .35rem .55rem -.2rem 0;
+        color: var(--gold-deep);
+        font-weight: 500;
+      }
+
+      /* Photo "framed" treatment */
+      .frame {
+        position: relative;
+        padding: .55rem;
+        background: linear-gradient(180deg, rgba(255,255,255,.7), rgba(246,241,231,.4));
+        border: 1px solid rgba(198,156,109,.35);
+        box-shadow: 0 1px 2px rgba(26,24,22,.06), 0 30px 60px -30px rgba(26,24,22,.35);
+      }
+      .frame::before {
+        content: ''; position: absolute; inset: .25rem; border: 1px solid rgba(198,156,109,.25); pointer-events: none;
       }
 
       /* Typography prose color overrides for dark backgrounds */
@@ -211,25 +320,23 @@ const pageTitle = title === settings.site_name
       .prose-on-dark { color: rgba(255,255,255,0.78); }
       .prose-on-dark strong { color: #ffffff; }
 
-      /* Fade-in utility */
-      .fade-up {
-        opacity: 0;
-        transform: translateY(20px);
+      /* Fade-in utility — only hides when JS is available (no-JS users see content immediately) */
+      html.js .fade-up {
+        opacity: 0; transform: translateY(20px);
         transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         will-change: opacity, transform;
       }
-      .fade-up.is-visible {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      html.js .fade-up.is-visible { opacity: 1; transform: translateY(0); }
       .delay-100 { transition-delay: 100ms; }
       .delay-200 { transition-delay: 200ms; }
       .delay-300 { transition-delay: 300ms; }
       .delay-400 { transition-delay: 400ms; }
+      .delay-500 { transition-delay: 500ms; }
 
       /* Reduced motion */
       @media (prefers-reduced-motion: reduce) {
         .fade-up { opacity: 1 !important; transform: none !important; transition: none !important; }
+        .marquee { animation: none !important; }
         * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
       }
     </style>
@@ -243,14 +350,9 @@ const pageTitle = title === settings.site_name
               observer.unobserve(entry.target);
             }
           });
-        }, {
-          rootMargin: '0px 0px -10% 0px',
-          threshold: 0.1
-        });
+        }, { rootMargin: '0px 0px -10% 0px', threshold: 0.1 });
 
-        document.querySelectorAll('.fade-up').forEach((el) => {
-          observer.observe(el);
-        });
+        document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
       }
 
       setupAnimations();

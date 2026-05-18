@@ -11,14 +11,14 @@ const filled = difficultyDots(level);
 const label  = difficultyLabel(level, ui);
 ---
 
-<span class="inline-flex items-center gap-2 text-fs-muted text-sm" aria-label={label}>
-  <span class="inline-flex items-center gap-1">
+<span class="inline-flex items-center gap-2 spec text-fc-muted" aria-label={label}>
+  <span class="inline-flex items-center gap-0.5">
     {[0, 1, 2].map((i) => (
       <span class:list={[
-        'w-1.5 h-1.5 rounded-full inline-block',
-        i < filled ? 'bg-fs-blue' : 'bg-fs-border',
+        'w-2 h-2 inline-block',
+        i < filled ? 'bg-fc-ink' : 'border border-fc-ink',
       ]}></span>
     ))}
   </span>
-  <span class="font-medium text-fs-dark/80">{label}</span>
+  <span class="text-fc-ink">{label}</span>
 </span>

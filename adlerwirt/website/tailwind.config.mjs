@@ -8,14 +8,17 @@ export default {
         'w-green-dark': '#0b160e',
         'w-gold':       '#c69c6d',
         'w-gold-light': '#dcb992',
+        'w-gold-dark':  '#a47948',
         'w-cream':      '#fdfbf7',
+        'w-paper':      '#f6f1e7',
         'w-linen':      '#f2efe9',
         'w-stone':      '#9c8e7e',
         'w-dark':       '#1a1816',
       },
       fontFamily: {
-        serif: ['"Playfair Display"', 'Georgia', 'serif'],
-        sans:  ['Inter', 'system-ui', 'sans-serif'],
+        serif:   ['"Playfair Display"', 'Georgia', 'serif'],
+        display: ['Fraunces', '"Playfair Display"', 'Georgia', 'serif'],
+        sans:    ['Inter', 'system-ui', 'sans-serif'],
       },
       typography: ({ theme }) => ({
         stone: {

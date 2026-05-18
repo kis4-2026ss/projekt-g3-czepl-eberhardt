@@ -12,15 +12,19 @@ const [settings, hours, ui, copy] = await Promise.all([
 <Layout title={copy.title} description={copy.lead}>
 
   <!-- Page header -->
-  <section class="bg-fs-surface border-b border-fs-border">
-    <div class="max-w-4xl mx-auto px-5 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-12 text-center fade-up">
-      <span class="eyebrow" data-cms-collection="kontakt_copy" data-cms-field="eyebrow">{copy.eyebrow}</span>
-      <h1 class="display font-display font-extrabold text-fs-dark text-4xl sm:text-5xl lg:text-6xl mt-5 leading-[1.05] tracking-tight-2"
+  <section class="bg-fc-paper border-b border-fc-ink/15 relative overflow-hidden">
+    <p class="absolute -right-6 top-2 num-display text-[clamp(8rem,22vw,16rem)] leading-[0.85] text-fc-ink/[0.05] select-none pointer-events-none" aria-hidden="true">03</p>
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-20 sm:pt-24 pb-14 fade-up relative">
+      <div class="flex items-baseline gap-4 mb-5">
+        <span class="num-display text-4xl sm:text-5xl text-fc-ink">03</span>
+        <span class="eyebrow" data-cms-collection="kontakt_copy" data-cms-field="eyebrow">{copy.eyebrow}</span>
+      </div>
+      <h1 class="h-mega text-fc-ink text-5xl sm:text-7xl lg:text-[6.5rem] max-w-4xl"
           data-cms-collection="kontakt_copy" data-cms-field="title">
         {copy.title}
       </h1>
       {copy.lead && (
-        <p class="mt-5 text-fs-muted text-lg leading-relaxed max-w-2xl mx-auto"
+        <p class="mt-7 text-fc-muted text-lg sm:text-xl leading-relaxed max-w-2xl"
            data-cms-collection="kontakt_copy" data-cms-field="lead">
           {copy.lead}
         </p>
@@ -29,27 +33,22 @@ const [settings, hours, ui, copy] = await Promise.all([
   </section>
 
   <!-- Two-column info -->
-  <section class="section bg-fs-white">
-    <div class="max-w-6xl mx-auto px-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
+  <section class="section bg-fc-paper">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
 
       <!-- Info column -->
-      <div class="fade-up">
-        <h2 class="font-display font-extrabold text-fs-dark text-2xl sm:text-3xl tracking-tight-2 mb-8">
+      <div class="lg:col-span-7 fade-up">
+        <h2 class="font-display font-bold text-fc-ink text-3xl tracking-tight-3 mb-10">
           {settings.site_name}
         </h2>
 
-        <ul class="space-y-7">
-          <li class="flex items-start gap-4" data-cms-collection="site_settings">
-            <span class="flex-shrink-0 w-11 h-11 rounded-xl bg-fs-blue-bg flex items-center justify-center text-fs-blue">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
-            </span>
+        <ul class="space-y-8 border-t border-fc-ink/15">
+          <li class="grid grid-cols-[5rem_1fr] sm:grid-cols-[6rem_1fr] gap-6 items-baseline pt-8 border-b border-fc-ink/15 pb-8" data-cms-collection="site_settings">
+            <span class="spec text-fc-rust">/ 01</span>
             <div>
               <p data-cms-collection="ui_copy" data-cms-field="address_label"
-                 class="text-fs-muted text-xs uppercase tracking-[0.14em] font-semibold mb-1.5">{ui.address_label}</p>
-              <p class="text-fs-dark text-base leading-relaxed">
+                 class="spec text-fc-muted mb-2">{ui.address_label}</p>
+              <p class="font-display font-bold text-fc-ink text-2xl leading-tight">
                 <span data-cms-field="address_street">{settings.address_street}</span><br />
                 <span data-cms-field="address_zip">{settings.address_zip}</span>
                 {' '}
@@ -58,43 +57,35 @@ const [settings, hours, ui, copy] = await Promise.all([
               {settings.google_maps_url && (
                 <a href={settings.google_maps_url} target="_blank" rel="noopener"
                    data-cms-collection="ui_copy" data-cms-field="directions_label"
-                   class="inline-link mt-2.5">
+                   class="inline-link mt-4">
                   {ui.directions_label}
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                  <svg class="w-3.5 h-3.5"><use href="#fc-arrow" /></svg>
                 </a>
               )}
             </div>
           </li>
 
-          <li class="flex items-start gap-4" data-cms-collection="site_settings">
-            <span class="flex-shrink-0 w-11 h-11 rounded-xl bg-fs-blue-bg flex items-center justify-center text-fs-blue">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-              </svg>
-            </span>
+          <li class="grid grid-cols-[5rem_1fr] sm:grid-cols-[6rem_1fr] gap-6 items-baseline pt-0 border-b border-fc-ink/15 pb-8" data-cms-collection="site_settings">
+            <span class="spec text-fc-rust">/ 02</span>
             <div>
               <p data-cms-collection="ui_copy" data-cms-field="phone_label"
-                 class="text-fs-muted text-xs uppercase tracking-[0.14em] font-semibold mb-1.5">{ui.phone_label}</p>
+                 class="spec text-fc-muted mb-2">{ui.phone_label}</p>
               <a href={`tel:${settings.contact_phone.replace(/\s/g, '')}`}
                  data-cms-field="contact_phone"
-                 class="text-fs-dark text-base hover:text-fs-blue transition-colors">
+                 class="font-display font-bold text-fc-ink text-2xl sm:text-3xl tabular-nums hover:text-fc-rust transition-colors">
                 {settings.contact_phone}
               </a>
             </div>
           </li>
 
-          <li class="flex items-start gap-4" data-cms-collection="site_settings">
-            <span class="flex-shrink-0 w-11 h-11 rounded-xl bg-fs-blue-bg flex items-center justify-center text-fs-blue">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-              </svg>
-            </span>
+          <li class="grid grid-cols-[5rem_1fr] sm:grid-cols-[6rem_1fr] gap-6 items-baseline pt-0 pb-2" data-cms-collection="site_settings">
+            <span class="spec text-fc-rust">/ 03</span>
             <div>
               <p data-cms-collection="ui_copy" data-cms-field="email_label"
-                 class="text-fs-muted text-xs uppercase tracking-[0.14em] font-semibold mb-1.5">{ui.email_label}</p>
+                 class="spec text-fc-muted mb-2">{ui.email_label}</p>
               <a href={`mailto:${settings.contact_email}`}
                  data-cms-field="contact_email"
-                 class="text-fs-dark text-base hover:text-fs-blue transition-colors break-all">
+                 class="font-display font-bold text-fc-ink text-xl sm:text-2xl hover:text-fc-rust transition-colors break-all">
                 {settings.contact_email}
               </a>
             </div>
@@ -103,55 +94,58 @@ const [settings, hours, ui, copy] = await Promise.all([
       </div>
 
       <!-- Hours column -->
-      <div class="fade-up delay-200">
-        <div class="bg-fs-surface rounded-2xl p-7 sm:p-9 border border-fs-border">
-          <h3 class="font-display font-extrabold text-fs-dark text-xl sm:text-2xl tracking-tight-2 mb-6"
-              data-cms-collection="kontakt_copy" data-cms-field="hours_title">
-            {copy.hours_title}
-          </h3>
-          <ul class="divide-y divide-fs-border">
-            {hours.map(h => (
-              <li data-cms-collection="opening_hours" data-cms-id={String(h.id)}
-                  class:list={['flex items-center justify-between py-3.5', h.closed ? 'text-fs-muted' : 'text-fs-dark']}>
-                <span data-cms-field="weekday" class="font-medium text-[15px]">{h.weekday}</span>
-                {h.closed
-                  ? <span data-cms-collection="ui_copy" data-cms-field="closed_label" class="text-sm italic line-through">{ui.closed_label}</span>
-                  : (
-                    <span class="text-sm tabular-nums font-medium">
-                      <span data-cms-field="open_from">{h.open_from}</span>
-                      <span class="text-fs-muted">–</span>
-                      <span data-cms-field="open_to">{h.open_to}</span>
-                    </span>
-                  )}
-              </li>
-            ))}
-          </ul>
+      <div class="lg:col-span-5 fade-up delay-200">
+        <div class="bg-fc-ink text-white p-8 sm:p-10 relative overflow-hidden">
+          <p class="absolute -right-3 -top-3 num-display text-[8rem] leading-none text-white/[0.06] select-none pointer-events-none" aria-hidden="true">04</p>
+          <div class="relative">
+            <span class="eyebrow on-ink mb-4">[ 04 ] Schedule</span>
+            <h3 class="font-display font-bold text-3xl sm:text-4xl tracking-tight-3 mb-8 mt-3"
+                data-cms-collection="kontakt_copy" data-cms-field="hours_title">
+              {copy.hours_title}
+            </h3>
+            <ul class="divide-y divide-white/15 border-y border-white/20">
+              {hours.map(h => (
+                <li data-cms-collection="opening_hours" data-cms-id={String(h.id)}
+                    class:list={['flex items-baseline justify-between py-4', h.closed ? 'opacity-50' : '']}>
+                  <span data-cms-field="weekday" class="spec text-fc-lime">{h.weekday}</span>
+                  {h.closed
+                    ? <span data-cms-collection="ui_copy" data-cms-field="closed_label" class="font-display italic text-white/55">{ui.closed_label}</span>
+                    : (
+                      <span class="num-display text-xl sm:text-2xl tabular-nums">
+                        <span data-cms-field="open_from">{h.open_from}</span>
+                        <span class="text-white/30 mx-1">—</span>
+                        <span data-cms-field="open_to">{h.open_to}</span>
+                      </span>
+                    )}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Trial banner -->
-  <section class="section-tight bg-fs-white">
-    <div class="max-w-3xl mx-auto px-5 sm:px-6 lg:px-8 fade-up">
-      <div class="bg-fs-blue text-white rounded-2xl px-7 sm:px-10 py-8 sm:py-9 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
-             style="background-image:radial-gradient(circle,#ffffff 1px,transparent 1px);background-size:24px 24px"></div>
-        <div class="relative">
-          <h3 class="font-display font-extrabold text-2xl sm:text-3xl tracking-tight-2"
-              data-cms-collection="kontakt_copy" data-cms-field="trial_title">
-            {copy.trial_title}
-          </h3>
-          <p class="mt-2 text-white/85"
-             data-cms-collection="kontakt_copy" data-cms-field="trial_text">
-            {copy.trial_text}
-          </p>
-        </div>
+  <section class="bg-fc-lime relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-16 sm:py-20 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center fade-up">
+      <div class="lg:col-span-8">
+        <span class="spec text-fc-ink/70 mb-5 inline-block">[ Trial ]</span>
+        <h3 class="h-mega text-fc-ink text-4xl sm:text-5xl lg:text-6xl mt-3"
+            data-cms-collection="kontakt_copy" data-cms-field="trial_title">
+          {copy.trial_title}
+        </h3>
+        <p class="mt-5 text-fc-ink/80 text-lg max-w-xl"
+           data-cms-collection="kontakt_copy" data-cms-field="trial_text">
+          {copy.trial_text}
+        </p>
+      </div>
+      <div class="lg:col-span-4 lg:justify-self-end">
         <a href={copy.trial_link || `mailto:${settings.contact_email}`}
            data-cms-collection="kontakt_copy" data-cms-field="trial_cta"
-           class="relative inline-flex items-center justify-center gap-2 bg-white text-fs-blue font-medium rounded-lg px-5 py-3 text-sm hover:bg-fs-blue-bg transition-colors whitespace-nowrap">
+           class="btn btn-primary">
           {copy.trial_cta}
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          <svg class="w-3.5 h-3.5"><use href="#fc-arrow" /></svg>
         </a>
       </div>
     </div>

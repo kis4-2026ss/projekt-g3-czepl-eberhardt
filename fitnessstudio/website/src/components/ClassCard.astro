@@ -7,77 +7,82 @@ interface Props {
   item: FitClass;
   ui: UiCopy;
   showSchedule?: boolean;
+  /** Optional index — adds an "01" prefix to the card */
+  index?: string;
 }
-const { item, ui, showSchedule = false } = Astro.props;
+const { item, ui, showSchedule = false, index } = Astro.props;
 ---
 
 <article
   data-cms-collection="classes"
   data-cms-id={String(item.id)}
-  class="card card-hover group overflow-hidden flex flex-col">
-  <div class="aspect-[16/10] overflow-hidden bg-fs-surface relative">
+  class="card card-hover group flex flex-col h-full bg-fc-cream">
+  <div class="relative overflow-hidden bg-fc-paper-2 aspect-[16/11]">
     {item.image
       ? <img src={assetUrl(item.image, 'width=900&quality=80&fit=cover')}
              alt={item.image_alt || item.name}
              data-cms-field="image"
              class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-      : <div class="w-full h-full bg-gradient-to-br from-fs-blue-bg to-fs-surface"></div>}
-  </div>
+      : <div class="w-full h-full bg-fc-paper-2 flex items-center justify-center text-fc-line">
+          <svg class="w-20 h-10"><use href="#fc-dumbbell" /></svg>
+        </div>}
 
-  <div class="p-6 sm:p-7 flex flex-col flex-1">
+    {index && (
+      <span class="absolute top-3 left-3 num-display bg-fc-ink text-fc-lime px-2.5 py-1 text-xl leading-none">{index}</span>
+    )}
     {item.category && (
       <p data-cms-collection="class_categories"
          data-cms-id={String(item.category.id)}
          data-cms-field="name"
-         class="pill self-start mb-3">{item.category.name}</p>
+         class="absolute top-3 right-3 pill">{item.category.name}</p>
     )}
+  </div>
+
+  <div class="p-6 sm:p-7 flex flex-col flex-1 border-t border-fc-ink">
     <h3 data-cms-field="name"
-        class="font-display font-bold text-fs-dark text-lg leading-snug mb-2">
+        class="font-display font-bold text-fc-ink text-[1.5rem] leading-[1.05] tracking-tight-2 mb-3">
       {item.name}
     </h3>
-    <div class="flex items-center gap-4 text-sm text-fs-muted mb-3">
+    <div class="flex items-center gap-4 spec text-fc-muted mb-4 pb-4 border-b border-fc-line">
       <span class="inline-flex items-center gap-1.5">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         <span data-cms-field="duration_min">{item.duration_min}</span>
         <span data-cms-collection="ui_copy" data-cms-field="minutes_label">{ui.minutes_label}</span>
       </span>
-      <span class="text-fs-border">·</span>
+      <span class="opacity-30">/</span>
       <Difficulty level={item.difficulty} ui={ui} />
     </div>
     {item.description && (
-      <p data-cms-field="description" class="text-fs-muted text-sm leading-relaxed line-clamp-3 mb-5">
+      <p data-cms-field="description" class="text-fc-muted text-[15px] leading-[1.65] line-clamp-3 mb-5">
         {item.description}
       </p>
     )}
 
     {showSchedule && (item.trainer_name || item.schedule_note) && (
-      <ul class="grid grid-cols-1 gap-1.5 mt-auto pt-4 border-t border-fs-border text-sm">
+      <ul class="space-y-2 mt-auto pt-4 border-t border-fc-line">
         {item.trainer_name && (
-          <li class="flex items-center gap-2 text-fs-muted">
-            <svg class="w-4 h-4 flex-shrink-0 text-fs-blue/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 14a4 4 0 10-8 0M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0H5z"/>
-            </svg>
-            <span data-cms-collection="ui_copy" data-cms-field="trainer_label">{ui.trainer_label}</span>
-            <span data-cms-field="trainer_name" class="text-fs-dark font-medium">{item.trainer_name}</span>
+          <li class="flex items-center gap-3 text-sm">
+            <span class="spec text-fc-muted">Coach</span>
+            <span class="opacity-30 spec">/</span>
+            <span data-cms-field="trainer_name" class="text-fc-ink font-medium">{item.trainer_name}</span>
           </li>
         )}
         {item.schedule_note && (
-          <li class="flex items-center gap-2 text-fs-muted">
-            <svg class="w-4 h-4 flex-shrink-0 text-fs-blue/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            <span data-cms-field="schedule_note" class="text-fs-dark font-medium">{item.schedule_note}</span>
+          <li class="flex items-center gap-3 text-sm">
+            <span class="spec text-fc-muted">Time</span>
+            <span class="opacity-30 spec">/</span>
+            <span data-cms-field="schedule_note" class="text-fc-ink font-medium">{item.schedule_note}</span>
           </li>
         )}
       </ul>
     )}
 
     {!showSchedule && (
-      <span class="mt-auto pt-2 inline-flex items-center gap-1.5 text-fs-blue text-sm font-semibold transition-all duration-200 group-hover:gap-2.5">
+      <span class="mt-auto pt-2 inline-flex items-center gap-2 text-fc-ink spec font-semibold transition-all duration-200 group-hover:gap-3 group-hover:text-fc-rust">
         {ui.more_label}
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+        <svg class="w-3.5 h-3.5"><use href="#fc-arrow" /></svg>
       </span>
     )}
   </div>

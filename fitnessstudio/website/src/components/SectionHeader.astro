@@ -4,6 +4,10 @@ interface Props {
   title: string;
   lead?: string;
   align?: 'center' | 'left';
+  /** Display index, e.g. "01", "02" */
+  index?: string;
+  /** Render on dark/ink background */
+  onInk?: boolean;
   cmsCollection?: string;
   cmsEyebrowField?: string;
   cmsTitleField?: string;
@@ -11,29 +15,39 @@ interface Props {
 }
 const {
   eyebrow, title, lead,
-  align = 'center',
+  align = 'left',
+  index,
+  onInk = false,
   cmsCollection,
   cmsEyebrowField,
   cmsTitleField,
   cmsLeadField,
 } = Astro.props;
+
+const titleColor = onInk ? 'text-white' : 'text-fc-ink';
+const leadColor  = onInk ? 'text-white/70' : 'text-fc-muted';
+const eyebrowCls = onInk ? 'eyebrow on-ink' : 'eyebrow';
+const indexCls   = onInk ? 'text-fc-lime' : 'text-fc-ink';
 ---
 
-<div class:list={['flex flex-col max-w-2xl', align === 'center' ? 'items-center text-center mx-auto' : 'items-start']}>
-  {eyebrow && (
-    <span class="eyebrow mb-4"
-          data-cms-collection={cmsCollection}
-          data-cms-field={cmsEyebrowField}>
-      {eyebrow}
-    </span>
-  )}
-  <h2 class="font-display font-extrabold text-fs-dark text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-tight-2"
+<div class:list={['flex flex-col max-w-3xl gap-5', align === 'center' ? 'items-center text-center mx-auto' : 'items-start']}>
+  <div class:list={['flex items-baseline gap-4', align === 'center' ? 'justify-center' : '']}>
+    {index && <span class:list={['num-display text-4xl sm:text-5xl', indexCls]}>{index}</span>}
+    {eyebrow && (
+      <span class={eyebrowCls}
+            data-cms-collection={cmsCollection}
+            data-cms-field={cmsEyebrowField}>
+        {eyebrow}
+      </span>
+    )}
+  </div>
+  <h2 class:list={['font-display font-bold text-4xl sm:text-5xl lg:text-[3.5rem] leading-[0.96] tracking-tight-3', titleColor]}
       data-cms-collection={cmsCollection}
       data-cms-field={cmsTitleField}>
     {title}
   </h2>
   {lead && (
-    <p class="mt-4 text-fs-muted text-base sm:text-lg leading-relaxed"
+    <p class:list={['text-base sm:text-lg leading-[1.65] max-w-2xl', leadColor]}
        data-cms-collection={cmsCollection}
        data-cms-field={cmsLeadField}>
       {lead}

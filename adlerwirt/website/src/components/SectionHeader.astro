@@ -3,53 +3,53 @@ interface Props {
   eyebrow?: string;
   title: string;
   align?: 'center' | 'left';
-  ornament?: boolean;
+  /** Roman numeral (I., II., III., …) shown as the editorial section marker. */
+  numeral?: string;
+  /** Render on a dark background. */
+  onDark?: boolean;
   class?: string;
-  /** Directus collection (e.g. 'home_copy') the eyebrow/title bind to — wired through for the preview banner's data-cms-* attributes. */
   cmsCollection?: string;
   cmsEyebrowField?: string;
   cmsTitleField?: string;
   cmsId?: string;
 }
 const {
-  eyebrow, title, align = 'center', ornament = true, class: className = '',
+  eyebrow, title, align = 'center', numeral, onDark = false, class: className = '',
   cmsCollection, cmsEyebrowField, cmsTitleField, cmsId,
 } = Astro.props;
 
-const wrap = align === 'center' ? 'text-center mx-auto' : 'text-left';
+const wrap = align === 'center' ? 'text-center mx-auto items-center' : 'text-left items-start';
+const eyeColor = onDark ? 'text-w-gold' : 'text-w-gold/95';
+const numColor = onDark ? 'text-w-gold' : 'text-w-gold-dark';
+const titleColor = onDark ? 'text-white' : 'text-w-dark';
 ---
-<div class:list={[wrap, 'max-w-3xl', className, 'fade-up']}>
+<div class:list={[wrap, 'flex flex-col max-w-3xl', className, 'fade-up']}>
+  {numeral && (
+    <div class:list={['flex items-baseline gap-3 mb-5', align === 'center' ? 'justify-center' : '', numColor]}>
+      <span class="font-serif italic text-4xl sm:text-5xl leading-none font-medium tracking-[0.02em]">{numeral}</span>
+      <span class="h-px w-12 bg-current opacity-50 self-center"></span>
+    </div>
+  )}
   {eyebrow && (
     <p
       data-cms-collection={cmsCollection && cmsEyebrowField ? cmsCollection : undefined}
       data-cms-id={cmsCollection && cmsEyebrowField ? cmsId : undefined}
       data-cms-field={cmsCollection && cmsEyebrowField ? cmsEyebrowField : undefined}
       class:list={[
-      'text-w-gold text-xs font-semibold tracking-[0.28em] uppercase mb-5',
-      align === 'center' ? 'inline-flex items-center gap-3 justify-center' : 'inline-flex items-center gap-3',
-    ]}>
-      {align === 'center' && <span class="w-8 h-px bg-w-gold/70 hidden sm:inline-block"></span>}
-      <span>{eyebrow}</span>
-      {align === 'center' && <span class="w-8 h-px bg-w-gold/70 hidden sm:inline-block"></span>}
+        'text-[11px] sm:text-xs font-semibold tracking-[0.36em] uppercase mb-4',
+        eyeColor,
+      ]}>
+      {eyebrow}
     </p>
   )}
   <h2
     data-cms-collection={cmsCollection && cmsTitleField ? cmsCollection : undefined}
     data-cms-id={cmsCollection && cmsTitleField ? cmsId : undefined}
     data-cms-field={cmsCollection && cmsTitleField ? cmsTitleField : undefined}
-    class="font-serif text-3xl sm:text-4xl lg:text-[2.75rem] leading-[1.15] text-w-dark font-medium tracking-tight">
+    class:list={[
+      'font-serif text-3xl sm:text-4xl lg:text-[2.85rem] leading-[1.1] font-medium tracking-tight',
+      titleColor,
+    ]}>
     {title}
   </h2>
-  {ornament && (
-    <div class:list={[
-      'mt-6 flex items-center gap-3 text-w-gold/70',
-      align === 'center' ? 'justify-center' : 'justify-start',
-    ]}>
-      <span class="h-px w-10 bg-w-gold/40"></span>
-      <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 2l2.39 7.36H22l-6.18 4.49L18.21 22 12 17.27 5.79 22l2.39-8.15L2 9.36h7.61z" opacity="0.55"/>
-      </svg>
-      <span class="h-px w-10 bg-w-gold/40"></span>
-    </div>
-  )}
 </div>

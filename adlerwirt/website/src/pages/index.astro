@@ -17,266 +17,422 @@ function formatDate(d: string | null) {
   if (!d) return '';
   return new Date(d).toLocaleDateString('de-AT', { day: 'numeric', month: 'long', year: 'numeric' });
 }
+function pad2(n: number) { return String(n).padStart(2, '0'); }
+
+// Headline italic-mix: pick a key word to italicize for editorial flair.
+const HEADLINE_KEYWORDS = ['Wirtshausküche', 'Wirtshaus­küche', 'Herz', 'Handschlag', 'Heimat', 'Sonntag'];
+let headlineHtml = hero.headline;
+for (const kw of HEADLINE_KEYWORDS) {
+  if (headlineHtml.includes(kw)) {
+    headlineHtml = headlineHtml.replace(kw, `<em>${kw}</em>`);
+    break;
+  }
+}
+
+// Marquee of dish names — repeat for seamless loop
+const marqueeNames = featured.length > 0
+  ? featured.map(f => f.name)
+  : ['Wiener Schnitzel', 'Tafelspitz', 'Backhendl', 'Kaiserschmarrn', 'Frittatensuppe'];
+const marqueeLoop = [...marqueeNames, ...marqueeNames, ...marqueeNames];
+
+// First featured dish gets a "hero" treatment, the rest are listed.
+const featuredHero = featured[0];
+const featuredRest = featured.slice(1, 4);
 ---
 
 <Layout title={settings.site_name} description={hero.subheadline}>
 
-  <!-- ── Hero ────────────────────────────────────────────────── -->
-  <section data-cms-collection="hero" class="relative min-h-[92vh] flex items-center justify-center overflow-hidden">
+  <!-- ── HERO ─────────────────────────────────────────────────── -->
+  <section data-cms-collection="hero" class="relative min-h-[100vh] flex flex-col overflow-hidden bg-w-dark">
+
+    <!-- Background image with refined gradient (asymmetric — heavier on left where text lives) -->
     <img src={assetUrl(hero.image)} alt={hero.image_alt}
          data-cms-collection="hero" data-cms-field="image"
-         class="absolute inset-0 w-full h-full object-cover object-center" />
-    <!-- two-stop gradient for crisp readability without crushing the image -->
-    <div class="absolute inset-0 bg-gradient-to-b from-w-dark/55 via-w-dark/35 to-w-dark/85"></div>
-    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(11,22,14,0.45)_100%)]"></div>
+         class="absolute inset-0 w-full h-full object-cover object-center scale-105" />
+    <div class="absolute inset-0 bg-[linear-gradient(95deg,rgba(11,22,14,0.85)_0%,rgba(11,22,14,0.65)_40%,rgba(11,22,14,0.35)_70%,rgba(11,22,14,0.55)_100%)]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_60%,transparent_0%,rgba(11,22,14,0.55)_100%)]"></div>
 
-    <div class="relative z-10 max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 py-28 w-full mt-16 text-center">
-      <div class="max-w-4xl mx-auto fade-up flex flex-col items-center">
-        {hero.eyebrow && (
-          <p data-cms-collection="hero" data-cms-field="eyebrow"
-             class="inline-flex items-center gap-4 text-w-gold text-xs sm:text-sm font-semibold tracking-[0.32em] uppercase mb-7">
-            <span class="w-10 sm:w-14 h-px bg-w-gold/80"></span>
-            {hero.eyebrow}
-            <span class="w-10 sm:w-14 h-px bg-w-gold/80"></span>
-          </p>
-        )}
-        <h1 data-cms-collection="hero" data-cms-field="headline"
-            class="font-serif text-[2.75rem] sm:text-6xl lg:text-[5.5rem] xl:text-[6.5rem] text-white font-medium leading-[1.04] mb-7 tracking-tight drop-shadow-2xl">
-          {hero.headline}
-        </h1>
-        {hero.subheadline && (
-          <p data-cms-collection="hero" data-cms-field="subheadline"
-             class="text-white/90 text-lg sm:text-xl font-light leading-relaxed mb-10 max-w-2xl mx-auto fade-up delay-100 drop-shadow-lg">
-            {hero.subheadline}
-          </p>
-        )}
-        <div class="flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto fade-up delay-200">
-          {hero.cta_primary_label && (
-            <a href={hero.cta_primary_link}
-               data-cms-collection="hero" data-cms-field="cta_primary_label"
-               class="btn btn-primary">
-              {hero.cta_primary_label}
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-            </a>
+    <!-- Vertical ANNO strip (left edge) -->
+    <div class="hidden lg:flex absolute left-0 top-0 bottom-0 w-16 items-center justify-center z-20">
+      <div class="flex flex-col items-center gap-6 text-w-gold/75">
+        <span class="h-20 w-px bg-w-gold/30"></span>
+        <span class="v-text">Anno · MDCCCXCVII</span>
+        <span class="h-20 w-px bg-w-gold/30"></span>
+      </div>
+    </div>
+
+    <!-- Wax seal (top right) -->
+    <div class="hidden md:flex absolute top-32 right-8 lg:right-16 z-20 fade-up delay-300">
+      <div class="seal">
+        <span class="seal-top">Familienbetrieb</span>
+        <span class="seal-num" data-cms-collection="about" data-cms-field="founded_year">{about.founded_year}</span>
+        <span class="seal-bot">· IV. Generation ·</span>
+      </div>
+    </div>
+
+    <!-- Editorial title block -->
+    <div class="relative z-10 flex-1 flex items-center">
+      <div class="max-w-7xl w-full mx-auto px-5 sm:px-6 lg:px-20 pt-40 pb-32 lg:pt-44 lg:pb-44">
+        <div class="max-w-3xl">
+          {hero.eyebrow && (
+            <p data-cms-collection="hero" data-cms-field="eyebrow"
+               class="text-w-gold text-[11px] sm:text-xs font-semibold tracking-[0.4em] uppercase mb-8 inline-flex items-center gap-3 fade-up">
+              <span class="block w-8 h-px bg-w-gold/70"></span>
+              {hero.eyebrow}
+            </p>
           )}
-          {hero.cta_secondary_label && (
-            <a href={hero.cta_secondary_link}
-               data-cms-collection="hero" data-cms-field="cta_secondary_label"
-               class="btn btn-ghost">
-              {hero.cta_secondary_label}
-            </a>
+          <h1 data-cms-collection="hero" data-cms-field="headline"
+              class="h-display text-white text-[3rem] sm:text-[4.4rem] lg:text-[6rem] xl:text-[6.6rem] mb-9 fade-up delay-100"
+              set:html={headlineHtml}>
+          </h1>
+          {hero.subheadline && (
+            <p data-cms-collection="hero" data-cms-field="subheadline"
+               class="text-white/85 text-lg sm:text-xl leading-[1.7] font-light max-w-2xl mb-10 fade-up delay-200">
+              {hero.subheadline}
+            </p>
           )}
+
+          <!-- CTA + phone — single decisive primary, telephone as inline link -->
+          <div class="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-8 fade-up delay-300">
+            {hero.cta_primary_label && (
+              <a href={hero.cta_primary_link}
+                 data-cms-collection="hero" data-cms-field="cta_primary_label"
+                 class="btn btn-gold !py-4 !px-8">
+                {hero.cta_primary_label}
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+              </a>
+            )}
+            <a href={`tel:${settings.contact_phone.replace(/\s/g,'')}`}
+               class="group inline-flex items-center gap-3 text-white/90 hover:text-w-gold transition-colors">
+              <span class="w-9 h-9 rounded-full border border-white/25 flex items-center justify-center group-hover:border-w-gold transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+              </span>
+              <span class="flex flex-col leading-tight">
+                <span class="text-[10px] tracking-[0.3em] uppercase text-white/55 font-semibold">Reservieren</span>
+                <span data-cms-collection="site_settings" data-cms-field="contact_phone" class="font-serif text-xl tabular-nums">{settings.contact_phone}</span>
+              </span>
+            </a>
+          </div>
         </div>
       </div>
     </div>
 
-    <a href="#featured" aria-label="Weiter scrollen" class="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 hover:text-w-gold transition-colors fade-up delay-300">
-      <span class="block animate-bounce">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7"/></svg>
-      </span>
-    </a>
+    <!-- Bottom marquee — signature dishes scrolling like a chalkboard ticker -->
+    <div class="relative z-10 border-t border-w-gold/20 bg-w-green-dark/70 backdrop-blur-sm">
+      <div class="marquee-wrap overflow-hidden">
+        <div class="marquee py-4 sm:py-5">
+          {marqueeLoop.map((name) => (
+            <span class="flex items-center gap-[3.5rem] text-w-gold/90 whitespace-nowrap text-sm tracking-[0.32em] uppercase font-semibold">
+              <span>{name}</span>
+              <svg class="w-2 h-2 text-w-gold/40 flex-shrink-0" viewBox="0 0 8 8"><circle cx="4" cy="4" r="2" fill="currentColor"/></svg>
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
   </section>
 
-  <!-- ── Featured dishes ─────────────────────────────────────── -->
-  <section id="featured" class="section bg-w-cream">
+  <!-- ── EMPFEHLUNGEN / FEATURED ─────────────────────────────── -->
+  <section id="featured" class="section bg-w-cream relative">
     <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-      <div class="flex justify-center mb-14 sm:mb-16">
-        <SectionHeader eyebrow={home.featured_eyebrow} title={home.featured_title}
-                       cmsCollection="home_copy" cmsEyebrowField="featured_eyebrow" cmsTitleField="featured_title" />
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-        {featured.map((item, index) => (
-          <article data-cms-collection="menu_items" data-cms-id={String(item.id)}
-                   class={`card card-hover p-8 sm:p-10 group fade-up delay-${(index % 3 + 1) * 100}`}>
-            <div class="flex items-start justify-between gap-4 mb-4">
-              <div class="min-w-0">
-                <p data-cms-collection="categories"
-                   data-cms-id={item.category?.id != null ? String(item.category.id) : undefined}
-                   data-cms-field="name"
-                   class="text-w-stone text-[11px] font-semibold uppercase tracking-[0.22em] mb-3">{item.category?.name}</p>
-                <h3 data-cms-field="name"
-                    class="font-serif text-2xl font-medium text-w-dark leading-snug group-hover:text-w-gold transition-colors duration-300">{item.name}</h3>
-              </div>
-              <span data-cms-field="price"
-                    class="text-w-gold font-medium text-lg whitespace-nowrap mt-1">€{Number(item.price).toFixed(2)}</span>
-            </div>
-            {item.description && <p data-cms-field="description" class="text-w-dark/70 text-[15px] leading-relaxed font-light">{item.description}</p>}
-            {(item.is_vegetarian || item.is_vegan) && (
-              <div class="flex gap-2 mt-6 flex-wrap">
-                {item.is_vegan && <span data-cms-collection="ui_copy" data-cms-field="vegan_label" class="px-2.5 py-1 bg-w-green/5 text-w-green text-[10px] font-semibold uppercase tracking-[0.18em] rounded-sm">{ui.vegan_label}</span>}
-                {item.is_vegetarian && !item.is_vegan && <span data-cms-collection="ui_copy" data-cms-field="vegetarian_label" class="px-2.5 py-1 bg-w-green/5 text-w-green text-[10px] font-semibold uppercase tracking-[0.18em] rounded-sm">{ui.vegetarian_label}</span>}
-              </div>
-            )}
-          </article>
-        ))}
-      </div>
-      <div class="text-center mt-14 fade-up delay-300">
-        <a href="/speisekarte" data-cms-collection="home_copy" data-cms-field="featured_all_link_label" class="inline-link">
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-16 sm:mb-20">
+        <SectionHeader
+          numeral="I."
+          eyebrow={home.featured_eyebrow}
+          title={home.featured_title}
+          align="left"
+          cmsCollection="home_copy"
+          cmsEyebrowField="featured_eyebrow"
+          cmsTitleField="featured_title" />
+        <a href="/speisekarte" data-cms-collection="home_copy" data-cms-field="featured_all_link_label"
+           class="inline-link whitespace-nowrap self-start lg:self-end">
           {home.featured_all_link_label}
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
         </a>
       </div>
-    </div>
-  </section>
 
-  <!-- ── About teaser ────────────────────────────────────────── -->
-  <section data-cms-collection="about" class="section bg-w-dark text-w-cream relative overflow-hidden">
-    <img src={assetUrl(about.image)} alt={about.title}
-         data-cms-collection="about" data-cms-field="image"
-         class="absolute inset-0 w-full h-full object-cover opacity-15 mix-blend-luminosity" />
-    <div class="absolute inset-0 bg-gradient-to-r from-w-dark/95 via-w-dark/85 to-w-dark/55"></div>
-    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center relative z-10">
-      <div class="fade-up">
-        <p data-cms-collection="home_copy" data-cms-field="about_eyebrow" class="eyebrow mb-5">{home.about_eyebrow}</p>
-        <h2 data-cms-collection="about" data-cms-field="title"
-            class="font-serif text-4xl sm:text-5xl lg:text-[3.25rem] text-white font-medium leading-[1.1] tracking-tight mb-6">
-          {about.title}
-        </h2>
-        <p data-cms-collection="about" data-cms-field="subtitle"
-           class="text-w-gold/95 text-xl sm:text-2xl leading-relaxed mb-8 italic font-serif">{about.subtitle}</p>
-        <p data-cms-collection="about" data-cms-field="story"
-           class="text-white/75 leading-[1.85] font-light text-base sm:text-lg max-w-xl">
-          {(about.story.split('\n\n')[0] ?? '').replace(/\*\*/g, '')}
-        </p>
-        <a href="/ueber-uns" data-cms-collection="home_copy" data-cms-field="about_link_label" class="inline-link on-dark mt-10">
-          {home.about_link_label}
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-        </a>
-      </div>
-      <div class="space-y-6 fade-up delay-200">
-        <div class="grid grid-cols-2 gap-4 sm:gap-6">
-          <div class="bg-white/5 backdrop-blur-md rounded-md p-8 sm:p-10 text-center border border-white/10 hover:bg-white/10 transition-colors duration-500">
-            <p data-cms-collection="about" data-cms-field="founded_year"
-               class="font-serif text-5xl sm:text-6xl font-medium text-w-gold leading-none">{about.founded_year}</p>
-            <p data-cms-collection="home_copy" data-cms-field="founded_label"
-               class="text-white/55 text-[11px] mt-4 tracking-[0.25em] uppercase">{home.founded_label}</p>
-          </div>
-          <div class="bg-white/5 backdrop-blur-md rounded-md p-8 sm:p-10 text-center border border-white/10 hover:bg-white/10 transition-colors duration-500">
-            <p data-cms-collection="about" data-cms-field="generations"
-               class="font-serif text-5xl sm:text-6xl font-medium text-w-gold leading-none">{about.generations}.</p>
-            <p data-cms-collection="home_copy" data-cms-field="generation_label"
-               class="text-white/55 text-[11px] mt-4 tracking-[0.25em] uppercase">{home.generation_label}</p>
+      {featuredHero && (
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 fade-up">
+          <!-- Hero featured: large editorial card -->
+          <article data-cms-collection="menu_items" data-cms-id={String(featuredHero.id)}
+                   class="lg:col-span-7 relative">
+            <div class="bg-w-green text-white relative overflow-hidden p-8 sm:p-12 lg:p-16 min-h-[460px] flex flex-col justify-between">
+              <div class="absolute inset-0 opacity-[0.05] pointer-events-none text-w-gold">
+                <svg class="absolute -right-8 -bottom-8 w-80 h-80"><use href="#m-eagle" /></svg>
+              </div>
+              <div class="relative z-10">
+                <p class="text-w-gold text-[11px] font-semibold tracking-[0.36em] uppercase mb-6 inline-flex items-center gap-2.5">
+                  <span class="font-serif italic text-[15px] tracking-normal">№ {pad2(1)}</span>
+                  <span class="w-8 h-px bg-w-gold/60"></span>
+                  Empfehlung des Hauses
+                </p>
+                <p data-cms-collection="categories"
+                   data-cms-id={featuredHero.category?.id != null ? String(featuredHero.category.id) : undefined}
+                   data-cms-field="name"
+                   class="text-white/60 text-[11px] uppercase tracking-[0.32em] font-semibold mb-4">{featuredHero.category?.name}</p>
+                <h3 data-cms-field="name" class="font-serif text-4xl sm:text-5xl lg:text-[3.5rem] leading-[1.05] font-medium text-white mb-6 tracking-tight">{featuredHero.name}</h3>
+                {featuredHero.description && (
+                  <p data-cms-field="description" class="text-white/75 text-lg leading-relaxed font-light max-w-lg">{featuredHero.description}</p>
+                )}
+              </div>
+              <div class="relative z-10 flex items-end justify-between mt-10 pt-8 border-t border-white/15">
+                <div class="flex items-baseline gap-2 text-w-gold">
+                  <span class="font-serif italic text-xs tracking-wider">ab</span>
+                  <span data-cms-field="price" class="font-serif text-4xl sm:text-5xl font-medium tabular-nums">€{Number(featuredHero.price).toFixed(2)}</span>
+                </div>
+                <div class="flex gap-2 flex-wrap items-center">
+                  {featuredHero.is_vegan && <span data-cms-collection="ui_copy" data-cms-field="vegan_label" class="px-2.5 py-1 text-w-gold border border-w-gold/40 text-[10px] font-semibold uppercase tracking-[0.22em]">{ui.vegan_label}</span>}
+                  {featuredHero.is_vegetarian && !featuredHero.is_vegan && <span data-cms-collection="ui_copy" data-cms-field="vegetarian_label" class="px-2.5 py-1 text-w-gold border border-w-gold/40 text-[10px] font-semibold uppercase tracking-[0.22em]">{ui.vegetarian_label}</span>}
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Companion list -->
+          <div class="lg:col-span-5">
+            <ol class="space-y-1">
+              {featuredRest.map((item, i) => (
+                <li data-cms-collection="menu_items" data-cms-id={String(item.id)}
+                    class={`group fade-up delay-${(i + 1) * 100}`}>
+                  <article class="py-7 border-b border-w-linen/80 hover:border-w-gold/40 transition-colors">
+                    <div class="flex items-baseline gap-3 sm:gap-5">
+                      <span class="font-serif italic text-w-gold text-lg sm:text-xl tabular-nums">№{pad2(i + 2)}</span>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-baseline gap-3">
+                          <h3 data-cms-field="name" class="font-serif text-xl sm:text-[1.4rem] font-medium text-w-dark group-hover:text-w-gold-dark transition-colors leading-snug">{item.name}</h3>
+                          <span class="leader"></span>
+                          <span data-cms-field="price" class="font-serif text-w-gold-dark text-lg sm:text-xl whitespace-nowrap tabular-nums font-medium">€{Number(item.price).toFixed(2)}</span>
+                        </div>
+                        {item.description && <p data-cms-field="description" class="text-w-stone text-[14.5px] mt-1.5 leading-relaxed font-light pr-2">{item.description}</p>}
+                        {(item.is_vegan || item.is_vegetarian) && (
+                          <div class="flex gap-2 mt-2.5 flex-wrap">
+                            {item.is_vegan && <span data-cms-collection="ui_copy" data-cms-field="vegan_label" class="text-[10px] text-w-green font-semibold tracking-[0.22em] uppercase">{ui.vegan_label}</span>}
+                            {item.is_vegetarian && !item.is_vegan && <span data-cms-collection="ui_copy" data-cms-field="vegetarian_label" class="text-[10px] text-w-green font-semibold tracking-[0.22em] uppercase">{ui.vegetarian_label}</span>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
-        <blockquote class="bg-w-green rounded-md p-8 sm:p-10 border border-white/5 relative overflow-hidden">
-          <div class="absolute -right-4 -top-4 opacity-[0.07] text-w-gold pointer-events-none">
-            <svg class="w-44 h-44" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+      )}
+    </div>
+  </section>
+
+  <!-- ── ABOUT / DIE FAMILIE ─────────────────────────────────── -->
+  <section data-cms-collection="about" class="section bg-w-paper relative overflow-hidden">
+    <!-- Ambient decorative wheat -->
+    <div class="absolute -left-6 top-12 text-w-gold/15 hidden lg:block" aria-hidden="true">
+      <svg class="w-20 h-28"><use href="#m-wheat" /></svg>
+    </div>
+    <div class="absolute -right-4 bottom-16 text-w-gold/15 hidden lg:block" aria-hidden="true">
+      <svg class="w-20 h-28 -scale-x-100"><use href="#m-wheat" /></svg>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center relative z-10">
+
+      <!-- Framed photo -->
+      <div class="lg:col-span-5 fade-up">
+        <div class="frame max-w-md mx-auto">
+          <img src={assetUrl(about.image)} alt={about.title}
+               data-cms-collection="about" data-cms-field="image"
+               class="w-full h-[420px] sm:h-[500px] object-cover" />
+        </div>
+        <!-- Anno strip beneath photo -->
+        <div class="mt-6 flex items-center justify-center gap-4 max-w-md mx-auto text-w-gold-dark">
+          <span class="h-px flex-1 bg-w-gold/30"></span>
+          <span class="font-serif italic text-sm tracking-wider">
+            <span data-cms-collection="about" data-cms-field="founded_year">{about.founded_year}</span> · <span data-cms-collection="about" data-cms-field="generations">{about.generations}.</span> Generation
+          </span>
+          <span class="h-px flex-1 bg-w-gold/30"></span>
+        </div>
+      </div>
+
+      <!-- Story -->
+      <div class="lg:col-span-7 fade-up delay-200">
+        <p data-cms-collection="home_copy" data-cms-field="about_eyebrow" class="eyebrow mb-5 inline-flex items-baseline gap-3">
+          <span class="font-serif italic text-3xl leading-none text-w-gold-dark">II.</span>
+          <span class="h-px w-12 bg-w-gold/50 self-center"></span>
+          <span>{home.about_eyebrow}</span>
+        </p>
+        <h2 data-cms-collection="about" data-cms-field="title"
+            class="h-display text-w-dark text-4xl sm:text-5xl lg:text-[3.5rem] mb-6">
+          {about.title.split(' ').map((word, i, arr) =>
+            i === Math.floor(arr.length / 2) ? <em>{word} </em> : `${word} `
+          )}
+        </h2>
+        <p data-cms-collection="about" data-cms-field="subtitle"
+           class="text-w-gold-dark text-lg sm:text-xl leading-relaxed mb-8 italic font-serif max-w-xl">{about.subtitle}</p>
+        <p data-cms-collection="about" data-cms-field="story"
+           class="drop-cap text-w-dark/75 leading-[1.85] font-light text-base sm:text-[17px] max-w-xl">
+          {(about.story.split('\n\n')[0] ?? '').replace(/\*\*/g, '')}
+        </p>
+
+        <!-- Signature -->
+        <div class="mt-10 flex items-end gap-8">
+          <div class="text-w-gold-dark">
+            <svg class="w-44 h-12 sm:w-52" aria-hidden="true"><use href="#m-signature" /></svg>
+            <p class="text-[10px] tracking-[0.32em] uppercase font-semibold text-w-stone mt-1">Familie Adler</p>
           </div>
-          <p data-cms-collection="about" data-cms-field="philosophy"
-             class="text-white/95 leading-[1.75] italic text-lg sm:text-xl font-serif relative z-10">"{about.philosophy}"</p>
-        </blockquote>
+          <a href="/ueber-uns" data-cms-collection="home_copy" data-cms-field="about_link_label" class="inline-link self-center">
+            {home.about_link_label}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </a>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ── Testimonials ────────────────────────────────────────── -->
-  <section class="section bg-w-cream">
-    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-      <div class="flex justify-center mb-14 sm:mb-16">
-        <SectionHeader eyebrow={home.testimonials_eyebrow} title={home.testimonials_title}
-                       cmsCollection="home_copy" cmsEyebrowField="testimonials_eyebrow" cmsTitleField="testimonials_title" />
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-        {testimonials.slice(0, 3).map((t, index) => (
-          <blockquote data-cms-collection="testimonials" data-cms-id={String(t.id)}
-                      class={`card p-8 sm:p-10 flex flex-col fade-up delay-${(index % 3 + 1) * 100}`}>
-            <p data-cms-field="rating" class="text-w-gold text-xl tracking-[0.2em] mb-6">{stars(t.rating)}</p>
-            <p data-cms-field="quote" class="text-w-dark/80 leading-[1.8] italic flex-1 text-lg font-serif">"{t.quote}"</p>
-            <footer class="mt-8 pt-6 border-t border-w-linen flex items-center justify-between">
-              <p data-cms-field="author" class="font-medium text-w-dark text-base">{t.author}</p>
-              <p data-cms-field="location" class="text-w-stone text-[11px] uppercase tracking-[0.22em]">{t.location}</p>
-            </footer>
-          </blockquote>
-        ))}
+  <!-- ── STIMMEN / TESTIMONIALS — pull-quote treatment ──────── -->
+  <section class="section bg-w-cream relative overflow-hidden">
+    <div class="max-w-6xl mx-auto px-5 sm:px-6 lg:px-8 relative z-10">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+
+        <div class="lg:col-span-4">
+          <SectionHeader
+            numeral="III."
+            eyebrow={home.testimonials_eyebrow}
+            title={home.testimonials_title}
+            align="left"
+            cmsCollection="home_copy"
+            cmsEyebrowField="testimonials_eyebrow"
+            cmsTitleField="testimonials_title" />
+        </div>
+
+        <div class="lg:col-span-8 space-y-12">
+          {testimonials.slice(0, 3).map((t, index) => (
+            <blockquote data-cms-collection="testimonials" data-cms-id={String(t.id)}
+                        class={`relative fade-up delay-${(index % 3 + 1) * 100} ${index !== 0 ? 'pt-12 border-t border-w-linen' : ''}`}>
+              <div class="flex items-baseline gap-5 mb-4">
+                <span data-cms-field="rating" class="text-w-gold text-base tracking-[0.4em]">{stars(t.rating)}</span>
+                <span class="h-px flex-1 bg-w-gold/20"></span>
+                <p data-cms-field="location" class="text-w-stone text-[10px] uppercase tracking-[0.32em] font-semibold">{t.location}</p>
+              </div>
+              <p data-cms-field="quote" class="font-serif italic text-w-dark/90 text-2xl sm:text-3xl leading-[1.35] font-medium tracking-tight">
+                <span class="text-w-gold/60 text-4xl font-serif leading-none align-baseline">“</span>{t.quote}<span class="text-w-gold/60 text-4xl font-serif leading-none align-baseline">”</span>
+              </p>
+              <footer class="mt-5 flex items-baseline gap-3">
+                <span class="font-serif italic text-w-gold-dark">—</span>
+                <p data-cms-field="author" class="text-w-dark text-[15px] font-medium tracking-wide">{t.author}</p>
+              </footer>
+            </blockquote>
+          ))}
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ── Events preview ──────────────────────────────────────── -->
-  <section class="section bg-w-linen/40">
-    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 sm:gap-10 mb-14 sm:mb-16 fade-up">
-        <SectionHeader eyebrow={home.events_eyebrow} title={home.events_title} align="left" ornament={false}
-                       cmsCollection="home_copy" cmsEyebrowField="events_eyebrow" cmsTitleField="events_title" />
+  <!-- ── EVENTS PREVIEW ─────────────────────────────────────── -->
+  <section class="section bg-w-paper relative overflow-hidden">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 relative z-10">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6 sm:gap-10 mb-14 sm:mb-16">
+        <SectionHeader
+          numeral="IV."
+          eyebrow={home.events_eyebrow}
+          title={home.events_title}
+          align="left"
+          cmsCollection="home_copy"
+          cmsEyebrowField="events_eyebrow"
+          cmsTitleField="events_title" />
         <a href="/events" data-cms-collection="home_copy" data-cms-field="events_all_link_label" class="inline-link whitespace-nowrap">
           {home.events_all_link_label}
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
         </a>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-        {events.slice(0, 4).map((ev, index) => (
-          <article data-cms-collection="events" data-cms-id={String(ev.id)}
-                   class={`card card-hover p-7 sm:p-8 fade-up delay-${(index % 2 + 1) * 100}`}>
-            <div class="flex items-start gap-6">
-              <div class="flex-shrink-0 w-16 h-16 rounded-md bg-w-green flex items-center justify-center">
-                <svg class="w-7 h-7 text-w-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-10 sm:gap-14">
+        {events.slice(0, 4).map((ev, index) => {
+          const d = ev.starts_on ? new Date(ev.starts_on) : null;
+          return (
+            <article data-cms-collection="events" data-cms-id={String(ev.id)}
+                     class={`group fade-up delay-${(index % 2 + 1) * 100}`}>
+              <div class="flex items-start gap-6 pb-7 border-b border-w-linen/90 transition-colors group-hover:border-w-gold/40">
+                <!-- Date column -->
+                <div class="flex-shrink-0 w-20 text-center pt-1">
+                  {ev.is_recurring ? (
+                    <div class="border-l-2 border-w-gold pl-4 text-left">
+                      <p class="font-serif italic text-w-gold-dark text-2xl leading-tight">jede</p>
+                      <p data-cms-field="recurrence_note" class="text-[10px] uppercase tracking-[0.28em] text-w-stone font-semibold mt-1">{ev.recurrence_note}</p>
+                    </div>
+                  ) : d ? (
+                    <>
+                      <p data-cms-field="starts_on" class="font-serif text-5xl font-medium text-w-gold-dark leading-none tabular-nums">{pad2(d.getDate())}</p>
+                      <p data-cms-field="starts_on" class="text-[10px] uppercase tracking-[0.32em] text-w-stone font-semibold mt-2">{d.toLocaleDateString('de-AT',{month:'short'}).replace('.','')}</p>
+                      <p data-cms-field="starts_on" class="text-[10px] uppercase tracking-[0.32em] text-w-stone/70 font-medium mt-1">{d.getFullYear()}</p>
+                    </>
+                  ) : null}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h3 data-cms-field="title" class="font-serif font-medium text-w-dark text-xl sm:text-2xl leading-snug group-hover:text-w-gold-dark transition-colors">{ev.title}</h3>
+                  {ev.subtitle && <p data-cms-field="subtitle" class="text-w-gold-dark text-[15px] mt-1.5 font-light italic">{ev.subtitle}</p>}
+                  {ev.description && (
+                    <p data-cms-field="description" class="text-w-dark/70 text-[15px] mt-3 leading-relaxed line-clamp-2 font-light">{ev.description}</p>
+                  )}
+                  {ev.ends_on && !ev.is_recurring && (
+                    <p class="text-w-stone text-[11px] mt-3 uppercase tracking-[0.28em] font-semibold">bis {formatDate(ev.ends_on)}</p>
+                  )}
+                </div>
               </div>
-              <div class="flex-1 min-w-0 pt-1">
-                <h3 data-cms-field="title" class="font-serif font-medium text-w-dark text-xl sm:text-2xl leading-snug">{ev.title}</h3>
-                {ev.subtitle && <p data-cms-field="subtitle" class="text-w-stone text-[15px] mt-1.5 font-light">{ev.subtitle}</p>}
-                {ev.starts_on && (
-                  <p data-cms-field={ev.is_recurring ? 'recurrence_note' : 'starts_on'}
-                     class="text-w-gold text-[11px] font-semibold uppercase tracking-[0.22em] mt-4">
-                    {ev.is_recurring ? ev.recurrence_note : formatDate(ev.starts_on)}
-                    {ev.ends_on && !ev.is_recurring && ` – ${formatDate(ev.ends_on)}`}
-                  </p>
-                )}
-                {ev.description && (
-                  <p data-cms-field="description" class="text-w-dark/70 text-[15px] mt-3 leading-relaxed line-clamp-2 font-light">{ev.description}</p>
-                )}
-              </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </div>
     </div>
   </section>
 
-  <!-- ── Opening hours strip ─────────────────────────────────── -->
-  <section class="section bg-w-green text-white relative">
-    <div class="absolute inset-0 opacity-[0.04]"
-         style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:24px 24px"></div>
+  <!-- ── ÖFFNUNGSZEITEN — editorial strip ────────────────────── -->
+  <section class="section bg-w-green text-white relative overflow-hidden">
+    <div class="absolute inset-0 opacity-[0.04] pointer-events-none"
+         style="background-image:radial-gradient(circle,#c69c6d 1px,transparent 1px);background-size:28px 28px"></div>
+    <!-- Faint eagle watermark -->
+    <div class="absolute -right-16 top-1/2 -translate-y-1/2 text-w-gold/[0.05] pointer-events-none" aria-hidden="true">
+      <svg class="w-[34rem] h-[34rem]"><use href="#m-eagle" /></svg>
+    </div>
+
     <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 relative z-10">
-      <div class="flex justify-center mb-12 sm:mb-14 fade-up">
-        <div class="text-center max-w-3xl">
-          <p data-cms-collection="home_copy" data-cms-field="opening_hours_eyebrow"
-             class="eyebrow mb-5 inline-flex items-center gap-3 justify-center">
-            <span class="w-8 h-px bg-w-gold/70 hidden sm:inline-block"></span>
-            <span>{home.opening_hours_eyebrow}</span>
-            <span class="w-8 h-px bg-w-gold/70 hidden sm:inline-block"></span>
-          </p>
-          <h2 data-cms-collection="home_copy" data-cms-field="opening_hours_title"
-              class="font-serif text-3xl sm:text-4xl lg:text-[2.75rem] text-white font-medium tracking-tight">
-            {home.opening_hours_title}
-          </h2>
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+        <div class="lg:col-span-4 fade-up">
+          <SectionHeader
+            numeral="V."
+            eyebrow={home.opening_hours_eyebrow}
+            title={home.opening_hours_title}
+            align="left"
+            onDark={true}
+            cmsCollection="home_copy"
+            cmsEyebrowField="opening_hours_eyebrow"
+            cmsTitleField="opening_hours_title" />
+          <a href="/kontakt" data-cms-collection="home_copy" data-cms-field="opening_hours_link_label" class="inline-link on-dark mt-8">
+            {home.opening_hours_link_label}
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </a>
         </div>
+        <ul class="lg:col-span-8 divide-y divide-white/10 fade-up delay-200">
+          {hours.map(h => (
+            <li data-cms-collection="opening_hours" data-cms-id={String(h.id)}
+                class:list={[
+                  'grid grid-cols-[7rem_1fr_auto] sm:grid-cols-[10rem_1fr_auto] items-baseline gap-6 py-5',
+                  h.closed ? 'opacity-55' : '',
+                ]}>
+              <p data-cms-field="weekday" class="font-serif text-white text-lg sm:text-xl tracking-tight">{h.weekday}</p>
+              {h.closed ? (
+                <p data-cms-collection="ui_copy" data-cms-field="closed_label" class="text-white/55 italic font-serif text-base">{ui.closed_label}</p>
+              ) : (
+                <p class="font-serif tabular-nums text-w-gold-light text-lg sm:text-xl">
+                  <span data-cms-field="open_from">{h.open_from}</span>
+                  <span class="text-white/30 mx-2">—</span>
+                  <span data-cms-field="open_to">{h.open_to}</span>
+                </p>
+              )}
+              {!h.closed && h.note && (
+                <span data-cms-field="note" class="text-[10px] uppercase tracking-[0.32em] text-w-gold font-semibold whitespace-nowrap">{h.note}</span>
+              )}
+              {h.closed && <span></span>}
+            </li>
+          ))}
+        </ul>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 fade-up delay-100">
-        {hours.map(h => (
-          <div data-cms-collection="opening_hours" data-cms-id={String(h.id)}
-               class:list={[
-            'rounded-md p-5 sm:p-6 text-center transition-all duration-300',
-            h.closed ? 'bg-white/5 opacity-60' : 'bg-white/[0.07] border border-white/10 hover:bg-white/15 hover:-translate-y-0.5',
-          ]}>
-            <p data-cms-field="weekday" class="text-w-gold text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.28em] mb-3">{h.weekday.slice(0,3)}</p>
-            {h.closed
-              ? <p data-cms-collection="ui_copy" data-cms-field="closed_label" class="text-white/60 text-sm font-light italic">{ui.closed_label}</p>
-              : <>
-                  <p class="text-white text-[15px] sm:text-base font-medium tracking-wide tabular-nums">
-                    <span data-cms-field="open_from">{h.open_from}</span>–<span data-cms-field="open_to">{h.open_to}</span>
-                  </p>
-                  {h.note && <p data-cms-field="note" class="text-white/55 text-[11px] mt-2 font-light leading-relaxed">{h.note}</p>}
-                </>
-            }
-          </div>
-        ))}
-      </div>
-      <p class="text-center mt-12 sm:mt-14 fade-up delay-200">
-        <a href="/kontakt" data-cms-collection="home_copy" data-cms-field="opening_hours_link_label" class="inline-link on-dark">
-          {home.opening_hours_link_label}
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-        </a>
-      </p>
     </div>
   </section>
 </Layout>

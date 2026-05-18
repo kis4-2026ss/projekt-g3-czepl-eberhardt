@@ -16,39 +16,56 @@ const [hero, about, classes, plans, testimonials, hours, home, ui, stats, settin
 ]);
 
 function stars(n: number) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
+function pad2(n: number | string) { return String(n).padStart(2, '0'); }
+
+// Marquee terms — generic "strength · mobility · cardio" feel
+const marqueeTerms = ['Strength', 'Mobility', 'Cardio', 'Power', 'Endurance', 'Recovery'];
+const marqueeLoop = [...marqueeTerms, ...marqueeTerms, ...marqueeTerms];
 ---
 
 <Layout title={settings.site_name} description={hero.subheadline}>
 
-  <!-- ── Hero ────────────────────────────────────────────────── -->
-  <section data-cms-collection="hero" class="bg-fs-white border-b border-fs-border/60 relative overflow-hidden">
-    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-24 pb-16 sm:pb-20 lg:pb-28 min-h-[88vh] flex items-center">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center w-full">
+  <!-- ── HERO ─────────────────────────────────────────────────── -->
+  <section data-cms-collection="hero" class="relative bg-fc-paper overflow-hidden">
 
-        <!-- Text column -->
-        <div class="lg:col-span-6 fade-up">
-          {hero.eyebrow && (
-            <span data-cms-collection="hero" data-cms-field="eyebrow" class="eyebrow mb-6">
-              {hero.eyebrow}
-            </span>
-          )}
+    <!-- Mega background wordmark — kinetic, sits behind the content -->
+    <p class="absolute -top-10 sm:top-2 -right-6 sm:-right-10 h-mega text-[clamp(8rem,28vw,22rem)] leading-[0.85] text-fc-ink/[0.04] select-none pointer-events-none whitespace-nowrap" aria-hidden="true">
+      FITCORE.
+    </p>
+
+    <div class="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-10 sm:pt-14 lg:pt-20 pb-16 sm:pb-20 lg:pb-24">
+
+      <!-- Top spec strip -->
+      <div class="flex flex-wrap items-baseline gap-4 sm:gap-8 mb-12 sm:mb-16 fade-up">
+        <span class="spec text-fc-ink flex items-center gap-2">
+          <svg class="w-2 h-2 text-fc-rust"><use href="#fc-cross" /></svg>
+          <span data-cms-collection="hero" data-cms-field="eyebrow">{hero.eyebrow}</span>
+        </span>
+        <span class="spec text-fc-muted">/ Est. <span data-cms-collection="site_stats" data-cms-field="founded_year">{stats.founded_year}</span></span>
+        <span class="spec text-fc-muted">/ <span data-cms-collection="site_settings" data-cms-field="address_city">{settings.address_city}</span></span>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-start">
+
+        <!-- Headline column -->
+        <div class="lg:col-span-7 fade-up">
           <h1 data-cms-collection="hero" data-cms-field="headline"
-              class="display font-display font-extrabold text-fs-dark text-[2.5rem] sm:text-5xl lg:text-[3.75rem] xl:text-[4.25rem] leading-[1.05] tracking-tight-2 mt-2">
+              class="h-mega text-fc-ink text-[3rem] sm:text-[5rem] lg:text-[7rem] xl:text-[8rem]">
             {hero.headline}
           </h1>
           {hero.subheadline && (
             <p data-cms-collection="hero" data-cms-field="subheadline"
-               class="mt-6 text-fs-muted text-lg leading-relaxed max-w-xl">
+               class="mt-8 text-fc-muted text-lg sm:text-xl leading-[1.55] max-w-xl fade-up delay-100">
               {hero.subheadline}
             </p>
           )}
-          <div class="mt-8 flex flex-wrap gap-3">
+          <div class="mt-10 flex flex-wrap gap-3 sm:gap-4 fade-up delay-200">
             {hero.cta_primary_label && (
               <a href={hero.cta_primary_link}
                  data-cms-collection="hero" data-cms-field="cta_primary_label"
-                 class="btn btn-primary">
+                 class="btn btn-lime">
                 {hero.cta_primary_label}
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                <svg class="w-3.5 h-3.5"><use href="#fc-arrow" /></svg>
               </a>
             )}
             {hero.cta_secondary_label && (
@@ -59,257 +76,291 @@ function stars(n: number) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
               </a>
             )}
           </div>
-
-          <!-- Stats row -->
-          <div data-cms-collection="site_stats" class="mt-12 grid grid-cols-3 max-w-lg divide-x divide-fs-border">
-            <div class="pr-6">
-              <p data-cms-field="member_count" class="font-display font-extrabold text-fs-blue text-2xl sm:text-3xl tracking-tight-2">{stats.member_count}</p>
-              <p data-cms-field="member_label" class="text-fs-muted text-xs mt-1 uppercase tracking-[0.1em] font-semibold">{stats.member_label}</p>
-            </div>
-            <div class="px-6">
-              <p data-cms-field="courses_per_week" class="font-display font-extrabold text-fs-blue text-2xl sm:text-3xl tracking-tight-2">{stats.courses_per_week}</p>
-              <p data-cms-field="courses_label" class="text-fs-muted text-xs mt-1 uppercase tracking-[0.1em] font-semibold">{stats.courses_label}</p>
-            </div>
-            <div class="pl-6">
-              <p data-cms-field="trainer_count" class="font-display font-extrabold text-fs-blue text-2xl sm:text-3xl tracking-tight-2">{stats.trainer_count}</p>
-              <p data-cms-field="trainer_label" class="text-fs-muted text-xs mt-1 uppercase tracking-[0.1em] font-semibold">{stats.trainer_label}</p>
-            </div>
-          </div>
         </div>
 
-        <!-- Image column -->
-        <div class="lg:col-span-6 fade-up delay-200">
-          <div class="relative">
-            <div class="absolute -inset-4 sm:-inset-6 bg-gradient-to-br from-fs-blue-bg to-transparent rounded-3xl"></div>
-            <div class="relative rounded-2xl overflow-hidden shadow-xl aspect-[5/6] bg-fs-surface">
-              {hero.image
-                ? <img src={assetUrl(hero.image, 'width=1200&quality=82&fit=cover')}
-                       alt={hero.image_alt}
-                       data-cms-collection="hero" data-cms-field="image"
-                       class="w-full h-full object-cover" />
-                : <div class="w-full h-full bg-gradient-to-br from-fs-blue/20 to-fs-blue-bg"></div>}
-            </div>
-            <!-- floating chip -->
-            <div class="hidden sm:flex absolute -bottom-4 -left-4 bg-white shadow-card-hover border border-fs-border rounded-xl p-4 items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-fs-blue-bg flex items-center justify-center">
-                <svg class="w-5 h-5 text-fs-blue" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+        <!-- Image column with stat-bar overlay -->
+        <div class="lg:col-span-5 fade-up delay-300">
+          <div class="relative aspect-[4/5] bg-fc-paper-2 overflow-hidden">
+            {hero.image
+              ? <img src={assetUrl(hero.image, 'width=1200&quality=82&fit=cover')}
+                     alt={hero.image_alt}
+                     data-cms-collection="hero" data-cms-field="image"
+                     class="w-full h-full object-cover" />
+              : <div class="w-full h-full bg-fc-paper-2"></div>}
+            <!-- Index marker -->
+            <span class="absolute top-4 left-4 num-display bg-fc-ink text-fc-lime px-3 py-1.5 text-xl">/ 01</span>
+            <!-- Rating chip — kinetic style -->
+            <div class="absolute bottom-4 left-4 right-4 bg-fc-ink text-white px-5 py-4 flex items-center justify-between gap-4">
+              <div>
+                <p class="spec text-fc-lime">Member Rating</p>
+                <p class="font-display font-bold text-2xl mt-0.5">
+                  <span data-cms-collection="site_stats" data-cms-field="rating">{stats.rating}</span>
+                  <span class="text-white/55 text-base font-medium ml-1">/ 5.0</span>
+                </p>
               </div>
-              <div class="leading-tight">
-                <p data-cms-collection="site_stats" data-cms-field="rating" class="font-display font-extrabold text-fs-dark text-lg">{stats.rating}</p>
-                <p data-cms-collection="site_stats" data-cms-field="rating_label" class="text-fs-muted text-[11px] uppercase tracking-[0.12em] font-semibold">{stats.rating_label}</p>
-              </div>
+              <p class="text-fc-lime text-xl tracking-[0.25em]">★★★★★</p>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Stats bar (3 cells) — sits under hero on a thin rule -->
+      <div data-cms-collection="site_stats" class="mt-16 sm:mt-20 grid grid-cols-3 border-t border-fc-ink fade-up delay-300">
+        <div class="py-6 sm:py-8 pr-4 sm:pr-8 border-r border-fc-ink/15">
+          <p class="spec text-fc-muted">[ 01 ] Member</p>
+          <p data-cms-field="member_count" class="num-display text-4xl sm:text-6xl mt-2 text-fc-ink">{stats.member_count}</p>
+          <p data-cms-field="member_label" class="spec mt-2 text-fc-ink">{stats.member_label}</p>
+        </div>
+        <div class="py-6 sm:py-8 px-4 sm:px-8 border-r border-fc-ink/15">
+          <p class="spec text-fc-muted">[ 02 ] Pro Woche</p>
+          <p data-cms-field="courses_per_week" class="num-display text-4xl sm:text-6xl mt-2 text-fc-ink">{stats.courses_per_week}</p>
+          <p data-cms-field="courses_label" class="spec mt-2 text-fc-ink">{stats.courses_label}</p>
+        </div>
+        <div class="py-6 sm:py-8 pl-4 sm:pl-8">
+          <p class="spec text-fc-muted">[ 03 ] Team</p>
+          <p data-cms-field="trainer_count" class="num-display text-4xl sm:text-6xl mt-2 text-fc-ink">{stats.trainer_count}</p>
+          <p data-cms-field="trainer_label" class="spec mt-2 text-fc-ink">{stats.trainer_label}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Marquee bar — bold green block, kinetic -->
+    <div class="bg-fc-lime border-y border-fc-ink marquee-wrap overflow-hidden">
+      <div class="marquee py-4">
+        {marqueeLoop.map((term) => (
+          <span class="flex items-center gap-12 whitespace-nowrap font-display font-bold text-fc-ink text-3xl sm:text-4xl tracking-tight-3">
+            <span>{term}.</span>
+            <svg class="w-3.5 h-3.5 text-fc-ink/50 flex-shrink-0"><use href="#fc-cross" /></svg>
+          </span>
+        ))}
+      </div>
     </div>
   </section>
 
-  <!-- ── Featured classes ────────────────────────────────────── -->
-  <section id="kurse" class="section bg-fs-surface">
+  <!-- ── KURSE / CLASSES ─────────────────────────────────────── -->
+  <section id="kurse" class="section bg-fc-paper">
     <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-      <div class="mb-12 sm:mb-14 fade-up">
-        <SectionHeader
-          eyebrow={home.classes_eyebrow}
-          title={home.classes_title}
-          lead={home.classes_lead}
-          cmsCollection="home_copy"
-          cmsEyebrowField="classes_eyebrow"
-          cmsTitleField="classes_title"
-          cmsLeadField="classes_lead" />
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-14 sm:mb-16 fade-up">
+        <div class="lg:col-span-7">
+          <SectionHeader
+            index="01"
+            eyebrow={home.classes_eyebrow}
+            title={home.classes_title}
+            lead={home.classes_lead}
+            cmsCollection="home_copy"
+            cmsEyebrowField="classes_eyebrow"
+            cmsTitleField="classes_title"
+            cmsLeadField="classes_lead" />
+        </div>
+        <div class="lg:col-span-5 flex lg:items-end lg:justify-end">
+          <a href="/kurse" data-cms-collection="home_copy" data-cms-field="classes_all_link_label" class="inline-link">
+            {home.classes_all_link_label}
+            <svg class="w-3.5 h-3.5"><use href="#fc-arrow" /></svg>
+          </a>
+        </div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
         {classes.slice(0, 3).map((c, i) => (
           <div class={`fade-up delay-${(i + 1) * 100}`}>
-            <ClassCard item={c} ui={ui} />
+            <ClassCard item={c} ui={ui} index={`/ ${pad2(i + 1)}`} />
           </div>
         ))}
-      </div>
-      <div class="text-center mt-12 fade-up delay-300">
-        <a href="/kurse" data-cms-collection="home_copy" data-cms-field="classes_all_link_label" class="inline-link">
-          {home.classes_all_link_label}
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-        </a>
       </div>
     </div>
   </section>
 
-  <!-- ── About teaser ────────────────────────────────────────── -->
-  <section class="section bg-fs-white">
-    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+  <!-- ── ABOUT — bold editorial split ─────────────────────────── -->
+  <section class="section bg-fc-cream relative overflow-hidden">
+    <!-- Big bg numeral 02 -->
+    <p class="absolute -left-6 top-10 num-display text-[clamp(10rem,28vw,22rem)] leading-[0.85] text-fc-ink/[0.05] select-none pointer-events-none" aria-hidden="true">02</p>
+
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start relative">
+
       <!-- Image -->
       <div class="lg:col-span-5 fade-up">
-        <div class="relative">
-          <div class="absolute -inset-3 bg-gradient-to-br from-fs-blue-bg via-transparent to-transparent rounded-3xl"></div>
-          <div class="relative aspect-[4/5] overflow-hidden rounded-2xl shadow-card-hover bg-fs-surface">
-            {about.image
-              ? <img src={assetUrl(about.image, 'width=900&quality=82&fit=cover')}
-                     alt={about.image_alt}
-                     data-cms-collection="about" data-cms-field="image"
-                     class="w-full h-full object-cover" />
-              : <div class="w-full h-full bg-gradient-to-br from-fs-blue/15 to-fs-blue-bg"></div>}
-          </div>
+        <div class="relative aspect-[4/5] overflow-hidden bg-fc-paper-2 border border-fc-ink">
+          {about.image
+            ? <img src={assetUrl(about.image, 'width=900&quality=82&fit=cover')}
+                   alt={about.image_alt}
+                   data-cms-collection="about" data-cms-field="image"
+                   class="w-full h-full object-cover" />
+            : <div class="w-full h-full bg-fc-paper-2"></div>}
         </div>
+        <!-- Stat row beneath image -->
+        <dl data-cms-collection="site_stats" class="mt-4 grid grid-cols-2 gap-0 border border-fc-ink border-t-0 divide-x divide-fc-ink">
+          <div class="p-5">
+            <dt class="spec text-fc-muted">Founded</dt>
+            <dd data-cms-field="founded_year" class="num-display text-3xl text-fc-ink mt-1">{stats.founded_year}</dd>
+          </div>
+          <div class="p-5">
+            <dt class="spec text-fc-muted">Studio</dt>
+            <dd data-cms-field="studio_area" class="num-display text-3xl text-fc-ink mt-1">{stats.studio_area}</dd>
+          </div>
+        </dl>
       </div>
 
-      <!-- Text + stats -->
+      <!-- Text -->
       <div class="lg:col-span-7 fade-up delay-100" data-cms-collection="about">
-        <span data-cms-field="eyebrow" class="eyebrow-plain">{about.eyebrow}</span>
-        <h2 data-cms-field="title" class="mt-3 font-display font-extrabold text-fs-dark text-3xl sm:text-4xl lg:text-[2.75rem] leading-[1.1] tracking-tight-2">
+        <span class="eyebrow mb-5" data-cms-field="eyebrow">[ 02 ] {about.eyebrow}</span>
+        <h2 data-cms-field="title" class="mt-5 h-mega text-fc-ink text-4xl sm:text-5xl lg:text-[3.75rem] leading-[1.02]">
           {about.title}
         </h2>
         {about.lead && (
-          <p data-cms-field="lead" class="mt-5 text-fs-muted text-lg leading-relaxed max-w-xl">
+          <p data-cms-field="lead" class="mt-7 text-fc-ink text-lg leading-relaxed max-w-xl">
             {about.lead}
           </p>
         )}
         {about.body && (
-          <p data-cms-field="body" class="mt-4 text-fs-muted text-base leading-relaxed max-w-xl">
+          <p data-cms-field="body" class="mt-5 text-fc-muted text-base leading-[1.75] max-w-xl">
             {about.body}
           </p>
         )}
         {about.team_link_label && (
-          <a href={about.team_link_href || '#'} data-cms-field="team_link_label" class="inline-link mt-6">
+          <a href={about.team_link_href || '#'} data-cms-field="team_link_label" class="inline-link mt-8">
             {about.team_link_label}
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+            <svg class="w-3.5 h-3.5"><use href="#fc-arrow" /></svg>
           </a>
         )}
 
-        <!-- 2×2 stat grid -->
-        <dl data-cms-collection="site_stats" class="mt-10 grid grid-cols-2 gap-3 sm:gap-4 max-w-xl">
-          <div class="border border-fs-border rounded-xl p-5 text-center bg-white hover:border-fs-blue/30 transition-colors duration-200">
-            <dt data-cms-field="founded_year" class="font-display font-extrabold text-fs-dark text-2xl sm:text-3xl tracking-tight-2">{stats.founded_year}</dt>
-            <dd data-cms-field="founded_label" class="text-fs-muted text-xs mt-1.5 uppercase tracking-[0.1em] font-semibold">{stats.founded_label}</dd>
+        <!-- Big inline stat callout -->
+        <div data-cms-collection="site_stats" class="mt-10 pt-10 border-t border-fc-ink/15 grid grid-cols-2 gap-6">
+          <div>
+            <p data-cms-field="rating" class="num-display text-5xl sm:text-6xl text-fc-ink">{stats.rating}<span class="text-fc-ink/30 text-3xl">/5</span></p>
+            <p data-cms-field="rating_label" class="spec mt-2 text-fc-muted">{stats.rating_label}</p>
           </div>
-          <div class="border border-fs-border rounded-xl p-5 text-center bg-white hover:border-fs-blue/30 transition-colors duration-200">
-            <dt data-cms-field="studio_area" class="font-display font-extrabold text-fs-dark text-2xl sm:text-3xl tracking-tight-2">{stats.studio_area}</dt>
-            <dd data-cms-field="studio_area_label" class="text-fs-muted text-xs mt-1.5 uppercase tracking-[0.1em] font-semibold">{stats.studio_area_label}</dd>
+          <div>
+            <p data-cms-field="trainer_about_count" class="num-display text-5xl sm:text-6xl text-fc-ink">{stats.trainer_about_count}</p>
+            <p data-cms-field="trainer_about_label" class="spec mt-2 text-fc-muted">{stats.trainer_about_label}</p>
           </div>
-          <div class="border border-fs-border rounded-xl p-5 text-center bg-white hover:border-fs-blue/30 transition-colors duration-200">
-            <dt data-cms-field="rating" class="font-display font-extrabold text-fs-dark text-2xl sm:text-3xl tracking-tight-2">{stats.rating}</dt>
-            <dd data-cms-field="rating_label" class="text-fs-muted text-xs mt-1.5 uppercase tracking-[0.1em] font-semibold">{stats.rating_label}</dd>
-          </div>
-          <div class="border border-fs-border rounded-xl p-5 text-center bg-white hover:border-fs-blue/30 transition-colors duration-200">
-            <dt data-cms-field="trainer_about_count" class="font-display font-extrabold text-fs-dark text-2xl sm:text-3xl tracking-tight-2">{stats.trainer_about_count}</dt>
-            <dd data-cms-field="trainer_about_label" class="text-fs-muted text-xs mt-1.5 uppercase tracking-[0.1em] font-semibold">{stats.trainer_about_label}</dd>
-          </div>
-        </dl>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ── Membership plans preview ───────────────────────────── -->
-  <section class="section bg-fs-surface">
-    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-      <div class="mb-12 sm:mb-14 fade-up">
-        <SectionHeader
-          eyebrow={home.pricing_eyebrow}
-          title={home.pricing_title}
-          lead={home.pricing_lead}
-          cmsCollection="home_copy"
-          cmsEyebrowField="pricing_eyebrow"
-          cmsTitleField="pricing_title"
-          cmsLeadField="pricing_lead" />
+  <!-- ── MEMBERSHIPS ─────────────────────────────────────────── -->
+  <section class="section bg-fc-ink text-white relative overflow-hidden">
+    <p class="absolute -left-6 top-6 num-display text-[clamp(8rem,22vw,18rem)] leading-[0.85] text-white/[0.05] select-none pointer-events-none" aria-hidden="true">03</p>
+
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 relative">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-14 sm:mb-16 fade-up">
+        <div class="lg:col-span-7">
+          <SectionHeader
+            index="03"
+            onInk={true}
+            eyebrow={home.pricing_eyebrow}
+            title={home.pricing_title}
+            lead={home.pricing_lead}
+            cmsCollection="home_copy"
+            cmsEyebrowField="pricing_eyebrow"
+            cmsTitleField="pricing_title"
+            cmsLeadField="pricing_lead" />
+        </div>
+        <div class="lg:col-span-5 flex lg:items-end lg:justify-end">
+          <a href="/mitgliedschaft" data-cms-collection="home_copy" data-cms-field="pricing_all_link_label" class="inline-link on-ink">
+            {home.pricing_all_link_label}
+            <svg class="w-3.5 h-3.5"><use href="#fc-arrow" /></svg>
+          </a>
+        </div>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto pt-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-7 max-w-6xl mx-auto pt-4">
         {plans.slice(0, 3).map((p, i) => (
           <div class={`fade-up delay-${(i + 1) * 100}`}>
-            <PricingCard plan={p} ui={ui} />
+            <PricingCard plan={p} ui={ui} index={`/ ${pad2(i + 1)}`} />
           </div>
         ))}
       </div>
-      <p class="text-center mt-10 text-fs-muted text-sm fade-up delay-300"
+      <p class="text-center mt-10 spec text-white/60 fade-up delay-300"
          data-cms-collection="home_copy" data-cms-field="pricing_footnote">
         {home.pricing_footnote}
       </p>
-      <div class="text-center mt-2 fade-up delay-300">
-        <a href="/mitgliedschaft" data-cms-collection="home_copy" data-cms-field="pricing_all_link_label" class="inline-link">
-          {home.pricing_all_link_label}
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-        </a>
+    </div>
+  </section>
+
+  <!-- ── TESTIMONIALS — pull-quote single column ──────────────── -->
+  <section class="section bg-fc-paper relative overflow-hidden">
+    <p class="absolute -right-6 top-6 num-display text-[clamp(8rem,22vw,18rem)] leading-[0.85] text-fc-ink/[0.05] select-none pointer-events-none" aria-hidden="true">04</p>
+
+    <div class="max-w-6xl mx-auto px-5 sm:px-6 lg:px-8 relative">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
+        <div class="lg:col-span-4 fade-up">
+          <SectionHeader
+            index="04"
+            eyebrow={home.testimonials_eyebrow}
+            title={home.testimonials_title}
+            cmsCollection="home_copy"
+            cmsEyebrowField="testimonials_eyebrow"
+            cmsTitleField="testimonials_title" />
+        </div>
+        <div class="lg:col-span-8 space-y-10">
+          {testimonials.slice(0, 3).map((t, i) => (
+            <blockquote
+              data-cms-collection="testimonials"
+              data-cms-id={String(t.id)}
+              class={`fade-up delay-${(i + 1) * 100} ${i > 0 ? 'pt-10 border-t border-fc-ink/15' : ''}`}>
+              <div class="flex items-baseline gap-5 mb-4">
+                <span class="num-display text-fc-rust text-2xl">/ {pad2(i + 1)}</span>
+                <p data-cms-field="rating" class="text-fc-ink tracking-[0.25em]">{stars(t.rating)}</p>
+                <span class="h-px flex-1 bg-fc-ink/15"></span>
+                <p data-cms-field="membership_type" class="spec text-fc-muted">{t.membership_type}</p>
+              </div>
+              <p data-cms-field="quote" class="font-display font-medium text-fc-ink text-2xl sm:text-[1.8rem] leading-[1.25] tracking-tight-2">
+                “{t.quote}”
+              </p>
+              <footer class="mt-4">
+                <p data-cms-field="author" class="spec text-fc-ink">— {t.author}</p>
+              </footer>
+            </blockquote>
+          ))}
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- ── Testimonials ────────────────────────────────────────── -->
-  <section class="section bg-fs-white">
-    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
-      <div class="mb-12 sm:mb-14 fade-up">
-        <SectionHeader
-          eyebrow={home.testimonials_eyebrow}
-          title={home.testimonials_title}
-          cmsCollection="home_copy"
-          cmsEyebrowField="testimonials_eyebrow"
-          cmsTitleField="testimonials_title" />
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
-        {testimonials.slice(0, 3).map((t, i) => (
-          <blockquote
-            data-cms-collection="testimonials"
-            data-cms-id={String(t.id)}
-            class={`bg-fs-surface border border-fs-border rounded-xl p-7 flex flex-col fade-up delay-${(i + 1) * 100}`}>
-            <p data-cms-field="rating" class="text-fs-blue text-lg tracking-[0.2em] mb-5">{stars(t.rating)}</p>
-            <p data-cms-field="quote" class="text-fs-dark/85 leading-relaxed italic flex-1 text-[15px]">
-              "{t.quote}"
-            </p>
-            <footer class="mt-6 pt-5 border-t border-fs-border">
-              <p data-cms-field="author" class="font-semibold text-fs-dark text-sm">{t.author}</p>
-              <p data-cms-field="membership_type" class="text-fs-muted text-xs mt-0.5 uppercase tracking-[0.1em] font-semibold">{t.membership_type}</p>
-            </footer>
-          </blockquote>
-        ))}
-      </div>
-    </div>
-  </section>
+  <!-- ── OPENING HOURS — editorial tabular schedule ──────────── -->
+  <section class="section bg-fc-cream relative overflow-hidden">
+    <p class="absolute -left-6 top-6 num-display text-[clamp(8rem,22vw,18rem)] leading-[0.85] text-fc-ink/[0.05] select-none pointer-events-none" aria-hidden="true">05</p>
 
-  <!-- ── Opening hours strip ─────────────────────────────────── -->
-  <section class="section bg-fs-blue text-white relative overflow-hidden">
-    <div class="absolute inset-0 opacity-[0.08]"
-         style="background-image:radial-gradient(circle,#ffffff 1px,transparent 1px);background-size:24px 24px"></div>
-    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 relative z-10">
-      <div class="flex flex-col items-center text-center mb-12 fade-up">
-        <span class="inline-block bg-white/15 text-white text-[11px] font-semibold tracking-[0.12em] uppercase px-3 py-1 rounded-full mb-4"
-              data-cms-collection="home_copy" data-cms-field="hours_eyebrow">
-          {home.hours_eyebrow}
-        </span>
-        <h2 class="font-display font-extrabold text-3xl sm:text-4xl lg:text-5xl tracking-tight-2"
-            data-cms-collection="home_copy" data-cms-field="hours_title">
-          {home.hours_title}
-        </h2>
-      </div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 fade-up delay-100">
-        {hours.map(h => (
-          <div data-cms-collection="opening_hours" data-cms-id={String(h.id)}
-               class:list={[
-                 'rounded-xl p-5 text-center transition-all duration-300',
-                 h.closed
-                   ? 'opacity-60 bg-white/5'
-                   : 'bg-white/10 border border-white/20 hover:bg-white/15 hover:-translate-y-0.5',
-               ]}>
-            <p data-cms-field="weekday" class="text-white/80 text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.18em] mb-3">{h.weekday.slice(0, 3)}</p>
-            {h.closed
-              ? <p data-cms-collection="ui_copy" data-cms-field="closed_label" class="text-white/70 text-sm italic font-medium">{ui.closed_label}</p>
-              : (
-                <p class="text-white text-sm sm:text-[15px] font-semibold tabular-nums">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 relative">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+        <div class="lg:col-span-5 fade-up">
+          <SectionHeader
+            index="05"
+            eyebrow={home.hours_eyebrow}
+            title={home.hours_title}
+            cmsCollection="home_copy"
+            cmsEyebrowField="hours_eyebrow"
+            cmsTitleField="hours_title" />
+          <a href={`tel:${settings.contact_phone.replace(/\s/g, '')}`}
+             data-cms-collection="home_copy" data-cms-field="hours_cta_label"
+             class="inline-link mt-8">
+            {home.hours_cta_label}
+            <svg class="w-3.5 h-3.5"><use href="#fc-arrow" /></svg>
+          </a>
+        </div>
+        <ul class="lg:col-span-7 divide-y divide-fc-ink/15 border-y border-fc-ink fade-up delay-100">
+          {hours.map(h => (
+            <li data-cms-collection="opening_hours" data-cms-id={String(h.id)}
+                class:list={[
+                  'grid grid-cols-[5.5rem_1fr_auto] sm:grid-cols-[8rem_1fr_auto] items-baseline gap-6 py-5',
+                  h.closed ? 'opacity-50' : '',
+                ]}>
+              <p data-cms-field="weekday" class="spec text-fc-ink">{h.weekday}</p>
+              {h.closed ? (
+                <p data-cms-collection="ui_copy" data-cms-field="closed_label" class="num-display text-2xl text-fc-muted italic font-normal">{ui.closed_label}</p>
+              ) : (
+                <p class="num-display text-2xl sm:text-3xl text-fc-ink tabular-nums">
                   <span data-cms-field="open_from">{h.open_from}</span>
-                  <span class="opacity-50">–</span>
+                  <span class="text-fc-ink/30 mx-2">—</span>
                   <span data-cms-field="open_to">{h.open_to}</span>
                 </p>
               )}
-            {!h.closed && h.note && (
-              <p data-cms-field="note" class="text-white/70 text-[11px] mt-1.5 leading-snug">{h.note}</p>
-            )}
-          </div>
-        ))}
+              {!h.closed && h.note ? (
+                <span data-cms-field="note" class="spec text-fc-rust whitespace-nowrap">{h.note}</span>
+              ) : <span></span>}
+            </li>
+          ))}
+        </ul>
       </div>
-      <p class="text-center mt-10 fade-up delay-200">
-        <a href={`tel:${settings.contact_phone.replace(/\s/g, '')}`}
-           data-cms-collection="home_copy" data-cms-field="hours_cta_label"
-           class="inline-link on-blue">
-          {home.hours_cta_label}
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-        </a>
-      </p>
     </div>
   </section>
 

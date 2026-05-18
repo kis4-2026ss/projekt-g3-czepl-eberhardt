@@ -3,35 +3,44 @@ import Layout from '../layouts/Layout.astro';
 import PageHeader from '../components/PageHeader.astro';
 import { getFaqItems, getFaqCopy, getPageHeader } from '../lib/directus';
 const [faqItems, copy, header] = await Promise.all([getFaqItems(), getFaqCopy(), getPageHeader('faq')]);
+
+function pad2(n: number) { return String(n).padStart(2, '0'); }
 ---
 
 <Layout title={header?.title} description={header?.seo_description}>
   <PageHeader header={header} />
 
-  <!-- FAQ accordion -->
+  <!-- FAQ — editorial accordion list -->
   <section class="max-w-3xl mx-auto px-5 sm:px-6 lg:px-8 py-20 sm:py-24">
-    <div class="space-y-3">
+    <ul class="divide-y divide-w-linen border-y border-w-linen">
       {faqItems.map((item, index) => (
-        <details data-cms-collection="faq_items" data-cms-id={String(item.id)}
-                 class={`group card overflow-hidden fade-up delay-${(index % 5) * 100}`}>
-          <summary class="flex items-center justify-between gap-4 px-6 sm:px-8 py-5 sm:py-6 cursor-pointer list-none select-none hover:bg-w-cream/70 transition-colors">
-            <span data-cms-field="question" class="font-serif text-lg sm:text-xl font-medium text-w-dark group-hover:text-w-gold transition-colors">{item.question}</span>
-            <span class="flex-shrink-0 w-8 h-8 rounded-full bg-w-cream flex items-center justify-center text-w-gold group-open:rotate-45 transition-transform duration-300">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
-            </span>
-          </summary>
-          <div class="px-6 sm:px-8 pb-7 pt-1">
-            <p data-cms-field="answer" class="text-w-dark/75 leading-[1.8] text-[15px] sm:text-base border-t border-w-linen/70 pt-5 font-light">{item.answer}</p>
-          </div>
-        </details>
+        <li class={`fade-up delay-${(index % 5) * 100}`}>
+          <details data-cms-collection="faq_items" data-cms-id={String(item.id)} class="group">
+            <summary class="flex items-baseline justify-between gap-5 py-6 sm:py-7 cursor-pointer list-none select-none">
+              <div class="flex items-baseline gap-4 sm:gap-5 flex-1 min-w-0">
+                <span class="font-serif italic text-w-gold-dark text-lg sm:text-xl tabular-nums opacity-80">№{pad2(index + 1)}</span>
+                <span data-cms-field="question" class="font-serif text-lg sm:text-xl font-medium text-w-dark leading-snug group-hover:text-w-gold-dark transition-colors">{item.question}</span>
+              </div>
+              <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center text-w-gold-dark transition-transform duration-300 group-open:rotate-45">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 5v14M5 12h14"/></svg>
+              </span>
+            </summary>
+            <div class="pb-7 sm:pb-8 pl-12 sm:pl-14 pr-12 -mt-2">
+              <p data-cms-field="answer" class="text-w-dark/75 leading-[1.85] text-[15px] sm:text-base font-light">{item.answer}</p>
+            </div>
+          </details>
+        </li>
       ))}
-    </div>
+    </ul>
 
-    <div class="mt-16 text-center card p-10 sm:p-12 fade-up">
-      <p data-cms-collection="faq_copy" data-cms-field="help_eyebrow" class="eyebrow mb-3">{copy.help_eyebrow}</p>
-      <p data-cms-collection="faq_copy" data-cms-field="help_title" class="font-serif text-2xl sm:text-3xl text-w-dark font-medium mb-3">{copy.help_title}</p>
-      <p data-cms-collection="faq_copy" data-cms-field="help_text" class="text-w-stone text-base mb-8 font-light max-w-md mx-auto">{copy.help_text}</p>
-      <a href={copy.help_cta_href} data-cms-collection="faq_copy" data-cms-field="help_cta_label" class="btn btn-primary">
+    <div class="mt-20 text-center fade-up">
+      <div class="inline-block text-w-gold-dark mb-5">
+        <svg class="w-12 h-16"><use href="#m-wheat" /></svg>
+      </div>
+      <p data-cms-collection="faq_copy" data-cms-field="help_eyebrow" class="eyebrow mb-4">{copy.help_eyebrow}</p>
+      <p data-cms-collection="faq_copy" data-cms-field="help_title" class="h-display text-w-dark text-3xl sm:text-4xl mb-4">{copy.help_title}</p>
+      <p data-cms-collection="faq_copy" data-cms-field="help_text" class="text-w-stone text-base sm:text-lg mb-8 font-light max-w-md mx-auto leading-relaxed">{copy.help_text}</p>
+      <a href={copy.help_cta_href} data-cms-collection="faq_copy" data-cms-field="help_cta_label" class="btn btn-gold">
         {copy.help_cta_label}
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
       </a>
