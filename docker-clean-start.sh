@@ -29,7 +29,7 @@ for arg in "$@"; do
   esac
 done
 
-PROJECT="${COMPOSE_PROJECT_NAME:-$(basename "$PWD")}"
+PROJECT=$(echo "${COMPOSE_PROJECT_NAME:-$(basename "$PWD")}" | tr '[:upper:]' '[:lower:]')
 
 echo "Stopping containers..."
 docker compose down --remove-orphans
@@ -49,21 +49,22 @@ if [ -n "$KEEP" ]; then
   echo "Preserving:      $KEEP  (use --full to wipe these too)"
 fi
 
-# Remove the MCP server image so its build always picks up the latest source code.
+# Remove built images so they always pick up the latest source code.
 # (compose --build alone can serve a cached layer if Docker thinks src/ is unchanged.)
 echo "Removing built images (forces fresh rebuild)..."
-docker compose rm -f mcp-server >/dev/null 2>&1 || true
+docker compose rm -f mcp-server agent-api >/dev/null 2>&1 || true
 docker image rm -f "${PROJECT}-mcp-server" "${PROJECT}_mcp-server" >/dev/null 2>&1 || true
+docker image rm -f "${PROJECT}-agent-api" "${PROJECT}_agent-api" >/dev/null 2>&1 || true
 
 echo "Building images..."
 if [ "$NO_CACHE" -eq 1 ]; then
-  docker compose build --no-cache --pull mcp-server
+  docker compose build --no-cache --pull mcp-server agent-api
 else
-  docker compose build mcp-server
+  docker compose build mcp-server agent-api
 fi
 
 echo "Starting stack..."
-docker compose up -d --build --force-recreate database cache directus website website-preview mcp-server
+docker compose up -d --build --force-recreate database cache directus website website-preview mcp-server agent-api
 
 echo "Waiting for Directus..."
 until curl -sf http://localhost:8055/server/health >/dev/null 2>&1; do sleep 2; done
@@ -78,6 +79,7 @@ echo "  Directus        → http://localhost:8055  (admin@gmail.at / admin)"
 echo "  Website         → http://localhost:4321"
 echo "  Website Preview → http://localhost:4322"
 echo "  MCP Server      → http://localhost:3001/mcp"
+echo "  Agent UI        → http://localhost:8000"
 echo "──────────────────────────────────────────────────────────────"
 echo "Claude Desktop setup"
 echo ""

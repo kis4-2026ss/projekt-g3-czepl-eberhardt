@@ -58,7 +58,7 @@ services:
 
   website:
     image: node:22-alpine
-    container_name: adlerwirt-website
+    container_name: adlerwirt-web
     restart: unless-stopped
     working_dir: /app
     volumes:
@@ -78,7 +78,7 @@ services:
 
   website-preview:
     image: node:22-alpine
-    container_name: adlerwirt-website-preview
+    container_name: agent-web-preview
     restart: unless-stopped
     working_dir: /app
     volumes:
@@ -113,6 +113,20 @@ services:
       PREVIEW_WEBSITE_INTERNAL_URL: "http://website-preview:4321"
       PREVIEW_PROXY_PORT: "4322"
       MCP_PUBLIC_URL: "http://localhost:3001"
+
+  agent-api:
+    build: ./agent
+    container_name: agent-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mcp-server
+    env_file:
+      - ./agent/.env.example
+    environment:
+      MCP_URL: "http://mcp-server:3001/mcp"
+      PORT: "8000"
 
   seed:
     image: python:3.12-alpine

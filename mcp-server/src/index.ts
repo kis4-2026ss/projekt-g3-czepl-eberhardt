@@ -64,9 +64,10 @@ const ITEM_PK_DESCRIPTION =
 // ── Preview store ─────────────────────────────────────────────────────────────
 
 interface PreviewEntry {
-  action: "create" | "update" | "delete" | "update_singleton";
+  action: "create" | "update" | "update_bulk" | "delete" | "update_singleton";
   collection: string;
   id?: string | number;
+  ids?: (string | number)[];
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
   diff?: DiffEntry[];
@@ -126,6 +127,15 @@ function applyPreviewsToResponse(body: unknown, collection: string): unknown {
             });
           }
           break;
+        case "update_bulk":
+          if (entry.ids && entry.ids.length > 0) {
+            const idSet = new Set(entry.ids.map(String));
+            items = items.map((item) => {
+              const i = item as Record<string, unknown>;
+              return idSet.has(String(i["id"])) ? { ...i, ...entry.data } : i;
+            });
+          }
+          break;
         case "delete":
           if (entry.id != null) {
             items = items.filter((item) => {
@@ -174,8 +184,8 @@ function renderEntryCard(p: StoredPreview, highlighted: boolean, previewBaseUrl:
         <tbody>${p.diff.map((d) => `
           <tr>
             <td style="font-family:monospace">${escHtml(d.field)}</td>
-            <td class="before">${escHtml(JSON.stringify(d.before))}</td>
-            <td class="after">${escHtml(JSON.stringify(d.after))}</td>
+            <td class="before">${escHtml(JSON.stringify(d.before) ?? "–")}</td>
+            <td class="after">${escHtml(JSON.stringify(d.after) ?? "–")}</td>
           </tr>`).join("")}
         </tbody>
       </table>`
@@ -251,6 +261,7 @@ function buildReviewPage(focusToken: string, allPreviews: StoredPreview[]): stri
     .status{padding:.6rem .9rem;border-radius:4px;font-weight:600;font-size:.85rem}
     .ok{background:#dcfce7;color:#16a34a}
     .err{background:#fee2e2;color:#dc2626}
+    .neutral{background:#f3f4f6;color:#374151}
     a.btn{display:inline-flex}
   </style>
 </head>
@@ -262,12 +273,12 @@ function buildReviewPage(focusToken: string, allPreviews: StoredPreview[]): stri
   ${bulkBar}
   ${cards}
   <script>
-    async function act(url, method, statusId, okMsg) {
+    async function act(url, method, statusId, okMsg, okClass) {
       const el = document.getElementById(statusId);
       const r = await fetch(url, { method });
       if (el) {
         el.style.display = 'block';
-        el.className = 'status ' + (r.ok ? 'ok' : 'err');
+        el.className = 'status ' + (r.ok ? (okClass || 'ok') : 'err');
         el.textContent = r.ok ? okMsg : 'Fehler (' + r.status + ')';
       }
     }
@@ -286,11 +297,11 @@ function buildReviewPage(focusToken: string, allPreviews: StoredPreview[]): stri
         const tokens = ${JSON.stringify(allPreviews.map((p) => p.preview_token))};
         await Promise.all(tokens.map(t => fetch('/preview/' + t, { method: 'DELETE' })));
         const el = document.getElementById('s-all');
-        if (el) { el.style.display='block'; el.className='status ok'; el.textContent='✗ Alle Änderungen verworfen.'; }
+        if (el) { el.style.display='block'; el.className='status neutral'; el.textContent='✗ Alle Änderungen verworfen.'; }
       } else if (btn.dataset.confirm) {
-        await act('/confirm/' + btn.dataset.confirm, 'POST', 's-' + btn.dataset.confirm, '✓ Übernommen und gespeichert.');
+        await act('/confirm/' + btn.dataset.confirm, 'POST', 's-' + btn.dataset.confirm, '✓ Übernommen und gespeichert.', 'ok');
       } else if (btn.dataset.discard) {
-        await act('/preview/' + btn.dataset.discard, 'DELETE', 's-' + btn.dataset.discard, '✗ Verworfen.');
+        await act('/preview/' + btn.dataset.discard, 'DELETE', 's-' + btn.dataset.discard, '✗ Verworfen.', 'neutral');
       }
     });
   </script>
@@ -979,7 +990,7 @@ const TOOLS: Tool[] = [
         collection: { type: "string", description: "Collection name" },
         ids: {
           type: "array",
-          items: {},
+          items: { type: "string" },
           description: `List of primary keys to update. ${ITEM_PK_DESCRIPTION}`,
         },
         data: {
@@ -1031,6 +1042,26 @@ function text(s: string) {
   return { content: [{ type: "text" as const, text: s }] };
 }
 
+function parseData(raw: unknown): Record<string, unknown> {
+  if (typeof raw === "string") {
+    try { return JSON.parse(raw) as Record<string, unknown>; } catch { return {}; }
+  }
+  return (raw ?? {}) as Record<string, unknown>;
+}
+
+async function validateFields(
+  client: DirectusClient,
+  collection: string,
+  data: Record<string, unknown>,
+): Promise<string | null> {
+  const fieldsRes = await client.getCollectionFields(collection) as Array<{ field: string }>;
+  const validFields = new Set(fieldsRes.map((f) => f.field));
+  const unknown = Object.keys(data).filter((k) => !validFields.has(k));
+  if (unknown.length === 0) return null;
+  const valid = fieldsRes.map((f) => f.field).join(", ");
+  return `Unknown field(s) for '${collection}': ${unknown.join(", ")}.\nValid fields: ${valid}.\nOnly use fields from that list.`;
+}
+
 function err(message: string) {
   return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
 }
@@ -1047,6 +1078,7 @@ function makeServer(client: DirectusClient): Server {
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
+    process.stderr.write(`[MCP] tool_call: ${name} args=${JSON.stringify(args)}\n`);
 
     try {
       switch (name) {
@@ -1095,21 +1127,23 @@ function makeServer(client: DirectusClient): Server {
         // ── Write ────────────────────────────────────────────────────────────
 
         case "create_item": {
-          const { collection, data } = args as {
-            collection: string;
-            data: Record<string, unknown>;
-          };
+          const { collection } = args as { collection: string };
+          const data = parseData((args as { data?: unknown }).data);
+          const fieldErr = await validateFields(client, collection, data);
+          if (fieldErr) return err(fieldErr);
           const entry: PreviewEntry = { action: "create", collection, after: data, data };
           const token = storePreview(entry);
           return text(buildPreviewResponse(token, entry));
         }
 
         case "update_item": {
-          const { collection, id, data } = args as {
+          const { collection, id } = args as {
             collection: string;
             id: string | number;
-            data: Record<string, unknown>;
           };
+          const data = parseData((args as { data?: unknown }).data);
+          const fieldErr = await validateFields(client, collection, data);
+          if (fieldErr) return err(fieldErr);
           const res = await client.readItem(collection, id) as { data: Record<string, unknown> };
           const before = res.data;
           const after = { ...before, ...data };
@@ -1122,10 +1156,10 @@ function makeServer(client: DirectusClient): Server {
         }
 
         case "update_items": {
-          const { collection, data } = args as {
-            collection: string;
-            data: Record<string, unknown>;
-          };
+          const { collection } = args as { collection: string };
+          const data = parseData((args as { data?: unknown }).data);
+          const fieldErr = await validateFields(client, collection, data);
+          if (fieldErr) return err(fieldErr);
           const rawIds = (args as { ids: unknown }).ids;
           const ids: (string | number)[] = Array.isArray(rawIds)
             ? rawIds as (string | number)[]
@@ -1135,18 +1169,17 @@ function makeServer(client: DirectusClient): Server {
                 ? [rawIds]
                 : [];
           const entry: PreviewEntry = {
-            action: "update", collection, after: data, data,
-            before: Object.fromEntries(ids.map((id) => [id, {}])),
+            action: "update_bulk", collection, ids, after: data, data,
           };
           const token = storePreview(entry);
           return text(buildPreviewResponse(token, entry));
         }
 
         case "update_singleton": {
-          const { collection, data } = args as {
-            collection: string;
-            data: Record<string, unknown>;
-          };
+          const { collection } = args as { collection: string };
+          const data = parseData((args as { data?: unknown }).data);
+          const fieldErr = await validateFields(client, collection, data);
+          if (fieldErr) return err(fieldErr);
           const res = await client.readSingleton(collection) as { data: Record<string, unknown> };
           const before = res.data;
           const after = { ...before, ...data };
@@ -1181,6 +1214,7 @@ function makeServer(client: DirectusClient): Server {
           switch (entry.action) {
             case "create":           await client.createItem(entry.collection, entry.data!); break;
             case "update":           await client.updateItem(entry.collection, entry.id!, entry.data!); break;
+            case "update_bulk":      await client.updateItems(entry.collection, entry.ids!, entry.data!); break;
             case "update_singleton": await client.updateSingleton(entry.collection, entry.data!); break;
             case "delete":           await client.deleteItem(entry.collection, entry.id!); break;
           }
@@ -1214,6 +1248,7 @@ function makeServer(client: DirectusClient): Server {
             switch (entry.action) {
               case "create":           await client.createItem(entry.collection, entry.data!); break;
               case "update":           await client.updateItem(entry.collection, entry.id!, entry.data!); break;
+              case "update_bulk":      await client.updateItems(entry.collection, entry.ids!, entry.data!); break;
               case "update_singleton": await client.updateSingleton(entry.collection, entry.data!); break;
               case "delete":           await client.deleteItem(entry.collection, entry.id!); break;
             }
@@ -1314,8 +1349,8 @@ httpServer.on("request", (req, res) => {
       const token = path.slice("/confirm/".length);
       const stored = previewStore.get(token);
       if (!stored) {
-        res.writeHead(404, { "Content-Type": "application/json", ...CORS_HEADERS })
-          .end(JSON.stringify({ error: "Preview not found or expired" }));
+        res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
+          .end(JSON.stringify({ success: true, alreadyApplied: true }));
         return;
       }
 
@@ -1330,6 +1365,9 @@ httpServer.on("request", (req, res) => {
           break;
         case "update":
           await confirmClient.updateItem(entry.collection, entry.id!, entry.data!);
+          break;
+        case "update_bulk":
+          await confirmClient.updateItems(entry.collection, entry.ids!, entry.data!);
           break;
         case "update_singleton":
           await confirmClient.updateSingleton(entry.collection, entry.data!);
