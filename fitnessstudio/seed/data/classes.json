@@ -1,0 +1,80 @@
+[
+  {
+    "name": "HIIT Burn",
+    "category_slug": "hiit",
+    "description": "45 Minuten kompromisslose Intervalle. Springen, sprinten, schwitzen. Ideal nach Feierabend, wenn der Kopf voll und der Akku leer ist.",
+    "duration_min": 45,
+    "difficulty": "intensiv",
+    "is_featured": true,
+    "trainer_name": "Anna Pichler",
+    "schedule_note": "Di & Do, 18:00 Uhr",
+    "image": "class-hiit.jpg",
+    "image_alt": "Gruppe macht Jump-Squats im hellen Studio",
+    "sort": 1
+  },
+  {
+    "name": "Power Lifting",
+    "category_slug": "kraft",
+    "description": "Kniebeuge, Kreuzheben, Bankdrücken — die großen Drei mit sauberer Technik. Für Einsteiger und Fortgeschrittene in kleinen Gruppen.",
+    "duration_min": 60,
+    "difficulty": "mittel",
+    "is_featured": true,
+    "trainer_name": "Daniel Voss",
+    "schedule_note": "Mo & Mi, 19:00 Uhr",
+    "image": "class-kraft.jpg",
+    "image_alt": "Person beim Kreuzheben vor Studiospiegel",
+    "sort": 2
+  },
+  {
+    "name": "Slow Flow Yoga",
+    "category_slug": "yoga",
+    "description": "Ruhige Bewegungen, langes Verweilen, bewusstes Atmen. Genau das richtige Gegengewicht zur Krafteinheit am Abend zuvor.",
+    "duration_min": 60,
+    "difficulty": "leicht",
+    "is_featured": true,
+    "trainer_name": "Maja Lindgren",
+    "schedule_note": "Mi & Fr, 08:00 Uhr",
+    "image": "class-yoga.jpg",
+    "image_alt": "Person in der Stellung des Kindes auf mintgrüner Matte",
+    "sort": 3
+  },
+  {
+    "name": "HIIT Express",
+    "category_slug": "hiit",
+    "description": "30-Minuten-Format für die Mittagspause. Bodyweight-fokussiert, ohne Geräte — du brauchst nichts außer dich selbst.",
+    "duration_min": 30,
+    "difficulty": "intensiv",
+    "is_featured": false,
+    "trainer_name": "Anna Pichler",
+    "schedule_note": "Mo–Fr, 12:15 Uhr",
+    "image": "class-hiit-2.jpg",
+    "image_alt": "Person beim Plank in hellem Studio",
+    "sort": 4
+  },
+  {
+    "name": "Krafteinstieg",
+    "category_slug": "kraft",
+    "description": "Du warst noch nie an der Langhantel? Hier lernst du in der Kleingruppe die Grundübungen Schritt für Schritt — ohne Eitelkeitsgewichte.",
+    "duration_min": 60,
+    "difficulty": "leicht",
+    "is_featured": false,
+    "trainer_name": "Daniel Voss",
+    "schedule_note": "Sa, 10:00 Uhr",
+    "image": "class-kraft-2.jpg",
+    "image_alt": "Trainerin erklärt Kniebeuge-Technik",
+    "sort": 5
+  },
+  {
+    "name": "Vinyasa Flow",
+    "category_slug": "yoga",
+    "description": "Fließende Yoga-Praxis mit Atemfokus, kräftigenden Sequenzen und längeren Halteübungen. Für alle, die Yoga als Training begreifen.",
+    "duration_min": 75,
+    "difficulty": "mittel",
+    "is_featured": false,
+    "trainer_name": "Maja Lindgren",
+    "schedule_note": "Di & Do, 19:30 Uhr",
+    "image": "class-yoga-2.jpg",
+    "image_alt": "Person im Krieger-Pose, Tageslicht von der Seite",
+    "sort": 6
+  }
+]

@@ -1,0 +1,5 @@
+[
+  {"name": "HIIT",  "slug": "hiit",  "description": "Hochintensives Intervalltraining — schnelle Sätze, kurze Pausen, maximaler Effekt.", "sort": 1},
+  {"name": "Kraft", "slug": "kraft", "description": "Klassisches Krafttraining mit Hanteln, Langhantel und freien Gewichten.",            "sort": 2},
+  {"name": "Yoga",  "slug": "yoga",  "description": "Atmen, dehnen, zur Ruhe kommen — von sanftem Flow bis kräftigendem Vinyasa.",       "sort": 3}
+]

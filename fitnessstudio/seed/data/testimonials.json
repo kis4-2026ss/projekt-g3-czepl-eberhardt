@@ -1,0 +1,23 @@
+[
+  {
+    "author": "Sarah K.",
+    "membership_type": "Premium-Mitglied seit 2 Jahren",
+    "rating": 5,
+    "sort": 1,
+    "quote": "Endlich ein Studio, in dem ich mich nicht beobachtet fühle. Die Trainer kennen mich beim Namen, und die HIIT-Kurse sind genau das, was ich nach einem langen Bürotag brauche."
+  },
+  {
+    "author": "Markus L.",
+    "membership_type": "Elite-Mitglied",
+    "rating": 5,
+    "sort": 2,
+    "quote": "Ich war bei vier Studios, bevor ich bei FitCore gelandet bin. Modernste Geräte, klare Preise, und der 24h-Zugang passt perfekt zu meinen Schichten."
+  },
+  {
+    "author": "Lena & Tom",
+    "membership_type": "Basic-Mitgliedschaft",
+    "rating": 5,
+    "sort": 3,
+    "quote": "Wir haben drei Wochen Probetraining gemacht, bis wir uns getraut haben zu unterschreiben — null Verkaufsdruck. Jetzt sind wir seit acht Monaten dabei und kommen nicht mehr weg."
+  }
+]

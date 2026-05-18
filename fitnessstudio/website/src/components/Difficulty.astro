@@ -1,0 +1,24 @@
+---
+import type { FitClass, UiCopy } from '../lib/directus';
+import { difficultyDots, difficultyLabel } from '../lib/directus';
+
+interface Props {
+  level: FitClass['difficulty'];
+  ui: UiCopy;
+}
+const { level, ui } = Astro.props;
+const filled = difficultyDots(level);
+const label  = difficultyLabel(level, ui);
+---
+
+<span class="inline-flex items-center gap-2 text-fs-muted text-sm" aria-label={label}>
+  <span class="inline-flex items-center gap-1">
+    {[0, 1, 2].map((i) => (
+      <span class:list={[
+        'w-1.5 h-1.5 rounded-full inline-block',
+        i < filled ? 'bg-fs-blue' : 'bg-fs-border',
+      ]}></span>
+    ))}
+  </span>
+  <span class="font-medium text-fs-dark/80">{label}</span>
+</span>

@@ -1,0 +1,146 @@
+---
+import type { NavigationLink, SiteSettings, UiCopy } from '../lib/directus';
+
+interface Props {
+  settings: SiteSettings;
+  nav: NavigationLink[];
+  ui: UiCopy;
+}
+const { settings, nav, ui } = Astro.props;
+
+const path = Astro.url.pathname;
+
+function isActive(href: string) {
+  if (href === '/') return path === '/';
+  return path === href || path.startsWith(href + '/');
+}
+---
+
+<header class="sticky top-0 inset-x-0 z-50 bg-white/95 backdrop-blur-md border-b border-transparent transition-all duration-200" id="main-nav">
+  <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16 sm:h-20">
+
+      <!-- Logo -->
+      <a href="/" class="group flex items-center gap-3 leading-tight">
+        <span aria-hidden="true" class="w-9 h-9 rounded-lg bg-fs-blue text-white flex items-center justify-center font-display font-extrabold text-base shadow-sm">
+          {settings.site_name.charAt(0)}
+        </span>
+        <span class="flex flex-col leading-tight">
+          <span data-cms-collection="site_settings" data-cms-field="site_name" class="font-display font-extrabold text-fs-dark text-lg tracking-tight-2">
+            {settings.site_name}
+          </span>
+          <span data-cms-collection="site_settings" data-cms-field="tagline" class="text-fs-muted text-[10px] font-medium tracking-[0.18em] uppercase mt-0.5 hidden sm:block">
+            {settings.tagline}
+          </span>
+        </span>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="hidden md:flex items-center gap-1">
+        {nav.map(l => (
+          <a
+            href={l.href}
+            data-cms-collection="navigation_links"
+            data-cms-id={String(l.id)}
+            data-cms-field="label"
+            class:list={[
+              'group relative px-3.5 py-2 text-sm font-medium transition-colors duration-200 rounded-md',
+              isActive(l.href) ? 'text-fs-blue' : 'text-fs-dark/80 hover:text-fs-dark',
+            ]}
+          >
+            {l.label}
+          </a>
+        ))}
+        <a
+          href={ui.nav_cta_href}
+          data-cms-collection="ui_copy"
+          data-cms-field="nav_cta_label"
+          class="ml-4 btn btn-primary"
+        >
+          {ui.nav_cta_label}
+        </a>
+      </nav>
+
+      <!-- Mobile toggle -->
+      <button id="nav-toggle" class="md:hidden text-fs-dark p-2 -mr-2 rounded-md hover:bg-fs-surface transition-colors" aria-label="Menü" aria-expanded="false" aria-controls="nav-drawer">
+        <svg id="icon-open"  class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg id="icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile drawer -->
+  <div id="nav-drawer" class="hidden md:hidden border-t border-fs-border bg-white">
+    <nav class="flex flex-col px-5 py-6 gap-1 max-h-[calc(100vh-4rem)] overflow-auto">
+      {nav.map(l => (
+        <a href={l.href}
+           data-cms-collection="navigation_links"
+           data-cms-id={String(l.id)}
+           data-cms-field="label"
+           class:list={[
+             'flex items-center justify-between py-3.5 text-base font-medium border-b border-fs-border transition-colors',
+             isActive(l.href) ? 'text-fs-blue' : 'text-fs-dark hover:text-fs-blue',
+           ]}>
+          <span>{l.label}</span>
+          <svg class="w-4 h-4 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M9 5l7 7-7 7"/></svg>
+        </a>
+      ))}
+      <a href={ui.nav_cta_href}
+         data-cms-collection="ui_copy"
+         data-cms-field="nav_cta_label"
+         class="mt-5 btn btn-primary">
+        {ui.nav_cta_label}
+      </a>
+    </nav>
+  </div>
+</header>
+
+<script>
+  function setupNav() {
+    const toggle  = document.getElementById('nav-toggle');
+    const drawer  = document.getElementById('nav-drawer');
+    const iconOpen  = document.getElementById('icon-open');
+    const iconClose = document.getElementById('icon-close');
+    const nav = document.getElementById('main-nav');
+    if (!toggle || !drawer || !iconOpen || !iconClose || !nav) return;
+
+    const newToggle = toggle.cloneNode(true) as HTMLButtonElement;
+    toggle.parentNode?.replaceChild(newToggle, toggle);
+
+    const open = () => {
+      drawer.classList.remove('hidden');
+      iconOpen.classList.add('hidden');
+      iconClose.classList.remove('hidden');
+      newToggle.setAttribute('aria-expanded', 'true');
+      document.body.style.overflow = 'hidden';
+    };
+    const close = () => {
+      drawer.classList.add('hidden');
+      iconOpen.classList.remove('hidden');
+      iconClose.classList.add('hidden');
+      newToggle.setAttribute('aria-expanded', 'false');
+      document.body.style.overflow = '';
+    };
+
+    newToggle.addEventListener('click', () => {
+      drawer.classList.contains('hidden') ? open() : close();
+    });
+
+    drawer.querySelectorAll('a[href]').forEach(a => a.addEventListener('click', close));
+
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+    const onScroll = () => {
+      if (window.scrollY > 8) {
+        nav.classList.add('border-fs-border', 'shadow-sm');
+      } else {
+        nav.classList.remove('border-fs-border', 'shadow-sm');
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  setupNav();
+  document.addEventListener('astro:after-swap', setupNav);
+</script>

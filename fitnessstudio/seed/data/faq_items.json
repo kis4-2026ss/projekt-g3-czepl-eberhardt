@@ -1,0 +1,27 @@
+[
+  {
+    "question": "Wie kann ich kündigen?",
+    "sort": 1,
+    "answer": "Alle Mitgliedschaften sind monatlich kündbar — schriftlich per E-Mail oder direkt an der Rezeption. Wir brauchen keine 24-Monats-Bindung, um dich zu überzeugen."
+  },
+  {
+    "question": "Kann ich vorher kostenlos testen?",
+    "sort": 2,
+    "answer": "Ja. Du bekommst ein kostenloses Probetraining inklusive Studio-Tour und kurzem Beratungsgespräch. Einfach online oder telefonisch einen Termin vereinbaren."
+  },
+  {
+    "question": "Wie lange läuft der Vertrag?",
+    "sort": 3,
+    "answer": "Standardmäßig monatlich. Es gibt keine Mindestlaufzeit über einen Monat hinaus. Längere Laufzeiten bieten wir nur an, wenn du explizit einen Rabatt dafür möchtest."
+  },
+  {
+    "question": "Gibt es einen Studentenrabatt?",
+    "sort": 4,
+    "answer": "Ja — 20 % Nachlass auf alle Tarife mit gültigem Studierendenausweis. Auch für Schüler:innen, Lehrlinge und Zivildiener."
+  },
+  {
+    "question": "Kann ich meinen Tarif wechseln?",
+    "sort": 5,
+    "answer": "Jederzeit zum Monatsende — ohne Gebühr. Upgrade ist sogar sofort möglich, wir verrechnen anteilig."
+  }
+]

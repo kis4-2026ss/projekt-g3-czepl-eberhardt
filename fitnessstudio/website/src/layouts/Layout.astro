@@ -1,0 +1,251 @@
+---
+import { ViewTransitions } from 'astro:transitions';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import {
+  getSiteSettings, getNavigation, getUiCopy, getSiteStats,
+  getOpeningHours,
+} from '../lib/directus';
+
+interface Props {
+  title?: string | undefined;
+  description?: string | undefined;
+}
+
+const [settings, nav, ui, stats, hours] = await Promise.all([
+  getSiteSettings(),
+  getNavigation(),
+  getUiCopy(),
+  getSiteStats(),
+  getOpeningHours(),
+]);
+
+const { title = settings.site_name, description = settings.tagline } = Astro.props;
+const pageTitle = title === settings.site_name
+  ? `${settings.site_name} — ${settings.tagline}`
+  : `${title} — ${settings.site_name}`;
+---
+
+<!doctype html>
+<html lang="de" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <title>{pageTitle}</title>
+    <ViewTransitions />
+  </head>
+  <body class="bg-fs-white text-fs-dark font-sans antialiased selection:bg-fs-blue/15 selection:text-fs-dark">
+    <Nav settings={settings} nav={nav} ui={ui} />
+    <main>
+      <slot />
+    </main>
+    <Footer settings={settings} nav={nav} ui={ui} hours={hours} stats={stats} />
+
+    <style is:global>
+      :root {
+        color-scheme: light;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        --section-y: clamp(4rem, 6vw, 7rem);
+      }
+
+      html, body { min-height: 100vh; }
+
+      h1, h2, h3, h4, h5, h6 {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        letter-spacing: -0.02em;
+      }
+
+      :focus-visible {
+        outline: 2px solid #2563eb;
+        outline-offset: 3px;
+        border-radius: 4px;
+      }
+      :focus:not(:focus-visible) { outline: none; }
+
+      :where(section, div, article)[id] { scroll-margin-top: 6rem; }
+
+      .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+      .line-clamp-2 {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+      .line-clamp-3 {
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+      }
+
+      /* ──────────────────────────────────────────────────────────
+         Design system primitives
+         ────────────────────────────────────────────────────────── */
+
+      .section { padding-top: var(--section-y); padding-bottom: var(--section-y); }
+      .section-tight { padding-top: calc(var(--section-y) * 0.65); padding-bottom: calc(var(--section-y) * 0.65); }
+
+      .eyebrow {
+        display: inline-block;
+        color: #2563eb;
+        background: #eff6ff;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 0.4rem 0.85rem;
+        border-radius: 9999px;
+      }
+      .eyebrow-plain {
+        color: #2563eb;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1.display, h2.display {
+        font-weight: 800;
+        line-height: 1.05;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.7rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: 0.5rem;
+        transition: background-color 200ms, color 200ms, border-color 200ms, transform 200ms, box-shadow 200ms;
+        white-space: nowrap;
+      }
+      .btn-primary {
+        background-color: #2563eb;
+        color: #ffffff;
+        box-shadow: 0 8px 20px -10px rgba(37,99,235,0.6);
+      }
+      .btn-primary:hover {
+        background-color: #1d4ed8;
+        transform: translateY(-1px);
+        box-shadow: 0 12px 28px -10px rgba(37,99,235,0.7);
+      }
+      .btn-ghost {
+        background: transparent;
+        color: #111827;
+        border: 1px solid #e5e7eb;
+      }
+      .btn-ghost:hover {
+        border-color: #2563eb;
+        color: #2563eb;
+      }
+      .btn-on-blue-ghost {
+        background: rgba(255,255,255,0.08);
+        color: #ffffff;
+        border: 1px solid rgba(255,255,255,0.3);
+      }
+      .btn-on-blue-ghost:hover {
+        border-color: rgba(255,255,255,0.7);
+        background: rgba(255,255,255,0.14);
+      }
+
+      /* Inline link */
+      .inline-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #2563eb;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: gap 200ms, color 200ms;
+      }
+      .inline-link:hover { color: #1d4ed8; gap: 0.75rem; }
+      .inline-link.on-blue { color: #ffffff; }
+      .inline-link.on-blue:hover { color: #eff6ff; }
+
+      /* Card */
+      .card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 2px rgba(17,24,39,0.04);
+        transition: transform 280ms cubic-bezier(.16,1,.3,1), box-shadow 280ms cubic-bezier(.16,1,.3,1), border-color 220ms;
+      }
+      .card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 36px -18px rgba(17,24,39,0.18);
+        border-color: rgba(37,99,235,0.3);
+      }
+
+      /* Pill / Badge */
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: #eff6ff;
+        color: #2563eb;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 0.3rem 0.7rem;
+        border-radius: 9999px;
+      }
+
+      /* Fade-up animation */
+      .fade-up {
+        opacity: 0;
+        transform: translateY(16px);
+        transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        will-change: opacity, transform;
+      }
+      .fade-up.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .delay-100 { transition-delay: 100ms; }
+      .delay-200 { transition-delay: 200ms; }
+      .delay-300 { transition-delay: 300ms; }
+      .delay-400 { transition-delay: 400ms; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .fade-up { opacity: 1 !important; transform: none !important; transition: none !important; }
+        * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+      }
+    </style>
+
+    <script>
+      function setupAnimations() {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-visible');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, {
+          rootMargin: '0px 0px -10% 0px',
+          threshold: 0.1
+        });
+        document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
+      }
+
+      setupAnimations();
+      document.addEventListener('astro:after-swap', setupAnimations);
+    </script>
+  </body>
+</html>

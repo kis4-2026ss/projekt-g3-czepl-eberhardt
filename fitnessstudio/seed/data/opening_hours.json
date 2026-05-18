@@ -1,0 +1,9 @@
+[
+  {"weekday": "Montag",     "sort": 1, "closed": false, "open_from": "06:30", "open_to": "22:30", "note": ""},
+  {"weekday": "Dienstag",   "sort": 2, "closed": false, "open_from": "06:30", "open_to": "22:30", "note": ""},
+  {"weekday": "Mittwoch",   "sort": 3, "closed": false, "open_from": "06:30", "open_to": "22:30", "note": ""},
+  {"weekday": "Donnerstag", "sort": 4, "closed": false, "open_from": "06:30", "open_to": "22:30", "note": ""},
+  {"weekday": "Freitag",    "sort": 5, "closed": false, "open_from": "06:30", "open_to": "22:00", "note": ""},
+  {"weekday": "Samstag",    "sort": 6, "closed": false, "open_from": "08:00", "open_to": "20:00", "note": ""},
+  {"weekday": "Sonntag",    "sort": 7, "closed": false, "open_from": "09:00", "open_to": "19:00", "note": "Nur Geräte"}
+]

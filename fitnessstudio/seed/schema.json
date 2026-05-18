@@ -1,0 +1,283 @@
+{
+  "collections": [
+    {
+      "collection": "site_settings",
+      "is_singleton": true,
+      "icon": "language",
+      "note": "Globale Webseiten-Einstellungen",
+      "fields": [
+        {"field": "site_name",       "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "tagline",         "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "contact_email",   "type": "string", "meta": {"interface": "input", "width": "half", "options": {"iconLeft": "mail"}}},
+        {"field": "contact_phone",   "type": "string", "meta": {"interface": "input", "width": "half", "options": {"iconLeft": "phone"}}},
+        {"field": "address_street",  "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "address_zip",     "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "address_city",    "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "google_maps_url", "type": "string", "meta": {"interface": "input", "width": "full", "options": {"iconLeft": "map"}}},
+        {"field": "instagram_url",   "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_note",     "type": "text",   "meta": {"interface": "input-multiline", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "site_stats",
+      "is_singleton": true,
+      "icon": "bar_chart",
+      "note": "Zahlen für Hero & About",
+      "fields": [
+        {"field": "member_count",      "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "member_label",      "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "courses_per_week",  "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "courses_label",     "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "trainer_count",     "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "trainer_label",     "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "founded_year",      "type": "integer", "meta": {"interface": "input", "width": "half"}},
+        {"field": "founded_label",     "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "studio_area",       "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "studio_area_label", "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "rating",            "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "rating_label",      "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "trainer_about_count","type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "trainer_about_label","type": "string", "meta": {"interface": "input", "width": "half"}}
+      ]
+    },
+    {
+      "collection": "hero",
+      "is_singleton": true,
+      "icon": "view_carousel",
+      "note": "Hero-Sektion auf der Startseite",
+      "fields": [
+        {"field": "eyebrow",             "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "headline",            "type": "string", "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "full"}},
+        {"field": "subheadline",         "type": "text",   "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "cta_primary_label",   "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "cta_primary_link",    "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "cta_secondary_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "cta_secondary_link",  "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "image_alt",           "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "image",               "type": "uuid",   "schema": {}, "meta": {"interface": "file-image", "special": ["file"], "width": "full"}}
+      ]
+    },
+    {
+      "collection": "about",
+      "is_singleton": true,
+      "icon": "auto_stories",
+      "note": "Über uns – Teaser auf Startseite",
+      "fields": [
+        {"field": "eyebrow",        "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "title",          "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "lead",           "type": "text",   "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "body",           "type": "text",   "meta": {"interface": "input-rich-text-md", "width": "full"}},
+        {"field": "team_link_label","type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "team_link_href", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "image",          "type": "uuid",   "schema": {}, "meta": {"interface": "file-image", "special": ["file"], "width": "full"}},
+        {"field": "image_alt",      "type": "string", "meta": {"interface": "input", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "class_categories",
+      "icon": "category",
+      "display_template": "{{name}}",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "name",        "type": "string",  "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "slug",        "type": "string",  "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "description", "type": "text",    "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "sort",        "type": "integer", "meta": {"interface": "input", "hidden": true}}
+      ]
+    },
+    {
+      "collection": "classes",
+      "icon": "fitness_center",
+      "display_template": "{{name}} ({{duration_min}} min)",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "name",          "type": "string",  "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "full"}},
+        {"field": "description",   "type": "text",    "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "duration_min",  "type": "integer", "meta": {"interface": "input", "width": "half", "note": "Minuten"}},
+        {"field": "difficulty",    "type": "string",  "meta": {"interface": "select-dropdown", "width": "half", "options": {"choices": [{"text": "Leicht", "value": "leicht"}, {"text": "Mittel", "value": "mittel"}, {"text": "Intensiv", "value": "intensiv"}]}}},
+        {"field": "is_featured",   "type": "boolean", "schema": {"default_value": false}, "meta": {"interface": "boolean", "width": "half"}},
+        {"field": "image",         "type": "uuid",    "schema": {}, "meta": {"interface": "file-image", "special": ["file"], "width": "full"}},
+        {"field": "image_alt",     "type": "string",  "meta": {"interface": "input", "width": "full"}},
+        {"field": "category",      "type": "integer", "schema": {}, "meta": {"interface": "select-dropdown-m2o", "special": ["m2o"], "width": "half"}},
+        {"field": "trainer_name",  "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "schedule_note", "type": "string",  "meta": {"interface": "input", "width": "full", "note": "z. B. \"Di & Do, 18:00 Uhr\""}},
+        {"field": "sort",          "type": "integer", "meta": {"interface": "input", "hidden": true}}
+      ]
+    },
+    {
+      "collection": "membership_plans",
+      "icon": "credit_card",
+      "display_template": "{{name}} – €{{price_monthly}}",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "name",           "type": "string",  "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "tagline",        "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "price_monthly",  "type": "decimal", "schema": {"numeric_precision": 8, "numeric_scale": 2}, "meta": {"interface": "input", "width": "half"}},
+        {"field": "billing_note",   "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "features",       "type": "json",    "meta": {"interface": "input-code", "options": {"language": "json"}, "width": "full", "note": "Array von {label, included}"}},
+        {"field": "is_highlighted", "type": "boolean", "schema": {"default_value": false}, "meta": {"interface": "boolean", "width": "half"}},
+        {"field": "highlight_label","type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "cta_label",      "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "cta_link",       "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "sort",           "type": "integer", "meta": {"interface": "input", "hidden": true}}
+      ]
+    },
+    {
+      "collection": "opening_hours",
+      "icon": "schedule",
+      "display_template": "{{weekday}} – {{open_from}}–{{open_to}}",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "weekday",   "type": "string",  "schema": {"is_nullable": false}, "meta": {"interface": "select-dropdown", "required": true, "options": {"choices": [{"text": "Montag", "value": "Montag"}, {"text": "Dienstag", "value": "Dienstag"}, {"text": "Mittwoch", "value": "Mittwoch"}, {"text": "Donnerstag", "value": "Donnerstag"}, {"text": "Freitag", "value": "Freitag"}, {"text": "Samstag", "value": "Samstag"}, {"text": "Sonntag", "value": "Sonntag"}]}}},
+        {"field": "sort",      "type": "integer", "meta": {"interface": "input", "hidden": true}},
+        {"field": "closed",    "type": "boolean", "schema": {"default_value": false}, "meta": {"interface": "boolean", "width": "half"}},
+        {"field": "open_from", "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "open_to",   "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "note",      "type": "string",  "meta": {"interface": "input", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "testimonials",
+      "icon": "format_quote",
+      "display_template": "{{author}} – {{rating}}★",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "author",          "type": "string",  "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "membership_type", "type": "string",  "meta": {"interface": "input", "width": "half"}},
+        {"field": "rating",          "type": "integer", "schema": {"default_value": 5}, "meta": {"interface": "select-dropdown", "options": {"choices": [{"text": "★", "value": 1}, {"text": "★★", "value": 2}, {"text": "★★★", "value": 3}, {"text": "★★★★", "value": 4}, {"text": "★★★★★", "value": 5}]}, "width": "half"}},
+        {"field": "sort",            "type": "integer", "meta": {"interface": "input", "hidden": true}},
+        {"field": "quote",           "type": "text",    "schema": {"is_nullable": false}, "meta": {"interface": "input-multiline", "required": true, "width": "full"}}
+      ]
+    },
+    {
+      "collection": "faq_items",
+      "icon": "help",
+      "display_template": "{{question}}",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "question", "type": "string",  "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "full"}},
+        {"field": "sort",     "type": "integer", "meta": {"interface": "input", "hidden": true}},
+        {"field": "answer",   "type": "text",    "schema": {"is_nullable": false}, "meta": {"interface": "input-multiline", "required": true, "width": "full"}}
+      ]
+    },
+    {
+      "collection": "navigation_links",
+      "icon": "link",
+      "display_template": "{{label}} → {{href}}",
+      "sort_field": "sort",
+      "fields": [
+        {"field": "href",  "type": "string",  "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "label", "type": "string",  "schema": {"is_nullable": false}, "meta": {"interface": "input", "required": true, "width": "half"}},
+        {"field": "sort",  "type": "integer", "meta": {"interface": "input", "hidden": true}}
+      ]
+    },
+    {
+      "collection": "ui_copy",
+      "is_singleton": true,
+      "icon": "translate",
+      "note": "Site-weite Labels",
+      "fields": [
+        {"field": "nav_cta_label",        "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "nav_cta_href",         "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_nav_title",     "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_contact_title", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_hours_title",   "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_maps_label",    "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "footer_rights_template","type": "string","meta": {"interface": "input", "width": "full"}},
+        {"field": "footer_legal_line",    "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "closed_label",         "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "trial_label",          "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "popular_label",        "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "per_month_label",      "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "difficulty_label_leicht",   "type": "string", "meta": {"interface": "input", "width": "third"}},
+        {"field": "difficulty_label_mittel",   "type": "string", "meta": {"interface": "input", "width": "third"}},
+        {"field": "difficulty_label_intensiv", "type": "string", "meta": {"interface": "input", "width": "third"}},
+        {"field": "minutes_label",        "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "trainer_label",        "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "more_label",           "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "all_categories_label", "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "phone_label",          "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "email_label",          "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "address_label",        "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "directions_label",     "type": "string", "meta": {"interface": "input", "width": "half"}}
+      ]
+    },
+    {
+      "collection": "home_copy",
+      "is_singleton": true,
+      "icon": "home",
+      "note": "Texte der Startseite",
+      "fields": [
+        {"field": "classes_eyebrow",       "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "classes_title",         "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "classes_lead",          "type": "text",   "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "classes_all_link_label","type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "pricing_eyebrow",       "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "pricing_title",         "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "pricing_lead",          "type": "text",   "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "pricing_footnote",      "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "pricing_all_link_label","type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "testimonials_eyebrow",  "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "testimonials_title",    "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "hours_eyebrow",         "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "hours_title",           "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "hours_cta_label",       "type": "string", "meta": {"interface": "input", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "kurse_copy",
+      "is_singleton": true,
+      "icon": "fitness_center",
+      "note": "Texte der Kurse-Seite",
+      "fields": [
+        {"field": "eyebrow", "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "title",   "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "lead",    "type": "text",   "meta": {"interface": "input-multiline", "width": "full"}}
+      ]
+    },
+    {
+      "collection": "mitgliedschaft_copy",
+      "is_singleton": true,
+      "icon": "credit_card",
+      "note": "Texte der Mitgliedschaft-Seite",
+      "fields": [
+        {"field": "eyebrow",       "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "title",         "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "subtitle",      "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "lead",          "type": "text",   "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "footnote",      "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "faq_eyebrow",   "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "faq_title",     "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "banner_title",  "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "banner_text",   "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "banner_cta",    "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "banner_link",   "type": "string", "meta": {"interface": "input", "width": "half"}}
+      ]
+    },
+    {
+      "collection": "kontakt_copy",
+      "is_singleton": true,
+      "icon": "mail",
+      "note": "Texte der Kontakt-Seite",
+      "fields": [
+        {"field": "eyebrow",         "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "title",           "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "lead",            "type": "text",   "meta": {"interface": "input-multiline", "width": "full"}},
+        {"field": "hours_title",     "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "trial_title",     "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "trial_text",      "type": "string", "meta": {"interface": "input", "width": "full"}},
+        {"field": "trial_cta",       "type": "string", "meta": {"interface": "input", "width": "half"}},
+        {"field": "trial_link",      "type": "string", "meta": {"interface": "input", "width": "half"}}
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "collection": "classes",
+      "field": "category",
+      "related_collection": "class_categories",
+      "meta": {"sort_field": null},
+      "schema": {"on_delete": "SET NULL"}
+    }
+  ]
+}

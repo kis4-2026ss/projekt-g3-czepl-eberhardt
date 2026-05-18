@@ -1,0 +1,109 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ClassCard from '../components/ClassCard.astro';
+import {
+  getClasses, getClassCategories, getUiCopy, getKurseCopy,
+} from '../lib/directus';
+
+const [classes, categories, ui, copy] = await Promise.all([
+  getClasses(), getClassCategories(), getUiCopy(), getKurseCopy(),
+]);
+---
+
+<Layout title={copy.title} description={copy.lead}>
+
+  <!-- Page header -->
+  <section class="bg-fs-surface border-b border-fs-border">
+    <div class="max-w-4xl mx-auto px-5 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-12 text-center fade-up">
+      <span class="eyebrow" data-cms-collection="kurse_copy" data-cms-field="eyebrow">{copy.eyebrow}</span>
+      <h1 class="display font-display font-extrabold text-fs-dark text-4xl sm:text-5xl lg:text-6xl mt-5 leading-[1.05] tracking-tight-2"
+          data-cms-collection="kurse_copy" data-cms-field="title">
+        {copy.title}
+      </h1>
+      {copy.lead && (
+        <p class="mt-5 text-fs-muted text-lg leading-relaxed max-w-2xl mx-auto"
+           data-cms-collection="kurse_copy" data-cms-field="lead">
+          {copy.lead}
+        </p>
+      )}
+    </div>
+  </section>
+
+  <!-- Filter bar (sticky under nav on mobile) -->
+  <section class="sticky top-16 sm:top-20 z-30 bg-white/95 backdrop-blur-md border-b border-fs-border">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+      <div id="filter-bar" class="flex gap-2 overflow-x-auto scrollbar-hide py-4">
+        <button
+          type="button"
+          data-filter="all"
+          class="filter-pill active flex-shrink-0 px-4 py-2 rounded-full border border-fs-blue bg-fs-blue text-white text-sm font-medium transition-all duration-200 whitespace-nowrap">
+          <span data-cms-collection="ui_copy" data-cms-field="all_categories_label">{ui.all_categories_label}</span>
+        </button>
+        {categories.map(c => (
+          <button
+            type="button"
+            data-filter={c.slug}
+            class="filter-pill flex-shrink-0 px-4 py-2 rounded-full border border-fs-border bg-white text-fs-muted text-sm font-medium hover:border-fs-blue hover:text-fs-blue transition-all duration-200 whitespace-nowrap">
+            <span data-cms-collection="class_categories" data-cms-id={String(c.id)} data-cms-field="name">{c.name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Classes grid -->
+  <section class="section bg-fs-white">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+      <div id="classes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
+        {classes.map((c, i) => (
+          <div class={`class-item fade-up delay-${((i % 3) + 1) * 100}`}
+               data-category={c.category?.slug ?? ''}>
+            <ClassCard item={c} ui={ui} showSchedule={true} />
+          </div>
+        ))}
+      </div>
+      {classes.length === 0 && (
+        <div class="text-center py-20 text-fs-muted">
+          Aktuell keine Kurse hinterlegt.
+        </div>
+      )}
+    </div>
+  </section>
+</Layout>
+
+<script>
+  function setupKurseFilter() {
+    const pills = document.querySelectorAll<HTMLButtonElement>('.filter-pill');
+    const items = document.querySelectorAll<HTMLElement>('.class-item');
+    if (!pills.length || !items.length) return;
+
+    const setActive = (filter: string) => {
+      pills.forEach((p) => {
+        const isActive = p.dataset.filter === filter;
+        p.classList.toggle('active', isActive);
+        p.classList.toggle('bg-fs-blue', isActive);
+        p.classList.toggle('text-white', isActive);
+        p.classList.toggle('border-fs-blue', isActive);
+        p.classList.toggle('bg-white', !isActive);
+        p.classList.toggle('text-fs-muted', !isActive);
+        p.classList.toggle('border-fs-border', !isActive);
+      });
+
+      items.forEach((el) => {
+        const cat = el.dataset.category ?? '';
+        const visible = filter === 'all' || cat === filter;
+        el.style.display = visible ? '' : 'none';
+      });
+    };
+
+    pills.forEach((p) => {
+      p.addEventListener('click', () => {
+        const filter = p.dataset.filter || 'all';
+        setActive(filter);
+      });
+    });
+  }
+
+  setupKurseFilter();
+  document.addEventListener('astro:after-swap', setupKurseFilter);
+</script>

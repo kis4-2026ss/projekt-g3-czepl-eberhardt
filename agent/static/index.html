@@ -18,255 +18,558 @@
       overflow: hidden;
     }
 
-    /* ── Header ── */
+    /* ── Header ─────────────────────────────────────────────────────── */
     header {
       background: #1a1816;
       color: #fff;
-      padding: .9rem 1.5rem;
+      padding: 0 1.25rem;
+      height: 52px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: .75rem;
       flex-shrink: 0;
     }
-    .header-left h1 { font-size: .95rem; font-weight: 700; }
-    .header-left .sub { font-size: .72rem; color: #9ca3af; margin-top: 1px; }
-    .btn-new {
-      background: transparent;
-      border: 1px solid rgba(255,255,255,.25);
+    .header-title {
+      font-size: .88rem;
+      font-weight: 700;
+      letter-spacing: -.01em;
+      white-space: nowrap;
       color: #fff;
-      padding: .35rem .85rem;
-      border-radius: 4px;
+    }
+    .header-sep {
+      width: 1px;
+      height: 16px;
+      background: rgba(255,255,255,.15);
+      flex-shrink: 0;
+    }
+
+    /* Instance chip */
+    #instance-chip {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .28rem .55rem .28rem .38rem;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 99px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+      min-width: 0;
+      max-width: 200px;
+    }
+    #instance-chip:hover { background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.28); }
+    .chip-avatar {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      font-size: .65rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      letter-spacing: 0;
+    }
+    .chip-name {
+      font-size: .78rem;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chip-caret {
+      font-size: .6rem;
+      color: rgba(255,255,255,.5);
+      flex-shrink: 0;
+      margin-left: 1px;
+    }
+    #instance-chip.no-instance .chip-name { color: rgba(255,255,255,.55); }
+
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: .4rem; }
+
+    .btn-hdr {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.18);
+      color: rgba(255,255,255,.85);
+      padding: .3rem .7rem;
+      border-radius: 5px;
       cursor: pointer;
       font-size: .78rem;
       font-weight: 600;
+      white-space: nowrap;
+      transition: background .15s, border-color .15s;
+      line-height: 1.4;
     }
-    .btn-new:hover { background: rgba(255,255,255,.1); }
+    .btn-hdr:hover { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.35); color: #fff; }
+    .btn-hdr-icon { padding: .3rem .5rem; font-size: .9rem; }
 
-    /* ── Message list ── */
+    /* ── Messages ────────────────────────────────────────────────────── */
     #messages {
       flex: 1;
       overflow-y: auto;
-      padding: 1.5rem;
+      padding: 1.5rem 1.25rem;
       display: flex;
       flex-direction: column;
       gap: .9rem;
     }
 
-    /* ── Empty state ── */
+    /* Empty state */
     #empty-state {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: .4rem;
+      gap: .35rem;
       flex: 1;
-      color: #6b7280;
+      color: #9ca3af;
       text-align: center;
+      user-select: none;
     }
-    #empty-state h2 { font-size: 1.05rem; color: #1a1816; font-weight: 700; }
-    #empty-state p { font-size: .82rem; max-width: 340px; }
+    #empty-state .empty-icon { font-size: 2rem; opacity: .35; margin-bottom: .25rem; }
+    #empty-state h2 { font-size: .95rem; font-weight: 700; color: #6b7280; }
+    #empty-state p  { font-size: .78rem; max-width: 280px; color: #9ca3af; line-height: 1.5; }
 
-    /* ── Message rows ── */
-    .msg { display: flex; flex-direction: column; max-width: 800px; width: 100%; }
+    /* Message rows */
+    .msg { display: flex; flex-direction: column; max-width: 780px; width: 100%; }
     .msg-user { align-self: flex-end; align-items: flex-end; }
     .msg-ai   { align-self: flex-start; align-items: flex-start; }
 
-    .bubble {
-      padding: .7rem 1rem;
-      border-radius: 10px;
-      font-size: .875rem;
-      line-height: 1.65;
-      max-width: 100%;
-    }
+    .bubble { padding: .65rem .95rem; border-radius: 10px; font-size: .875rem; line-height: 1.65; max-width: 100%; }
     .bubble-user {
-      background: #1a1816;
-      color: #f9f7f4;
+      background: #1a1816; color: #f9f7f4;
       border-radius: 10px 10px 3px 10px;
-      white-space: pre-wrap;
-      word-break: break-word;
+      white-space: pre-wrap; word-break: break-word;
     }
     .bubble-ai {
-      background: #fff;
-      border: 1px solid #e5e1da;
+      background: #fff; border: 1px solid #e5e1da;
       border-radius: 10px 10px 10px 3px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
     }
-
-    /* Markdown inside AI bubble */
-    .bubble-ai p { margin-bottom: .55rem; }
+    .bubble-ai p { margin-bottom: .5rem; }
     .bubble-ai p:last-child { margin-bottom: 0; }
-    .bubble-ai ul, .bubble-ai ol { padding-left: 1.2rem; margin-bottom: .55rem; }
+    .bubble-ai ul, .bubble-ai ol { padding-left: 1.2rem; margin-bottom: .5rem; }
     .bubble-ai li { margin-bottom: .2rem; }
-    .bubble-ai h1,.bubble-ai h2,.bubble-ai h3 { font-weight: 700; margin: .5rem 0 .3rem; }
-    .bubble-ai code {
-      background: #f3f1ec;
-      padding: .1rem .35rem;
-      border-radius: 3px;
-      font-size: .82em;
-      font-family: 'Menlo', 'Consolas', monospace;
-    }
-    .bubble-ai pre {
-      background: #1a1816;
-      color: #f9f7f4;
-      padding: .75rem 1rem;
-      border-radius: 5px;
-      overflow-x: auto;
-      margin: .5rem 0;
-      font-size: .8rem;
-    }
+    .bubble-ai h1,.bubble-ai h2,.bubble-ai h3 { font-weight: 700; margin: .5rem 0 .25rem; }
+    .bubble-ai code { background: #f3f1ec; padding: .1rem .32rem; border-radius: 3px; font-size: .8em; font-family: 'Menlo','Consolas',monospace; }
+    .bubble-ai pre { background: #1a1816; color: #f9f7f4; padding: .75rem 1rem; border-radius: 5px; overflow-x: auto; margin: .45rem 0; font-size: .78rem; }
     .bubble-ai pre code { background: transparent; padding: 0; color: inherit; font-size: inherit; }
     .bubble-ai strong { font-weight: 700; }
     .bubble-ai a { color: #2563eb; text-underline-offset: 2px; }
-    .bubble-ai blockquote {
-      border-left: 3px solid #e5e1da;
-      padding-left: .75rem;
-      color: #6b7280;
-      margin: .4rem 0;
-    }
+    .bubble-ai blockquote { border-left: 3px solid #e5e1da; padding-left: .75rem; color: #6b7280; margin: .4rem 0; }
 
-    /* ── Tool indicators (appear above the bubble in the AI msg wrapper) ── */
-    .tools-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: .35rem;
-      margin-bottom: .4rem;
-    }
+    /* Tool badges */
+    .tools-row { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .35rem; }
     .tool-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: .3rem;
-      padding: .2rem .55rem;
-      border-radius: 99px;
-      font-size: .7rem;
-      font-weight: 700;
-      background: #fef9c3;
-      color: #92400e;
-      border: 1px solid #fde68a;
-      white-space: nowrap;
+      display: inline-flex; align-items: center; gap: .28rem;
+      padding: .18rem .5rem; border-radius: 99px; font-size: .68rem; font-weight: 700;
+      background: #fef9c3; color: #92400e; border: 1px solid #fde68a; white-space: nowrap;
     }
-    .tool-badge.done {
-      background: #dcfce7;
-      color: #16a34a;
-      border-color: #bbf7d0;
-    }
-    .tool-badge .dot {
-      width: 5px; height: 5px;
-      border-radius: 50%;
-      background: currentColor;
-      flex-shrink: 0;
-    }
+    .tool-badge.done { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
+    .tool-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
     .tool-badge:not(.done) .dot { animation: blink 1.1s ease-in-out infinite; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+    .typing { color: #9ca3af; font-style: italic; font-size: .8rem; }
 
-    .typing { color: #9ca3af; font-style: italic; font-size: .82rem; }
+    .bubble-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; border-radius: 8px; padding: .6rem .9rem; font-size: .82rem; }
 
-    /* ── Error bubble ── */
-    .bubble-error {
-      background: #fee2e2;
-      color: #991b1b;
-      border: 1px solid #fecaca;
-      border-radius: 8px;
-      padding: .65rem .9rem;
-      font-size: .82rem;
-    }
-
-    /* ── Input area ── */
+    /* ── Input area ──────────────────────────────────────────────────── */
     #input-area {
-      background: #fff;
-      border-top: 1px solid #e5e1da;
-      padding: .9rem 1.25rem;
-      display: flex;
-      gap: .65rem;
-      align-items: flex-end;
-      flex-shrink: 0;
+      background: #fff; border-top: 1px solid #e5e1da;
+      padding: .85rem 1.25rem; display: flex; gap: .6rem;
+      align-items: flex-end; flex-shrink: 0;
     }
     #msg-input {
-      flex: 1;
-      padding: .65rem .9rem;
-      border: 1px solid #d1cdc7;
-      border-radius: 6px;
-      font-size: .875rem;
-      font-family: inherit;
-      resize: none;
-      outline: none;
-      line-height: 1.5;
-      min-height: 42px;
-      max-height: 180px;
-      overflow-y: auto;
-      background: #f9f7f4;
-      transition: border-color .15s;
+      flex: 1; padding: .6rem .85rem; border: 1px solid #d1cdc7;
+      border-radius: 6px; font-size: .875rem; font-family: inherit;
+      resize: none; outline: none; line-height: 1.5;
+      min-height: 40px; max-height: 180px; overflow-y: auto;
+      background: #f9f7f4; transition: border-color .15s;
     }
     #msg-input:focus { border-color: #1a1816; background: #fff; }
-    #msg-input::placeholder { color: #9ca3af; }
+    #msg-input::placeholder { color: #b0a99f; }
+    #msg-input:disabled { opacity: .5; cursor: not-allowed; }
     #send-btn {
-      background: #1a1816;
-      color: #fff;
-      border: none;
-      padding: 0 1.1rem;
-      height: 42px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 700;
-      font-size: .85rem;
-      flex-shrink: 0;
-      transition: background .15s;
+      background: #1a1816; color: #fff; border: none;
+      padding: 0 1.1rem; height: 40px; border-radius: 6px;
+      cursor: pointer; font-weight: 700; font-size: .82rem;
+      flex-shrink: 0; transition: background .15s;
     }
     #send-btn:hover:not(:disabled) { background: #374151; }
-    #send-btn:disabled { opacity: .45; cursor: not-allowed; }
+    #send-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Modal base ──────────────────────────────────────────────────── */
+    .overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.38);
+      align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .overlay.open { display: flex; animation: fade-in .15s ease; }
+    @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+
+    .modal {
+      background: #fff; border-radius: 10px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.16), 0 1px 3px rgba(0,0,0,.08);
+      width: 100%;
+      animation: slide-up .18s ease;
+    }
+    @keyframes slide-up { from { transform: translateY(8px); opacity: .6 } to { transform: none; opacity: 1 } }
+
+    .modal-head {
+      padding: 1.1rem 1.4rem .9rem;
+      border-bottom: 1px solid #f0ece5;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-head h2 { font-size: .95rem; font-weight: 700; }
+    .modal-head p  { font-size: .78rem; color: #9ca3af; margin-top: 2px; }
+    .btn-close {
+      background: none; border: none; cursor: pointer;
+      width: 28px; height: 28px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      color: #9ca3af; font-size: .95rem; transition: background .12s, color .12s;
+      flex-shrink: 0;
+    }
+    .btn-close:hover { background: #f3f1ec; color: #1a1816; }
+
+    /* ── Start chat modal ────────────────────────────────────────────── */
+    #start-overlay .modal { max-width: 480px; }
+
+    .inst-grid {
+      padding: 1.1rem 1.4rem;
+      display: grid; grid-template-columns: 1fr 1fr; gap: .65rem;
+    }
+
+    .inst-card {
+      padding: 1rem 1rem .85rem;
+      border: 1.5px solid #e5e1da;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color .14s, box-shadow .14s, transform .12s;
+      display: flex; flex-direction: column; gap: .35rem;
+      user-select: none;
+    }
+    .inst-card:hover {
+      border-color: #1a1816;
+      box-shadow: 0 2px 10px rgba(0,0,0,.1);
+      transform: translateY(-1px);
+    }
+    .inst-card:active { transform: translateY(0); box-shadow: none; }
+    .inst-card .avatar {
+      width: 34px; height: 34px; border-radius: 8px;
+      font-size: .82rem; font-weight: 800; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: .1rem;
+    }
+    .inst-card .card-name { font-size: .875rem; font-weight: 700; color: #1a1816; line-height: 1.2; }
+    .inst-card .card-url  { font-size: .72rem; color: #9ca3af; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .modal-foot {
+      padding: .75rem 1.4rem;
+      border-top: 1px solid #f0ece5;
+      display: flex; justify-content: center;
+    }
+    .modal-foot a { font-size: .78rem; color: #6b7280; cursor: pointer; text-decoration: none; transition: color .12s; }
+    .modal-foot a:hover { color: #1a1816; }
+
+    /* ── Settings modal ──────────────────────────────────────────────── */
+    #settings-overlay .modal { max-width: 560px; max-height: 85dvh; display: flex; flex-direction: column; }
+
+    .modal-body { flex: 1; overflow-y: auto; }
+
+    /* Instance list in settings */
+    #inst-list { padding: .75rem 1.4rem; display: flex; flex-direction: column; gap: .45rem; }
+    .settings-card {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .7rem .85rem;
+      border: 1px solid #e5e1da; border-radius: 7px;
+      background: #faf9f7;
+      transition: border-color .12s;
+    }
+    .settings-card:hover { border-color: #c9c4bc; }
+    .settings-card .avatar {
+      width: 32px; height: 32px; border-radius: 7px;
+      font-size: .75rem; font-weight: 800; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .settings-card .card-info { flex: 1; min-width: 0; }
+    .settings-card .card-name { font-size: .85rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .settings-card .card-meta { font-size: .72rem; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+    .card-btns { display: flex; gap: .3rem; flex-shrink: 0; }
+    .btn-sm {
+      padding: .22rem .55rem; border-radius: 4px; font-size: .72rem;
+      font-weight: 600; cursor: pointer; border: 1px solid; line-height: 1.4;
+      transition: background .12s;
+    }
+    .btn-edit { background: #fff; border-color: #d1cdc7; color: #374151; }
+    .btn-edit:hover { background: #f3f1ec; }
+    .btn-del  { background: #fff; border-color: #fca5a5; color: #dc2626; }
+    .btn-del:hover { background: #fee2e2; }
+
+    .btn-add {
+      margin: 0 1.4rem .75rem;
+      display: flex; align-items: center; justify-content: center; gap: .4rem;
+      padding: .55rem; border: 1.5px dashed #d1cdc7;
+      border-radius: 7px; cursor: pointer;
+      font-size: .8rem; font-weight: 600; color: #9ca3af;
+      background: none; width: calc(100% - 2.8rem);
+      transition: border-color .12s, color .12s, background .12s;
+    }
+    .btn-add:hover { border-color: #1a1816; color: #1a1816; background: #f9f7f4; }
+
+    /* Instance form */
+    #inst-form {
+      display: none;
+      padding: 0 1.4rem 1.25rem;
+      border-top: 1px solid #f0ece5;
+    }
+    #inst-form.visible { display: block; }
+    #inst-form h3 {
+      font-size: .72rem; font-weight: 700; color: #9ca3af;
+      text-transform: uppercase; letter-spacing: .07em;
+      padding: 1rem 0 .75rem;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+    .field { display: flex; flex-direction: column; gap: .28rem; }
+    .field.span2 { grid-column: span 2; }
+    .field label { font-size: .72rem; font-weight: 600; color: #6b7280; }
+    .field input {
+      padding: .42rem .65rem; border: 1px solid #d1cdc7; border-radius: 5px;
+      font-size: .82rem; font-family: inherit; background: #f9f7f4; outline: none;
+      transition: border-color .12s, background .12s;
+    }
+    .field input:focus { border-color: #1a1816; background: #fff; }
+    .field input::placeholder { color: #c0bbb4; }
+    .form-actions { display: flex; gap: .5rem; justify-content: flex-end; margin-top: .9rem; }
+    .btn-primary {
+      background: #1a1816; color: #fff; border: none;
+      padding: .42rem 1rem; border-radius: 5px;
+      font-size: .8rem; font-weight: 700; cursor: pointer;
+      transition: background .12s;
+    }
+    .btn-primary:hover { background: #374151; }
+    .btn-ghost {
+      background: #fff; color: #6b7280; border: 1px solid #d1cdc7;
+      padding: .42rem 1rem; border-radius: 5px;
+      font-size: .8rem; font-weight: 600; cursor: pointer;
+      transition: background .12s;
+    }
+    .btn-ghost:hover { background: #f3f1ec; color: #1a1816; }
   </style>
 </head>
 <body>
 
+<!-- Header -->
 <header>
-  <div class="header-left">
-    <h1>Directus AI Agent</h1>
-    <div class="sub">Gemini · MCP · LangChain</div>
+  <span class="header-title">AI Agent</span>
+  <div class="header-sep"></div>
+  <div id="instance-chip" class="no-instance" onclick="openStart(true)">
+    <div class="chip-avatar" id="chip-avatar" style="background:#6b7280">?</div>
+    <span class="chip-name" id="chip-name">Instanz wählen</span>
+    <span class="chip-caret">▾</span>
   </div>
-  <button class="btn-new" onclick="newChat()">+ Neuer Chat</button>
+  <div class="header-right">
+    <button class="btn-hdr btn-hdr-icon" onclick="openSettings()" title="Instanzen verwalten">⚙</button>
+    <button class="btn-hdr" onclick="openStart(false)">+ Neuer Chat</button>
+  </div>
 </header>
 
+<!-- Messages -->
 <div id="messages">
   <div id="empty-state">
-    <h2>Wie kann ich helfen?</h2>
-    <p>Frag mich nach CMS-Inhalten oder bitte mich, Änderungen vorzubereiten.</p>
+    <div class="empty-icon">✦</div>
+    <h2>Bereit</h2>
+    <p>Wähle eine Instanz und starte einen Chat.</p>
   </div>
 </div>
 
+<!-- Input -->
 <div id="input-area">
-  <textarea
-    id="msg-input"
-    placeholder="Nachricht eingeben… (Enter senden · Shift+Enter neue Zeile)"
-    rows="1"
-  ></textarea>
-  <button id="send-btn" onclick="sendMessage()">Senden</button>
+  <textarea id="msg-input" placeholder="Nachricht eingeben… (Enter senden · Shift+Enter neue Zeile)" rows="1" disabled></textarea>
+  <button id="send-btn" onclick="sendMessage()" disabled>Senden</button>
+</div>
+
+<!-- ── Start-Chat modal ─────────────────────────────────────────────── -->
+<div id="start-overlay" class="overlay" onclick="onOverlayClick(event,'start-overlay')">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2>Chat starten</h2>
+        <p>Wähle eine Instanz</p>
+      </div>
+      <button class="btn-close" id="start-close-btn" onclick="closeStart()">✕</button>
+    </div>
+    <div class="inst-grid" id="inst-grid"></div>
+    <div class="modal-foot">
+      <a onclick="openSettings()">Instanzen verwalten →</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Settings modal ──────────────────────────────────────────────── -->
+<div id="settings-overlay" class="overlay" onclick="onOverlayClick(event,'settings-overlay')">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>Instanzen</h2>
+      <button class="btn-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="inst-list"></div>
+      <button class="btn-add" onclick="showForm(null)">＋ Neue Instanz</button>
+      <div id="inst-form">
+        <h3 id="form-heading">Neue Instanz</h3>
+        <div class="form-grid">
+          <div class="field span2">
+            <label>Name</label>
+            <input id="f-name" placeholder="z.B. Adlerwirt">
+          </div>
+          <div class="field span2">
+            <label>Directus URL <span style="font-weight:400;color:#b0a99f">(intern, für MCP-Server)</span></label>
+            <input id="f-directus-url" placeholder="http://adlerwirt-directus:8055">
+          </div>
+          <div class="field">
+            <label>API Token</label>
+            <input id="f-token" placeholder="adlerwirt-dev-token">
+          </div>
+          <div class="field">
+            <label>Website URL</label>
+            <input id="f-website-url" placeholder="http://localhost:4321">
+          </div>
+          <div class="field">
+            <label>Admin E-Mail</label>
+            <input id="f-email" type="email" placeholder="admin@example.com">
+          </div>
+          <div class="field">
+            <label>Passwort</label>
+            <input id="f-password" type="password" placeholder="••••••">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-ghost" onclick="cancelForm()">Abbrechen</button>
+          <button class="btn-primary" onclick="saveInstance()">Speichern</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
   marked.setOptions({ breaks: true, gfm: true });
 
-  let sessionId  = crypto.randomUUID();
-  let streaming  = false;
+  // ── State ──────────────────────────────────────────────────────────
+  let sessionId   = crypto.randomUUID();
+  let streaming   = false;
+  let activeInst  = null;   // { id, name, website_url, ... }
+  let instances   = [];
+  let editingId   = null;
+  let allowClose  = false;  // start modal can't be closed until an instance is picked once
+
+  const AVATAR_COLORS = ['#7c3aed','#0369a1','#0f766e','#b45309','#be185d','#16a34a','#dc2626'];
+  function avatarColor(id) { return AVATAR_COLORS[(id - 1) % AVATAR_COLORS.length]; }
+  function initials(name)  { return name.trim().slice(0,2).toUpperCase(); }
 
   const msgList  = document.getElementById('messages');
+  const empty    = document.getElementById('empty-state');
   const input    = document.getElementById('msg-input');
   const sendBtn  = document.getElementById('send-btn');
-  const empty    = document.getElementById('empty-state');
 
-  /* ── Session ── */
+  // ── Instances ──────────────────────────────────────────────────────
+  async function loadInstances() {
+    const r = await fetch('/instances');
+    instances = await r.json();
+    renderGrid();
+    renderList();
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById('inst-grid');
+    if (!instances.length) {
+      grid.innerHTML = '<p style="grid-column:span 2;padding:.5rem 0;color:#9ca3af;font-size:.8rem;text-align:center">Noch keine Instanzen. <a onclick="openSettings()" style="cursor:pointer;color:#6b7280;text-decoration:underline">Jetzt anlegen →</a></p>';
+      return;
+    }
+    grid.innerHTML = instances.map(i => `
+      <div class="inst-card" onclick="pickInstance(${i.id})">
+        <div class="avatar" style="background:${avatarColor(i.id)}">${initials(i.name)}</div>
+        <div class="card-name">${esc(i.name)}</div>
+        <div class="card-url">${esc(i.website_url || i.directus_url || '—')}</div>
+      </div>`).join('');
+  }
+
+  function renderList() {
+    const list = document.getElementById('inst-list');
+    if (!instances.length) {
+      list.innerHTML = '<p style="padding:.75rem 1.4rem;color:#9ca3af;font-size:.8rem">Noch keine Instanzen.</p>';
+      return;
+    }
+    list.innerHTML = instances.map(i => `
+      <div class="settings-card">
+        <div class="avatar" style="background:${avatarColor(i.id)}">${initials(i.name)}</div>
+        <div class="card-info">
+          <div class="card-name">${esc(i.name)}</div>
+          <div class="card-meta">${esc(i.website_url || i.directus_url || '—')}</div>
+        </div>
+        <div class="card-btns">
+          <button class="btn-sm btn-edit" onclick="showForm(${i.id})">Bearbeiten</button>
+          <button class="btn-sm btn-del"  onclick="deleteInst(${i.id})">Löschen</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function updateChip() {
+    const chip   = document.getElementById('instance-chip');
+    const avatar = document.getElementById('chip-avatar');
+    const name   = document.getElementById('chip-name');
+    if (activeInst) {
+      chip.classList.remove('no-instance');
+      avatar.textContent = initials(activeInst.name);
+      avatar.style.background = avatarColor(activeInst.id);
+      name.textContent = activeInst.name;
+    } else {
+      chip.classList.add('no-instance');
+      avatar.textContent = '?';
+      avatar.style.background = '#6b7280';
+      name.textContent = 'Instanz wählen';
+    }
+  }
+
+  // ── Start-chat modal ───────────────────────────────────────────────
+  function openStart(switchMode) {
+    allowClose = switchMode && !!activeInst;
+    document.getElementById('start-close-btn').style.display = allowClose ? '' : 'none';
+    renderGrid();
+    document.getElementById('start-overlay').classList.add('open');
+  }
+
+  function closeStart() {
+    if (!allowClose && !activeInst) return;
+    document.getElementById('start-overlay').classList.remove('open');
+  }
+
+  function pickInstance(id) {
+    const inst = instances.find(i => i.id === id);
+    if (!inst) return;
+    activeInst = inst;
+    updateChip();
+    allowClose = true;
+    closeStart();
+    newChat();
+  }
+
+  // ── Chat ───────────────────────────────────────────────────────────
   function newChat() {
     sessionId = crypto.randomUUID();
     msgList.innerHTML = '';
     msgList.appendChild(empty);
     empty.style.display = '';
-    input.focus();
+    if (activeInst) {
+      input.disabled = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
   }
 
-  /* ── Scroll ── */
-  function scrollBottom() {
-    msgList.scrollTop = msgList.scrollHeight;
-  }
+  function scrollBottom() { msgList.scrollTop = msgList.scrollHeight; }
 
-  /* ── Append user message ── */
   function appendUser(text) {
     empty.remove();
     const row = document.createElement('div');
@@ -279,144 +582,156 @@
     scrollBottom();
   }
 
-  /* ── Create AI message shell ── */
   function createAiRow() {
     empty.remove();
-    const row    = document.createElement('div');
-    row.className = 'msg msg-ai';
-
-    const tools  = document.createElement('div');
-    tools.className = 'tools-row';
-
-    const bub    = document.createElement('div');
-    bub.className = 'bubble bubble-ai';
+    const row   = document.createElement('div'); row.className = 'msg msg-ai';
+    const tools = document.createElement('div'); tools.className = 'tools-row';
+    const bub   = document.createElement('div'); bub.className = 'bubble bubble-ai';
     bub.innerHTML = '<span class="typing">Denke nach…</span>';
-
-    row.appendChild(tools);
-    row.appendChild(bub);
-    msgList.appendChild(row);
-    scrollBottom();
-    return { row, tools, bub };
+    row.appendChild(tools); row.appendChild(bub);
+    msgList.appendChild(row); scrollBottom();
+    return { tools, bub };
   }
 
-  /* ── Tool badges ── */
   const activeBadges = {};
 
-  function toolStart(toolsEl, name) {
-    const badge = document.createElement('span');
-    badge.className = 'tool-badge';
-    badge.innerHTML = `<span class="dot"></span>${name}`;
-    toolsEl.appendChild(badge);
-    activeBadges[name] = badge;
-    scrollBottom();
+  function toolStart(el, name) {
+    const b = document.createElement('span'); b.className = 'tool-badge';
+    b.innerHTML = `<span class="dot"></span>${name}`;
+    el.appendChild(b); activeBadges[name] = b; scrollBottom();
   }
-
   function toolDone(name) {
-    const b = activeBadges[name];
-    if (!b) return;
-    b.classList.add('done');
-    b.innerHTML = `<span class="dot"></span>${name} ✓`;
+    const b = activeBadges[name]; if (!b) return;
+    b.classList.add('done'); b.innerHTML = `<span class="dot"></span>${name} ✓`;
   }
 
-  /* ── Send ── */
   async function sendMessage() {
     const text = input.value.trim();
-    if (!text || streaming) return;
-
-    streaming = true;
-    sendBtn.disabled = true;
-    input.value = '';
-    input.style.height = 'auto';
-
-    // Clear badge state from previous turn
+    if (!text || streaming || !activeInst) return;
+    streaming = true; sendBtn.disabled = true;
+    input.value = ''; input.style.height = 'auto';
     for (const k of Object.keys(activeBadges)) delete activeBadges[k];
 
     appendUser(text);
     const { tools: toolsEl, bub } = createAiRow();
-
-    let rawContent = '';
-    let started    = false;
+    let raw = '', started = false;
 
     try {
       const resp = await fetch('/chat', {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ message: text, session_id: sessionId }),
+        body: JSON.stringify({ message: text, session_id: sessionId, instance_id: activeInst.id }),
       });
-
       if (!resp.ok) throw new Error(`Server error ${resp.status}`);
-
-      const reader  = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let   buf     = '';
-
+      const reader = resp.body.getReader(), dec = new TextDecoder();
+      let buf = '';
       while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-
-        const lines = buf.split('\n');
-        buf = lines.pop(); // keep incomplete line
-
+        const { done, value } = await reader.read(); if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n'); buf = lines.pop();
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
-          let event;
-          try { event = JSON.parse(line.slice(6)); } catch { continue; }
-
-          switch (event.type) {
-            case 'token':
-              if (!started) { bub.innerHTML = ''; started = true; }
-              rawContent += event.content;
-              bub.innerHTML = marked.parse(rawContent);
-              scrollBottom();
-              break;
-            case 'tool_start':
-              toolStart(toolsEl, event.name);
-              break;
-            case 'tool_end':
-              toolDone(event.name);
-              break;
-            case 'error':
-              bub.innerHTML = '';
-              const errDiv = document.createElement('div');
-              errDiv.className = 'bubble-error';
-              errDiv.textContent = `Fehler: ${event.content}`;
-              bub.replaceWith(errDiv);
-              break;
-            case 'done':
-              if (!started) bub.innerHTML = '<em style="color:#9ca3af">Keine Antwort.</em>';
-              break;
+          let ev; try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+          if (ev.type === 'token') {
+            if (!started) { bub.innerHTML = ''; started = true; }
+            raw += ev.content; bub.innerHTML = marked.parse(raw); scrollBottom();
+          } else if (ev.type === 'tool_start') { toolStart(toolsEl, ev.name);
+          } else if (ev.type === 'tool_end')   { toolDone(ev.name);
+          } else if (ev.type === 'error') {
+            bub.innerHTML = ''; const e = document.createElement('div');
+            e.className = 'bubble-error'; e.textContent = `Fehler: ${ev.content}`; bub.replaceWith(e);
+          } else if (ev.type === 'done') {
+            if (!started) bub.innerHTML = '<em style="color:#9ca3af">Keine Antwort.</em>';
           }
         }
       }
     } catch (err) {
-      bub.innerHTML = '';
-      const errDiv = document.createElement('div');
-      errDiv.className = 'bubble-error';
-      errDiv.textContent = `Verbindungsfehler: ${err.message}`;
-      bub.replaceWith(errDiv);
+      bub.innerHTML = ''; const e = document.createElement('div');
+      e.className = 'bubble-error'; e.textContent = `Verbindungsfehler: ${err.message}`; bub.replaceWith(e);
     } finally {
-      streaming = false;
-      sendBtn.disabled = false;
-      input.focus();
+      streaming = false; sendBtn.disabled = false; input.focus();
     }
   }
 
-  /* ── Textarea auto-resize ── */
+  // ── Settings modal ─────────────────────────────────────────────────
+  function openSettings() {
+    closeStart();
+    cancelForm();
+    renderList();
+    document.getElementById('settings-overlay').classList.add('open');
+  }
+  function closeSettings() {
+    document.getElementById('settings-overlay').classList.remove('open');
+  }
+
+  function showForm(id) {
+    editingId = id;
+    const form = document.getElementById('inst-form');
+    form.classList.add('visible');
+    document.getElementById('form-heading').textContent = id ? 'Bearbeiten' : 'Neue Instanz';
+    const i = id ? (instances.find(x => x.id === id) || {}) : {};
+    document.getElementById('f-name').value        = i.name || '';
+    document.getElementById('f-directus-url').value= i.directus_url || '';
+    document.getElementById('f-token').value       = i.directus_token || '';
+    document.getElementById('f-website-url').value = i.website_url || '';
+    document.getElementById('f-email').value       = i.directus_email || '';
+    document.getElementById('f-password').value    = i.directus_password || '';
+    form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function cancelForm() {
+    editingId = null;
+    document.getElementById('inst-form').classList.remove('visible');
+  }
+  async function saveInstance() {
+    const body = {
+      name:              document.getElementById('f-name').value.trim(),
+      directus_url:      document.getElementById('f-directus-url').value.trim(),
+      directus_token:    document.getElementById('f-token').value.trim() || null,
+      website_url:       document.getElementById('f-website-url').value.trim() || null,
+      directus_email:    document.getElementById('f-email').value.trim() || null,
+      directus_password: document.getElementById('f-password').value || null,
+    };
+    if (!body.name || !body.directus_url) { alert('Name und Directus URL sind Pflichtfelder.'); return; }
+    const url = editingId ? `/instances/${editingId}` : '/instances';
+    const res = await fetch(url, {
+      method: editingId ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { alert('Fehler beim Speichern.'); return; }
+    await loadInstances();
+    cancelForm();
+  }
+  async function deleteInst(id) {
+    if (!confirm('Instanz wirklich löschen?')) return;
+    await fetch(`/instances/${id}`, { method: 'DELETE' });
+    if (activeInst?.id === id) { activeInst = null; updateChip(); input.disabled = true; sendBtn.disabled = true; }
+    await loadInstances();
+  }
+
+  // ── Overlay click-outside ──────────────────────────────────────────
+  function onOverlayClick(e, id) {
+    if (e.target.id === id) {
+      if (id === 'start-overlay') closeStart();
+      else closeSettings();
+    }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
   input.addEventListener('input', () => {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 180) + 'px';
   });
-
-  /* ── Enter to send ── */
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
 
-  input.focus();
+  // ── Init ───────────────────────────────────────────────────────────
+  loadInstances().then(() => openStart(false));
 </script>
 </body>
 </html>

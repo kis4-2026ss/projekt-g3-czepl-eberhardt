@@ -1,0 +1,84 @@
+---
+import type { FitClass, UiCopy } from '../lib/directus';
+import { assetUrl } from '../lib/directus';
+import Difficulty from './Difficulty.astro';
+
+interface Props {
+  item: FitClass;
+  ui: UiCopy;
+  showSchedule?: boolean;
+}
+const { item, ui, showSchedule = false } = Astro.props;
+---
+
+<article
+  data-cms-collection="classes"
+  data-cms-id={String(item.id)}
+  class="card card-hover group overflow-hidden flex flex-col">
+  <div class="aspect-[16/10] overflow-hidden bg-fs-surface relative">
+    {item.image
+      ? <img src={assetUrl(item.image, 'width=900&quality=80&fit=cover')}
+             alt={item.image_alt || item.name}
+             data-cms-field="image"
+             class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+      : <div class="w-full h-full bg-gradient-to-br from-fs-blue-bg to-fs-surface"></div>}
+  </div>
+
+  <div class="p-6 sm:p-7 flex flex-col flex-1">
+    {item.category && (
+      <p data-cms-collection="class_categories"
+         data-cms-id={String(item.category.id)}
+         data-cms-field="name"
+         class="pill self-start mb-3">{item.category.name}</p>
+    )}
+    <h3 data-cms-field="name"
+        class="font-display font-bold text-fs-dark text-lg leading-snug mb-2">
+      {item.name}
+    </h3>
+    <div class="flex items-center gap-4 text-sm text-fs-muted mb-3">
+      <span class="inline-flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span data-cms-field="duration_min">{item.duration_min}</span>
+        <span data-cms-collection="ui_copy" data-cms-field="minutes_label">{ui.minutes_label}</span>
+      </span>
+      <span class="text-fs-border">·</span>
+      <Difficulty level={item.difficulty} ui={ui} />
+    </div>
+    {item.description && (
+      <p data-cms-field="description" class="text-fs-muted text-sm leading-relaxed line-clamp-3 mb-5">
+        {item.description}
+      </p>
+    )}
+
+    {showSchedule && (item.trainer_name || item.schedule_note) && (
+      <ul class="grid grid-cols-1 gap-1.5 mt-auto pt-4 border-t border-fs-border text-sm">
+        {item.trainer_name && (
+          <li class="flex items-center gap-2 text-fs-muted">
+            <svg class="w-4 h-4 flex-shrink-0 text-fs-blue/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 14a4 4 0 10-8 0M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0H5z"/>
+            </svg>
+            <span data-cms-collection="ui_copy" data-cms-field="trainer_label">{ui.trainer_label}</span>
+            <span data-cms-field="trainer_name" class="text-fs-dark font-medium">{item.trainer_name}</span>
+          </li>
+        )}
+        {item.schedule_note && (
+          <li class="flex items-center gap-2 text-fs-muted">
+            <svg class="w-4 h-4 flex-shrink-0 text-fs-blue/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <span data-cms-field="schedule_note" class="text-fs-dark font-medium">{item.schedule_note}</span>
+          </li>
+        )}
+      </ul>
+    )}
+
+    {!showSchedule && (
+      <span class="mt-auto pt-2 inline-flex items-center gap-1.5 text-fs-blue text-sm font-semibold transition-all duration-200 group-hover:gap-2.5">
+        {ui.more_label}
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+      </span>
+    )}
+  </div>
+</article>

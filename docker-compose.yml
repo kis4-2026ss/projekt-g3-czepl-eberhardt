@@ -1,42 +1,32 @@
 services:
-  database:
+  # ── Adlerwirt ─────────────────────────────────────────────────────────────────
+
+  adlerwirt-db:
     image: postgres:16-alpine
-    container_name: directus-db
+    container_name: adlerwirt-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: directus
       POSTGRES_PASSWORD: directus
       POSTGRES_DB: directus
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - adlerwirt_db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U directus -d directus"]
       interval: 5s
       timeout: 5s
       retries: 20
 
-  cache:
-    image: redis:7-alpine
-    container_name: directus-cache
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
-  directus:
+  adlerwirt-directus:
     image: directus/directus:11.1.2
-    container_name: directus
+    container_name: adlerwirt-directus
     restart: unless-stopped
     ports:
       - "8055:8055"
     volumes:
-      - directus_uploads:/directus/uploads
+      - adlerwirt_uploads:/directus/uploads
     depends_on:
-      database:
-        condition: service_healthy
-      cache:
+      adlerwirt-db:
         condition: service_healthy
     environment:
       KEY: "5c5b7f4e-3a0e-4a3d-9b5e-2f3c6d8a1b22"
@@ -46,110 +36,217 @@ services:
       ADMIN_TOKEN: "adlerwirt-dev-token"
       PUBLIC_URL: "http://localhost:8055"
       DB_CLIENT: "pg"
-      DB_HOST: "database"
+      DB_HOST: "adlerwirt-db"
       DB_PORT: "5432"
       DB_DATABASE: "directus"
       DB_USER: "directus"
       DB_PASSWORD: "directus"
-      CACHE_STORE: "redis"
-      CACHE_ENABLED: "false"
-      REDIS: "redis://cache:6379"
       WEBSOCKETS_ENABLED: "true"
 
-  website:
-    image: node:22-alpine
-    container_name: adlerwirt-web
+  adlerwirt-website:
+    build: ./adlerwirt/website
+    container_name: adlerwirt-website
     restart: unless-stopped
-    working_dir: /app
     volumes:
-      - ./website:/app
-      - website_node_modules:/app/node_modules
+      - ./adlerwirt/website:/app
+      - adlerwirt_website_modules:/app/node_modules
     ports:
       - "4321:4321"
     depends_on:
-      - directus
+      - adlerwirt-directus
     environment:
-      DIRECTUS_URL: "http://directus:8055"
+      DIRECTUS_URL: "http://adlerwirt-directus:8055"
       PUBLIC_DIRECTUS_URL: "http://localhost:8055"
       DIRECTUS_TOKEN: "adlerwirt-dev-token"
       ADMIN_EMAIL: "admin@gmail.at"
       ADMIN_PASSWORD: "admin"
-    command: sh /app/docker-start.sh
 
-  website-preview:
-    image: node:22-alpine
-    container_name: agent-web-preview
+  adlerwirt-website-preview:
+    build: ./adlerwirt/website
+    container_name: adlerwirt-website-preview
     restart: unless-stopped
-    working_dir: /app
     volumes:
-      - ./website:/app
-      - website_preview_node_modules:/app/node_modules
+      - ./adlerwirt/website:/app
+      - adlerwirt_preview_modules:/app/node_modules
     depends_on:
-      - mcp-server
+      - adlerwirt-mcp
     environment:
-      DIRECTUS_URL: "http://mcp-server:3001/directus-proxy"
+      DIRECTUS_URL: "http://adlerwirt-mcp:3001/directus-proxy"
       PUBLIC_DIRECTUS_URL: "http://localhost:8055"
       DIRECTUS_TOKEN: "adlerwirt-dev-token"
       ADMIN_EMAIL: "admin@gmail.at"
       ADMIN_PASSWORD: "admin"
-    command: sh /app/docker-start.sh
 
-  mcp-server:
+  adlerwirt-mcp:
     build: ./mcp-server
-    container_name: directus-mcp-server
+    container_name: adlerwirt-mcp
     restart: unless-stopped
     ports:
       - "3001:3001"
       - "4322:4322"
     depends_on:
-      - directus
+      - adlerwirt-directus
     environment:
-      DIRECTUS_URL: "http://directus:8055"
+      DIRECTUS_URL: "http://adlerwirt-directus:8055"
       DIRECTUS_EMAIL: "admin@gmail.at"
       DIRECTUS_PASSWORD: "admin"
       PORT: "3001"
       WEBSITE_URL: "http://localhost:4321"
       PREVIEW_WEBSITE_URL: "http://localhost:4322"
-      PREVIEW_WEBSITE_INTERNAL_URL: "http://website-preview:4321"
+      PREVIEW_WEBSITE_INTERNAL_URL: "http://adlerwirt-website-preview:4321"
       PREVIEW_PROXY_PORT: "4322"
       MCP_PUBLIC_URL: "http://localhost:3001"
 
-  agent-api:
+  agent:
     build: ./agent
-    container_name: agent-api
+    container_name: agent
     restart: unless-stopped
     ports:
       - "8000:8000"
     depends_on:
-      - mcp-server
+      - adlerwirt-mcp
+      - fitcore-mcp
+    volumes:
+      - agent_data:/app/data
     env_file:
       - ./agent/.env.example
     environment:
-      MCP_URL: "http://mcp-server:3001/mcp"
       PORT: "8000"
+      MCP_URL: "http://adlerwirt-mcp:3001/mcp"
 
-  seed:
-    image: python:3.12-alpine
-    container_name: directus-seed
+  adlerwirt-seed:
+    build: ./adlerwirt/seed
+    container_name: adlerwirt-seed
     depends_on:
-      - directus
+      - adlerwirt-directus
     volumes:
-      - ./seed:/seed:ro
-      - ./seed/images:/seed/images:ro
-    working_dir: /seed
+      - ./adlerwirt/seed:/seed:ro
     environment:
-      DIRECTUS_URL: "http://directus:8055"
+      DIRECTUS_URL: "http://adlerwirt-directus:8055"
       ADMIN_EMAIL: "admin@gmail.at"
       ADMIN_PASSWORD: "admin"
       PYTHONUNBUFFERED: "1"
-    command:
-      - "sh"
-      - "-c"
-      - "pip install --quiet --no-cache-dir requests && python /seed/seed.py"
+    restart: "no"
+
+  # ── FitCore Studio ────────────────────────────────────────────────────────────
+
+  fitcore-db:
+    image: postgres:16-alpine
+    container_name: fitcore-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: directus
+      POSTGRES_PASSWORD: directus
+      POSTGRES_DB: directus
+    volumes:
+      - fitcore_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U directus -d directus"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  fitcore-directus:
+    image: directus/directus:11.1.2
+    container_name: fitcore-directus
+    restart: unless-stopped
+    ports:
+      - "8056:8055"
+    volumes:
+      - fitcore_uploads:/directus/uploads
+    depends_on:
+      fitcore-db:
+        condition: service_healthy
+    environment:
+      KEY: "f1tc0re-key-3a0e-4a3d-9b5e-2f3c6d8a1b22"
+      SECRET: "f1tc0re-secret-7b8a-4d3e-a5c6-1b2d3e4f5a67"
+      ADMIN_EMAIL: "admin@fitcore.studio"
+      ADMIN_PASSWORD: "admin"
+      ADMIN_TOKEN: "fitcore-dev-token"
+      PUBLIC_URL: "http://localhost:8056"
+      DB_CLIENT: "pg"
+      DB_HOST: "fitcore-db"
+      DB_PORT: "5432"
+      DB_DATABASE: "directus"
+      DB_USER: "directus"
+      DB_PASSWORD: "directus"
+      WEBSOCKETS_ENABLED: "true"
+
+  fitcore-website:
+    build: ./fitnessstudio/website
+    container_name: fitcore-website
+    restart: unless-stopped
+    volumes:
+      - ./fitnessstudio/website:/app
+      - fitcore_website_modules:/app/node_modules
+    ports:
+      - "4323:4321"
+    depends_on:
+      - fitcore-directus
+    environment:
+      DIRECTUS_URL: "http://fitcore-directus:8055"
+      PUBLIC_DIRECTUS_URL: "http://localhost:8056"
+      DIRECTUS_TOKEN: "fitcore-dev-token"
+      ADMIN_EMAIL: "admin@fitcore.studio"
+      ADMIN_PASSWORD: "admin"
+
+  fitcore-website-preview:
+    build: ./fitnessstudio/website
+    container_name: fitcore-website-preview
+    restart: unless-stopped
+    volumes:
+      - ./fitnessstudio/website:/app
+      - fitcore_preview_modules:/app/node_modules
+    depends_on:
+      - fitcore-mcp
+    environment:
+      DIRECTUS_URL: "http://fitcore-mcp:3002/directus-proxy"
+      PUBLIC_DIRECTUS_URL: "http://localhost:8056"
+      DIRECTUS_TOKEN: "fitcore-dev-token"
+      ADMIN_EMAIL: "admin@fitcore.studio"
+      ADMIN_PASSWORD: "admin"
+
+  fitcore-mcp:
+    build: ./mcp-server
+    container_name: fitcore-mcp
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+      - "4324:4324"
+    depends_on:
+      - fitcore-directus
+    environment:
+      DIRECTUS_URL: "http://fitcore-directus:8055"
+      DIRECTUS_EMAIL: "admin@fitcore.studio"
+      DIRECTUS_PASSWORD: "admin"
+      PORT: "3002"
+      WEBSITE_URL: "http://localhost:4323"
+      PREVIEW_WEBSITE_URL: "http://localhost:4324"
+      PREVIEW_WEBSITE_INTERNAL_URL: "http://fitcore-website-preview:4321"
+      PREVIEW_PROXY_PORT: "4324"
+      MCP_PUBLIC_URL: "http://localhost:3002"
+
+  fitcore-seed:
+    build: ./fitnessstudio/seed
+    container_name: fitcore-seed
+    depends_on:
+      - fitcore-directus
+    volumes:
+      - ./fitnessstudio/seed:/seed:ro
+    environment:
+      DIRECTUS_URL: "http://fitcore-directus:8055"
+      ADMIN_EMAIL: "admin@fitcore.studio"
+      ADMIN_PASSWORD: "admin"
+      PYTHONUNBUFFERED: "1"
     restart: "no"
 
 volumes:
-  db_data:
-  directus_uploads:
-  website_node_modules:
-  website_preview_node_modules:
+  adlerwirt_db:
+  adlerwirt_uploads:
+  adlerwirt_website_modules:
+  adlerwirt_preview_modules:
+  fitcore_db:
+  fitcore_uploads:
+  fitcore_website_modules:
+  fitcore_preview_modules:
+  agent_data:

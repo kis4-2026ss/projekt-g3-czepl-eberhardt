@@ -1,0 +1,63 @@
+[
+  {
+    "name": "Basic",
+    "tagline": "Für alle, die einfach trainieren wollen.",
+    "price_monthly": 29.00,
+    "billing_note": "pro Monat",
+    "features": [
+      {"label": "Zugang zu allen Geräten", "included": true},
+      {"label": "Umkleide & Duschen",       "included": true},
+      {"label": "Kostenfreies WLAN",        "included": true},
+      {"label": "Trinkflaschen-Station",    "included": true},
+      {"label": "Gruppenkurse",             "included": false},
+      {"label": "Sauna & Wellness",         "included": false},
+      {"label": "24h-Zugang",               "included": false}
+    ],
+    "is_highlighted": false,
+    "highlight_label": "",
+    "cta_label": "Basic wählen",
+    "cta_link": "/kontakt?plan=basic",
+    "sort": 1
+  },
+  {
+    "name": "Premium",
+    "tagline": "Unser meistgewählter Tarif.",
+    "price_monthly": 49.00,
+    "billing_note": "pro Monat",
+    "features": [
+      {"label": "Zugang zu allen Geräten",  "included": true},
+      {"label": "Umkleide & Duschen",        "included": true},
+      {"label": "Alle Gruppenkurse inklusive","included": true},
+      {"label": "Sauna & Dampfbad",          "included": true},
+      {"label": "1× Personal-Training/Monat","included": true},
+      {"label": "Trainingsplan inkl. App",   "included": true},
+      {"label": "24h-Zugang",                "included": false}
+    ],
+    "is_highlighted": true,
+    "highlight_label": "Beliebt",
+    "cta_label": "Premium wählen",
+    "cta_link": "/kontakt?plan=premium",
+    "sort": 2
+  },
+  {
+    "name": "Elite",
+    "tagline": "Alles drin. Immer für dich da.",
+    "price_monthly": 79.00,
+    "billing_note": "pro Monat",
+    "features": [
+      {"label": "Zugang zu allen Geräten",        "included": true},
+      {"label": "Umkleide & Duschen",              "included": true},
+      {"label": "Alle Gruppenkurse inklusive",     "included": true},
+      {"label": "Sauna & Wellness",                "included": true},
+      {"label": "2× Personal-Training/Monat",      "included": true},
+      {"label": "Ernährungsberatung",              "included": true},
+      {"label": "24h-Zugang",                      "included": true},
+      {"label": "Handtuch- & Wäscheservice",       "included": true}
+    ],
+    "is_highlighted": false,
+    "highlight_label": "",
+    "cta_label": "Elite wählen",
+    "cta_link": "/kontakt?plan=elite",
+    "sort": 3
+  }
+]

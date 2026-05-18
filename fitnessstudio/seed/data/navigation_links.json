@@ -1,0 +1,6 @@
+[
+  { "href": "/",                "label": "Startseite",     "sort": 1 },
+  { "href": "/kurse",           "label": "Kurse",          "sort": 2 },
+  { "href": "/mitgliedschaft",  "label": "Mitgliedschaft", "sort": 3 },
+  { "href": "/kontakt",         "label": "Kontakt",        "sort": 4 }
+]

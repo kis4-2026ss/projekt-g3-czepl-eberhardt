@@ -1,0 +1,110 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PricingCard from '../components/PricingCard.astro';
+import {
+  getMembershipPlans, getFaqItems, getUiCopy, getMitgliedschaftCopy,
+} from '../lib/directus';
+
+const [plans, faqs, ui, copy] = await Promise.all([
+  getMembershipPlans(), getFaqItems(), getUiCopy(), getMitgliedschaftCopy(),
+]);
+---
+
+<Layout title={copy.title} description={copy.lead}>
+
+  <!-- Page header -->
+  <section class="bg-fs-surface border-b border-fs-border">
+    <div class="max-w-4xl mx-auto px-5 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-14 text-center fade-up">
+      <span class="eyebrow" data-cms-collection="mitgliedschaft_copy" data-cms-field="eyebrow">{copy.eyebrow}</span>
+      <h1 class="display font-display font-extrabold text-fs-dark text-4xl sm:text-5xl lg:text-6xl mt-5 leading-[1.05] tracking-tight-2"
+          data-cms-collection="mitgliedschaft_copy" data-cms-field="title">
+        {copy.title}
+      </h1>
+      <p class="mt-5 text-fs-blue text-xl font-medium"
+         data-cms-collection="mitgliedschaft_copy" data-cms-field="subtitle">
+        {copy.subtitle}
+      </p>
+      {copy.lead && (
+        <p class="mt-4 text-fs-muted text-base leading-relaxed max-w-2xl mx-auto"
+           data-cms-collection="mitgliedschaft_copy" data-cms-field="lead">
+          {copy.lead}
+        </p>
+      )}
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section class="section bg-fs-white">
+    <div class="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto pt-4">
+        {plans.map((p, i) => (
+          <div class={`fade-up delay-${(i + 1) * 100}`}>
+            <PricingCard plan={p} ui={ui} variant="full" />
+          </div>
+        ))}
+      </div>
+      <p class="text-center mt-8 text-fs-muted text-sm fade-up delay-300"
+         data-cms-collection="mitgliedschaft_copy" data-cms-field="footnote">
+        {copy.footnote}
+      </p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section bg-fs-surface">
+    <div class="max-w-3xl mx-auto px-5 sm:px-6 lg:px-8">
+      <div class="text-center mb-10 fade-up">
+        <span class="eyebrow" data-cms-collection="mitgliedschaft_copy" data-cms-field="faq_eyebrow">{copy.faq_eyebrow}</span>
+        <h2 class="font-display font-extrabold text-fs-dark text-3xl sm:text-4xl mt-4 leading-tight tracking-tight-2"
+            data-cms-collection="mitgliedschaft_copy" data-cms-field="faq_title">
+          {copy.faq_title}
+        </h2>
+      </div>
+
+      <div class="bg-white border border-fs-border rounded-2xl divide-y divide-fs-border overflow-hidden fade-up delay-100">
+        {faqs.map((item) => (
+          <details
+            data-cms-collection="faq_items"
+            data-cms-id={String(item.id)}
+            class="group">
+            <summary class="cursor-pointer select-none px-6 sm:px-7 py-5 flex items-center justify-between gap-4 list-none">
+              <span data-cms-field="question" class="font-semibold text-fs-dark text-[15px] leading-snug">{item.question}</span>
+              <svg class="w-5 h-5 flex-shrink-0 text-fs-muted transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </summary>
+            <div class="px-6 sm:px-7 pb-6 pt-0 -mt-1">
+              <p data-cms-field="answer" class="text-fs-muted text-[15px] leading-relaxed">{item.answer}</p>
+            </div>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Trial banner -->
+  <section class="section-tight bg-fs-white">
+    <div class="max-w-3xl mx-auto px-5 sm:px-6 lg:px-8 fade-up">
+      <div class="bg-fs-blue text-white rounded-2xl px-7 sm:px-10 py-8 sm:py-9 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
+             style="background-image:radial-gradient(circle,#ffffff 1px,transparent 1px);background-size:24px 24px"></div>
+        <div class="relative">
+          <h3 class="font-display font-extrabold text-2xl sm:text-3xl tracking-tight-2"
+              data-cms-collection="mitgliedschaft_copy" data-cms-field="banner_title">
+            {copy.banner_title}
+          </h3>
+          <p class="mt-2 text-white/85"
+             data-cms-collection="mitgliedschaft_copy" data-cms-field="banner_text">
+            {copy.banner_text}
+          </p>
+        </div>
+        <a href={copy.banner_link || '/kontakt'}
+           data-cms-collection="mitgliedschaft_copy" data-cms-field="banner_cta"
+           class="relative inline-flex items-center justify-center gap-2 bg-white text-fs-blue font-medium rounded-lg px-5 py-3 text-sm hover:bg-fs-blue-bg transition-colors whitespace-nowrap">
+          {copy.banner_cta}
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>
