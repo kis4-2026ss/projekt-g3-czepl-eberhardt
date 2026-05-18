@@ -120,6 +120,17 @@
       font-feature-settings: 'ss01', 'cv11';
       overflow: hidden;
       overscroll-behavior: none;
+      /* Smoothly cross-fade between light and dark themes so toggling
+         doesn't feel like a hard cut. Limited to the few elements that
+         actually shift backgrounds — animating everything is too costly. */
+      transition: background var(--t-med), color var(--t-med);
+    }
+    .sidebar, .main, .topbar, .composer, .composer-region, .preview-panel,
+    .preview-head, .preview-body, .preview-iframe, .msg-content,
+    .preview-row, .preview-group, .pg-head, .tool-badge {
+      transition-property: background, color, border-color;
+      transition-duration: var(--t-med);
+      transition-timing-function: cubic-bezier(.2,.6,.3,1);
     }
 
     body::before {
@@ -369,6 +380,40 @@
     .history-item.active .h-del { opacity: 1; }
     .history-item .h-del:hover { background: var(--err-soft); color: var(--err); }
     .history-item .h-del svg { width: 12px; height: 12px; }
+    /* "N pending changes" indicator on each chat. Always visible when count > 0;
+       hidden on hover so the delete button has room. */
+    .history-item .h-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: var(--radius-pill);
+      border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+      transition: opacity var(--t-fast);
+    }
+    .history-item:hover .h-badge { opacity: 0; }
+
+    /* Time-bucket headers in the chat list. */
+    .history-group {
+      padding: .6rem .6rem .2rem;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink-4);
+      margin-top: .25rem;
+    }
+    .history-group:first-child { margin-top: 0; }
 
     .sidebar-foot {
       border-top: 1px solid var(--line);
@@ -430,11 +475,21 @@
       padding-right: 1rem;
     }
     .topbar-title .crumb {
-      color: var(--ink-4);
-      margin: 0 .4rem;
+      color: var(--ink-5);
+      margin: 0 .35rem;
+      font-weight: 400;
     }
     .topbar-title .crumb-inst {
       color: var(--ink-3);
+    }
+    .topbar-title .crumb-chat {
+      color: var(--ink);
+      font-weight: 500;
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: inline-block;
+      vertical-align: bottom;
     }
     .topbar-actions { display: flex; align-items: center; gap: .25rem; }
 
@@ -513,8 +568,37 @@
     .welcome-sub {
       font-size: 15px;
       color: var(--ink-3);
-      max-width: 480px;
-      line-height: 1.55;
+      max-width: 540px;
+      line-height: 1.6;
+    }
+    .welcome-shortcuts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px dashed var(--line);
+    }
+    .welcome-shortcut {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: 12px;
+      color: var(--ink-4);
+      letter-spacing: -.002em;
+    }
+    .welcome-shortcut kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      color: var(--ink-3);
+      line-height: 1.4;
+      box-shadow: 0 1px 0 var(--line);
     }
 
     .suggestions {
@@ -780,18 +864,18 @@
     .tool-badge {
       display: inline-flex;
       align-items: center;
-      gap: .35rem;
-      padding: .2rem .55rem .2rem .45rem;
+      gap: .4rem;
+      padding: .22rem .6rem .22rem .5rem;
       border-radius: var(--radius-pill);
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 500;
-      letter-spacing: -.002em;
+      letter-spacing: -.003em;
       background: var(--warn-soft);
       color: var(--warn);
-      border: 1px solid color-mix(in srgb, var(--warn) 25%, transparent);
+      border: 1px solid color-mix(in srgb, var(--warn) 22%, transparent);
       white-space: nowrap;
-      font-family: var(--font-mono);
-      font-variant-numeric: tabular-nums;
+      font-family: var(--font-body);
+      transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
     }
     .tool-badge.done {
       background: var(--ok-soft);
@@ -886,6 +970,19 @@
       overflow: hidden;
       box-shadow: var(--shadow-1);
       animation: msg-in 280ms cubic-bezier(.2,.6,.3,1);
+      transition: opacity var(--t-med), background var(--t-med);
+    }
+    /* When every change in a group has been processed, dim the group so
+       the user's attention moves to fresher content lower in the chat. */
+    .preview-group.all-done {
+      background: var(--paper);
+      box-shadow: none;
+    }
+    .preview-group.all-done .pg-head {
+      background: var(--paper);
+    }
+    .preview-group.all-done .pg-label {
+      color: var(--ink-3);
     }
     .pg-head {
       display: flex;
@@ -934,47 +1031,124 @@
     .preview-row {
       display: flex;
       flex-direction: column;
-      padding: .65rem .85rem;
+      padding: .55rem .85rem;
       border-bottom: 1px solid var(--line);
-      transition: background var(--t-fast);
+      transition: background var(--t-fast), padding var(--t-fast);
     }
     .preview-row:last-child { border-bottom: none; }
-    .preview-row.removed { opacity: .55; filter: saturate(.55); }
 
-    .pr-link-top {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: .45rem;
+    /* Once an action is applied/discarded, the row collapses to a slim
+       one-liner with a colored status pill — kept in the chat as a
+       receipt so the user can see what happened. */
+    .preview-row.removed {
+      padding: .45rem .85rem;
+      background: var(--paper);
     }
-    .pr-link-top a {
-      display: inline-flex;
-      align-items: center;
-      gap: .3rem;
-      padding: .1rem .35rem;
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--ink-4);
-      text-decoration: none;
-      letter-spacing: .002em;
-      border-radius: var(--radius-1);
-      transition: color var(--t-fast), background var(--t-fast);
-    }
-    .pr-link-top a:hover {
-      color: var(--accent);
-      background: var(--accent-soft);
-    }
-    .pr-link-top svg {
-      width: 10px; height: 10px;
-      transition: transform var(--t-fast);
-    }
-    .pr-link-top a:hover svg { transform: translate(1px, -1px); }
-
-    .pr-head {
+    .preview-row.removed > *:not(.pr-collapsed) { display: none; }
+    .pr-collapsed {
       display: flex;
       align-items: center;
       gap: .55rem;
+      font-family: var(--font-body);
+      font-size: 12.5px;
+      letter-spacing: -.003em;
+      color: var(--ink-3);
+      animation: msg-in 280ms cubic-bezier(.2,.6,.3,1);
       flex-wrap: wrap;
     }
+    .pr-coll-icon {
+      width: 18px; height: 18px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .pr-coll-icon svg { width: 10px; height: 10px; }
+    .preview-row.was-confirmed .pr-coll-icon {
+      background: var(--ok);
+      color: #fff;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent);
+    }
+    .preview-row.was-discarded .pr-coll-icon {
+      background: var(--paper-3);
+      color: var(--ink-4);
+    }
+    .pr-coll-msg { font-weight: 600; }
+    .preview-row.was-confirmed .pr-coll-msg { color: var(--ok); }
+    .preview-row.was-discarded .pr-coll-msg { color: var(--ink-3); }
+    .pr-coll-sep { color: var(--ink-5); }
+    .pr-coll-title { color: var(--ink-3); }
+    .pr-coll-title .pr-id {
+      font-family: var(--font-mono);
+      color: var(--ink-4);
+      font-size: 11.5px;
+      margin-left: .2rem;
+    }
+
+    /* Single compact header row: label + title + count on the left,
+       all view actions and decisions clustered on the right. Replaces
+       the previous stacked layout (top-bar + head + dashed footer). */
+    .pr-head {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      flex-wrap: wrap;
+      min-height: 28px;
+    }
+    .pr-meta {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      color: var(--ink-4);
+      padding: 1px 6px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+    .pr-actions {
+      display: flex;
+      align-items: center;
+      gap: .2rem;
+      margin-left: auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .pr-actions-sep {
+      width: 1px;
+      height: 16px;
+      background: var(--line);
+      margin: 0 .25rem;
+      flex-shrink: 0;
+    }
+    .pr-icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      color: var(--ink-4);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-1);
+      text-decoration: none;
+      cursor: pointer;
+      transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+      flex-shrink: 0;
+    }
+    .pr-icon-btn:hover {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+    .pr-icon-btn svg {
+      width: 11px; height: 11px;
+      transition: transform 180ms;
+    }
+    .pr-icon-btn[href]:hover svg { transform: translate(1px, -1px); }
     .pr-label {
       display: inline-flex;
       align-items: center;
@@ -1019,65 +1193,75 @@
       color: var(--ink-4);
       margin-left: .25rem;
     }
-    .pr-toggle {
-      width: 22px; height: 22px;
-      display: grid;
-      place-items: center;
-      border-radius: var(--radius-1);
-      color: var(--ink-4);
-      transition: color var(--t-fast), background var(--t-fast);
-      flex-shrink: 0;
-    }
-    .pr-toggle:hover { color: var(--ink); background: var(--paper-2); }
-    .pr-toggle svg { width: 11px; height: 11px; transition: transform 180ms; }
     .preview-row[data-expanded="true"] .pr-toggle svg { transform: rotate(180deg); }
 
-    .pr-actions { display: flex; gap: .25rem; flex-shrink: 0; }
-    .pr-btn {
+    .pr-btn-quiet {
       display: inline-flex;
       align-items: center;
       gap: .3rem;
       padding: .3rem .6rem;
-      border-radius: var(--radius-1);
       font-family: var(--font-body);
       font-size: 12px;
       font-weight: 500;
       letter-spacing: -.003em;
-      border: 1px solid var(--line);
-      background: var(--paper-card);
-      color: var(--ink-2);
+      color: var(--ink-3);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-1);
       cursor: pointer;
-      transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), transform var(--t-fast), opacity var(--t-fast);
-      text-decoration: none;
-      line-height: 1.3;
+      transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), opacity var(--t-fast);
+      line-height: 1.2;
     }
-    .pr-btn svg { width: 11px; height: 11px; flex-shrink: 0; }
-    .pr-btn:hover:not(:disabled) { background: var(--paper-2); border-color: var(--line-strong); color: var(--ink); }
-    .pr-btn:disabled { opacity: .45; cursor: not-allowed; }
-    .pr-btn.is-confirm {
-      background: var(--ok);
-      color: #fff;
-      border-color: var(--ok);
-    }
-    .pr-btn.is-confirm:hover:not(:disabled) {
-      filter: brightness(.94);
-      color: #fff;
-      background: var(--ok);
-      border-color: var(--ok);
-    }
-    .pr-btn.is-discard {
-      background: var(--paper-card);
-      color: var(--err);
-      border-color: color-mix(in srgb, var(--err) 32%, var(--line));
-    }
-    .pr-btn.is-discard:hover:not(:disabled) {
+    .pr-btn-quiet:hover:not(:disabled) {
       background: var(--err-soft);
-      border-color: var(--err);
       color: var(--err);
+      border-color: color-mix(in srgb, var(--err) 22%, transparent);
+    }
+    .pr-btn-quiet:disabled { opacity: .45; cursor: not-allowed; }
+    .pr-btn-quiet svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+    .pr-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .32rem .75rem;
+      font-family: var(--font-body);
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: -.003em;
+      color: #fff;
+      background: var(--ok);
+      border: 1px solid var(--ok);
+      border-radius: var(--radius-1);
+      cursor: pointer;
+      transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast), opacity var(--t-fast);
+      line-height: 1.2;
+      box-shadow: 0 1px 2px color-mix(in srgb, var(--ok) 30%, transparent);
+    }
+    .pr-btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--ok) 32%, transparent);
+      background: color-mix(in srgb, var(--ok) 92%, #000);
+      border-color: color-mix(in srgb, var(--ok) 92%, #000);
+    }
+    .pr-btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .pr-btn-primary:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+    .pr-btn-primary svg { width: 12px; height: 12px; flex-shrink: 0; }
+    .pr-btn-primary.pending svg { animation: pp-spin 900ms linear infinite; }
+    @keyframes pp-spin { to { transform: rotate(360deg); } }
+
+    /* Success ripple on confirm — runs once before the row collapses. */
+    .preview-row.confirming {
+      animation: pr-ripple 600ms cubic-bezier(.2,.6,.3,1);
+    }
+    @keyframes pr-ripple {
+      0%   { background: var(--paper-card); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 30%, transparent); }
+      30%  { background: color-mix(in srgb, var(--ok) 16%, var(--paper-card)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent); }
+      100% { background: var(--paper-card); box-shadow: 0 0 0 0 transparent; }
     }
 
     .pr-body {
-      margin-top: .55rem;
+      margin-top: .45rem;
       overflow: hidden;
     }
     .preview-row[data-expanded="false"] .pr-body { display: none; }
@@ -1097,7 +1281,7 @@
       grid-template-columns: minmax(110px, 1fr) 1.4fr 16px 1.4fr;
       gap: .4rem;
       align-items: start;
-      padding: .4rem .7rem;
+      padding: .3rem .65rem;
       border-bottom: 1px solid var(--line);
     }
     .pr-diff-row:last-child { border-bottom: none; }
@@ -1163,10 +1347,12 @@
 
     @media (max-width: 680px) {
       .pr-head { gap: .4rem; }
-      .pr-actions { width: 100%; justify-content: flex-end; margin-top: .35rem; }
-      .pr-btn span { display: none; }
-      .pr-btn { padding: .35rem .5rem; }
-      .pr-diff-row { grid-template-columns: 1fr; gap: .2rem; padding: .45rem .65rem; }
+      .pr-actions { gap: .15rem; width: 100%; }
+      .pr-actions-sep { display: none; }
+      .pr-btn-quiet { padding: .3rem .5rem; }
+      .pr-btn-quiet span { display: none; }
+      .pr-btn-primary { padding: .32rem .65rem; font-size: 12.5px; }
+      .pr-diff-row { grid-template-columns: 1fr; gap: .2rem; padding: .35rem .65rem; }
       .prd-arrow { display: none; }
       .prd-field {
         color: var(--ink-4);
@@ -1639,22 +1825,45 @@
       pointer-events: none;
     }
     .toast {
-      padding: .55rem .9rem;
-      border-radius: var(--radius-pill);
-      background: var(--ink);
-      color: var(--paper);
-      font-size: 12.5px;
+      position: relative;
+      padding: .65rem 1rem .65rem .85rem;
+      border-radius: var(--radius-3);
+      background: var(--paper-card);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: -.003em;
       box-shadow: var(--shadow-3);
-      animation: toast-in 280ms cubic-bezier(.2,.6,.3,1);
+      border: 1px solid var(--line);
+      animation: toast-in 320ms cubic-bezier(.2,.6,.3,1);
       display: flex;
       align-items: center;
-      gap: .5rem;
+      gap: .55rem;
+      overflow: hidden;
     }
-    .toast svg { width: 14px; height: 14px; }
-    .toast.ok { background: var(--ok); color: #fff; }
-    .toast.err { background: var(--err); color: #fff; }
+    .toast::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: var(--ink-4);
+    }
+    .toast .toast-icon {
+      width: 22px; height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--paper-2);
+      color: var(--ink-3);
+    }
+    .toast svg { width: 12px; height: 12px; }
+    .toast.ok::before { background: var(--ok); }
+    .toast.ok .toast-icon { background: var(--ok); color: #fff; }
+    .toast.err::before { background: var(--err); }
+    .toast.err .toast-icon { background: var(--err); color: #fff; }
     @keyframes toast-in {
-      from { transform: translateY(10px); opacity: 0; }
+      from { transform: translateY(12px); opacity: 0; }
       to   { transform: none; opacity: 1; }
     }
 
@@ -1732,18 +1941,46 @@
     .preview-url {
       flex: 1;
       min-width: 0;
-      font-family: var(--font-mono);
-      font-size: 11.5px;
-      color: var(--ink-3);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      padding: .25rem .55rem;
-      border-radius: var(--radius-1);
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .35rem .7rem;
+      border-radius: var(--radius-pill);
       background: var(--paper-2);
       border: 1px solid var(--line);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      transition: border-color var(--t-fast);
     }
     .preview-url:empty { display: none; }
+    .preview-url:hover { border-color: var(--line-strong); }
+    .preview-url .pu-status {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--ok);
+      flex-shrink: 0;
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--ok) 18%, transparent);
+    }
+    .preview-url .pu-status.loading {
+      background: var(--accent);
+      animation: pp-pulse 1.4s ease-in-out infinite;
+    }
+    .preview-url .pu-host {
+      color: var(--ink-3);
+      flex-shrink: 0;
+    }
+    .preview-url .pu-sep {
+      color: var(--ink-5);
+      flex-shrink: 0;
+    }
+    .preview-url .pu-path {
+      color: var(--ink);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
 
     .preview-body {
       flex: 1;
@@ -1794,8 +2031,23 @@
     }
     .preview-empty-msg {
       font-size: 12.5px;
-      max-width: 280px;
-      line-height: 1.5;
+      max-width: 320px;
+      line-height: 1.6;
+      color: var(--ink-3);
+    }
+    .preview-empty-msg strong {
+      color: var(--ink-2);
+      font-weight: 600;
+    }
+    .preview-empty-hint {
+      margin-top: 1rem;
+      padding: .35rem .75rem;
+      font-size: 11px;
+      color: var(--ink-4);
+      background: var(--paper-2);
+      border: 1px dashed var(--line);
+      border-radius: var(--radius-pill);
+      letter-spacing: -.002em;
     }
 
     .preview-loading {
@@ -1942,6 +2194,8 @@
       </button>
       <div class="topbar-title" id="topbar-title">
         <span class="crumb-inst">—</span>
+        <span class="crumb crumb-chat-sep" style="display:none">›</span>
+        <span class="crumb-chat" style="display:none"></span>
       </div>
       <div class="topbar-actions">
         <button class="icon-btn preview-toggle" id="preview-toggle" onclick="togglePreviewPanel()" title="Live-Vorschau anzeigen" aria-label="Live-Vorschau" aria-pressed="false">
@@ -2007,7 +2261,8 @@
           <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="16" height="14" rx="2"/><path d="M3 8h16"/></svg>
         </div>
         <div class="preview-empty-title">Live-<em>Vorschau</em></div>
-        <div class="preview-empty-msg">Klicke auf <strong>Vorschau</strong> bei einer Änderung, um sie hier im Kontext der Website zu sehen.</div>
+        <div class="preview-empty-msg">Klicke <strong>Im Panel</strong> auf einer Karte, um die geplante Änderung im Kontext deiner Website zu sehen. Du kannst <strong>Übernehmen</strong> und <strong>Verwerfen</strong> auch direkt in der Vorschau.</div>
+        <div class="preview-empty-hint">↔ Breite anpassen über die linke Kante</div>
       </div>
       <div class="preview-loading" id="preview-loading"><span>lädt</span><span class="dots"><span></span><span></span><span></span></span></div>
     </div>
@@ -2120,21 +2375,21 @@
   // ── Constants ────────────────────────────────────────────────────────
   const AVATAR_COLORS = ['#7c3aed','#0369a1','#0f766e','#b45309','#be185d','#16a34a','#dc2626'];
   const SUGGESTIONS = [
-    { title: 'Collections auflisten', desc: 'Welche Datenmodelle existieren?', icon: 'layers',
-      prompt: 'Liste mir alle Collections und ihre wichtigsten Felder auf.' },
-    { title: 'Inhalte zusammenfassen', desc: 'Überblick über die Website',     icon: 'doc',
-      prompt: 'Gib mir einen Überblick über die aktuellen Inhalte der Website.' },
-    { title: 'Neuen Eintrag anlegen',   desc: 'Strukturiert erstellen',         icon: 'plus',
-      prompt: 'Hilf mir, einen neuen Eintrag anzulegen. Frage nach den Details.' },
-    { title: 'Letzte Änderungen',       desc: 'Was wurde kürzlich aktualisiert?', icon: 'clock',
-      prompt: 'Zeige mir die zuletzt geänderten Einträge.' },
+    { title: 'Überblick verschaffen', desc: 'Welche Inhalte gibt es auf der Website?', icon: 'overview',
+      prompt: 'Gib mir einen kompakten Überblick über alle Collections und ihre wichtigsten Inhalte.' },
+    { title: 'Eintrag bearbeiten', desc: 'Text, Preis oder Status ändern', icon: 'pencil',
+      prompt: 'Ich möchte einen bestehenden Eintrag bearbeiten. Hilf mir, ihn zu finden.' },
+    { title: 'Neues anlegen',  desc: 'Strukturiert mit allen Pflichtfeldern', icon: 'sparkle',
+      prompt: 'Hilf mir, einen neuen Eintrag anzulegen. Frag mich Schritt für Schritt nach den Details.' },
+    { title: 'Mehrere auf einmal', desc: 'Bulk-Aktualisierung über Filter', icon: 'stack',
+      prompt: 'Ich möchte mehrere Einträge gleichzeitig aktualisieren. Welche Filter unterstützt du?' },
   ];
 
   const ICONS = {
-    layers: '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3l8 4-8 4-8-4 8-4z"/><path d="M3 11l8 4 8-4"/><path d="M3 15l8 4 8-4"/></svg>',
-    doc:    '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-4-4z"/><path d="M14 3v4h4"/><path d="M7 11h8M7 14h8M7 8h2"/></svg>',
-    plus:   '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M11 7v8M7 11h8"/></svg>',
-    clock:  '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M11 6v5l3 2"/></svg>',
+    overview: '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="12" y="3" width="7" height="4" rx="1"/><rect x="12" y="9" width="7" height="10" rx="1.5"/><rect x="3" y="12" width="7" height="7" rx="1.5"/></svg>',
+    pencil:   '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5l4 4L9 17H5v-4l9.5-9.5z"/><path d="M13 5l4 4"/></svg>',
+    sparkle:  '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3l1.8 4.5L17 9l-4.2 1.5L11 15l-1.8-4.5L5 9l4.2-1.5L11 3z"/><path d="M17.5 14.5l.7 1.7 1.8.6-1.8.6-.7 1.7-.7-1.7-1.8-.6 1.8-.6.7-1.7z"/></svg>',
+    stack:    '<svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l8-4 8 4-8 4-8-4z"/><path d="M3 11l8 4 8-4"/><path d="M3 15l8 4 8-4"/></svg>',
   };
 
   const AI_AVATAR_SVG = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.4 3.2L12.8 6 10 8l-.8 3.5L8 9.5 6.8 11.5 6 8 3.2 6l3.4-.8L8 2z"/></svg>';
@@ -2216,7 +2471,10 @@
     const w = document.getElementById('toast-wrap');
     const el = document.createElement('div');
     el.className = `toast ${kind}`;
-    el.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${kind==='err' ? '<circle cx="8" cy="8" r="6"/><path d="M8 5v3M8 11h0"/>' : '<path d="M3 8.5l3.5 3.5L13 5"/>'}</svg><span>${esc(msg)}</span>`;
+    const icon = kind === 'err'
+      ? '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v3.5M8 11h0"/></svg>'
+      : '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.5 3.5L13 5"/></svg>';
+    el.innerHTML = `<span class="toast-icon">${icon}</span><span>${esc(msg)}</span>`;
     w.appendChild(el);
     setTimeout(() => {
       el.style.transition = 'opacity 200ms, transform 200ms';
@@ -2318,6 +2576,29 @@
       ctxText.textContent = 'Keine Instanz';
       if (crumb) crumb.textContent = '—';
     }
+    updateTopbarChat();
+  }
+
+  // Show the active chat's title in the topbar (Instance › Chat title).
+  // Hidden when no chat is loaded so the topbar just shows the instance.
+  function updateTopbarChat() {
+    const sep   = document.querySelector('#topbar-title .crumb-chat-sep');
+    const title = document.querySelector('#topbar-title .crumb-chat');
+    if (!sep || !title) return;
+    let chatTitle = '';
+    if (currentChatId && activeInst) {
+      const c = (chats[activeInst.id] || []).find(x => x.id === currentChatId);
+      if (c) chatTitle = c.title;
+    }
+    if (chatTitle) {
+      sep.style.display = '';
+      title.style.display = '';
+      title.textContent = chatTitle;
+      title.title = chatTitle;
+    } else {
+      sep.style.display = 'none';
+      title.style.display = 'none';
+    }
   }
 
   // ── Chats persistence (server-backed) ────────────────────────────────
@@ -2364,13 +2645,34 @@
       list.innerHTML = `<div class="history-empty">${activeInst ? 'Noch keine Chats. Stelle deine erste Frage.' : 'Wähle eine Instanz.'}</div>`;
       return;
     }
-    list.innerHTML = items.map(c => `
-      <div class="history-item ${c.id === currentChatId ? 'active' : ''}" onclick="loadChat('${c.id}')">
-        <span class="h-title">${esc(c.title)}</span>
-        <button class="h-del" onclick="event.stopPropagation();deleteChat('${c.id}')" aria-label="Löschen" title="Chat löschen">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
-        </button>
-      </div>`).join('');
+    // Bucket chats by recency so it's easier to find what you worked on.
+    const now = Date.now();
+    function bucket(ts) {
+      const d = (now - new Date(ts).getTime()) / 1000;
+      if (d < 86400)    return 'Heute';
+      if (d < 172800)   return 'Gestern';
+      if (d < 604800)   return 'Diese Woche';
+      if (d < 2592000)  return 'Diesen Monat';
+      return 'Älter';
+    }
+    const order = ['Heute', 'Gestern', 'Diese Woche', 'Diesen Monat', 'Älter'];
+    const groups = {};
+    for (const c of items) (groups[bucket(c.updated_at)] = groups[bucket(c.updated_at)] || []).push(c);
+    let html = '';
+    for (const k of order) {
+      if (!groups[k]) continue;
+      html += `<div class="history-group">${esc(k)}</div>`;
+      html += groups[k].map(c => `
+        <div class="history-item ${c.id === currentChatId ? 'active' : ''}" onclick="loadChat('${c.id}')">
+          <span class="h-title">${esc(c.title)}</span>
+          ${c.pending_count ? `<span class="h-badge" title="${c.pending_count} ausstehende Änderung${c.pending_count === 1 ? '' : 'en'}">${c.pending_count}</span>` : ''}
+          <button class="h-del" onclick="event.stopPropagation();deleteChat('${c.id}')" aria-label="Löschen" title="Chat löschen">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+          </button>
+        </div>`).join('');
+    }
+    list.innerHTML = html;
+    updateTopbarChat();
   }
 
   // ── Start-chat modal ─────────────────────────────────────────────────
@@ -2410,7 +2712,7 @@
     welcome.innerHTML = `
       <div class="welcome-eyebrow"><span class="line"></span><span class="dot"></span>Atelier · AI Agent</div>
       <h1 class="welcome-h1">Was möchtest du heute<br>in <em>${name}</em> tun?</h1>
-      <div class="welcome-sub">Stelle Fragen zu deinen Inhalten, verwalte Einträge, oder lasse den Agent komplexe Aufgaben über mehrere Schritte ausführen.</div>
+      <div class="welcome-sub">Stelle Fragen zu Inhalten, verwalte Einträge im CMS, oder lasse den Agent komplexe Aufgaben über mehrere Schritte ausführen. Jede Änderung wird vor dem Speichern zur Bestätigung als Karte angezeigt.</div>
       <div class="suggestions">
         ${SUGGESTIONS.map(s => `
           <button class="sugg-card" onclick="useSuggestion(${JSON.stringify(s.prompt).replace(/"/g,'&quot;')})">
@@ -2418,6 +2720,11 @@
             <div class="sc-title">${s.title}</div>
             <div class="sc-desc">${s.desc}</div>
           </button>`).join('')}
+      </div>
+      <div class="welcome-shortcuts">
+        <span class="welcome-shortcut"><kbd>⌘N</kbd> Neuer Chat</span>
+        <span class="welcome-shortcut"><kbd>⌘K</kbd> Instanz wählen</span>
+        <span class="welcome-shortcut"><kbd>↵</kbd> Senden</span>
       </div>
     `;
     msgList.appendChild(welcome);
@@ -2542,7 +2849,7 @@
       <div class="msg-avatar ai">${AI_AVATAR_SVG}</div>
       <div class="msg-body">
         <div class="msg-head"><span class="author"><em>Atelier</em></span><span class="time">${nowStr()}</span></div>
-        ${toolBadges.length ? `<div class="tools-row">${toolBadges.map(t => `<span class="tool-badge done"><span class="pulse"></span>${esc(t)}<svg class="check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.5 2.5L10 3.5"/></svg></span>`).join('')}</div>` : '<div class="tools-row"></div>'}
+        ${toolBadges.length ? `<div class="tools-row">${toolBadges.map(t => `<span class="tool-badge done" data-tool="${esc(t)}"><span class="pulse"></span>${esc(toolLabel(t, true))}<svg class="check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.5 2.5L10 3.5"/></svg></span>`).join('')}</div>` : '<div class="tools-row"></div>'}
         <div class="msg-content">${html}</div>
         <div class="msg-actions">
           <button class="msg-action copy" onclick="copyMessage(this)" title="Antwort kopieren">
@@ -2583,13 +2890,40 @@
     };
   }
 
-  // Tool badges
+  // Tool badges — translate raw MCP tool names into human-readable activity
+  // phrases. Active (present-progressive) while the tool is running, past
+  // tense once finished. Falls back to the raw name for unknown tools.
+  const TOOL_LABELS = {
+    list_collections:      { active: 'Sucht Collections',           done: 'Collections gefunden' },
+    get_collection_fields: { active: 'Liest Felddefinitionen',      done: 'Felder gelesen' },
+    get_schema:            { active: 'Liest Schema',                done: 'Schema gelesen' },
+    read_items:            { active: 'Lädt Einträge',               done: 'Einträge geladen' },
+    read_item:             { active: 'Lädt Eintrag',                done: 'Eintrag geladen' },
+    read_singleton:        { active: 'Lädt Singleton',              done: 'Singleton geladen' },
+    create_item:           { active: 'Bereitet Eintrag vor',        done: 'Eintrag vorbereitet' },
+    update_item:           { active: 'Bereitet Änderung vor',       done: 'Änderung vorbereitet' },
+    update_items:          { active: 'Bereitet Änderungen vor',     done: 'Änderungen vorbereitet' },
+    update_singleton:      { active: 'Bereitet Aktualisierung vor', done: 'Aktualisierung vorbereitet' },
+    delete_item:           { active: 'Bereitet Löschung vor',       done: 'Löschung vorbereitet' },
+    confirm_preview:       { active: 'Wendet Änderung an',          done: 'Angewendet' },
+    confirm_all_previews:  { active: 'Wendet alles an',             done: 'Alle angewendet' },
+    discard_preview:       { active: 'Verwirft Änderung',           done: 'Verworfen' },
+    discard_all_previews:  { active: 'Verwirft alles',              done: 'Alle verworfen' },
+    list_previews:         { active: 'Prüft Änderungs-Status',      done: 'Status geprüft' },
+  };
+  function toolLabel(name, done) {
+    const entry = TOOL_LABELS[name];
+    if (entry) return done ? entry.done : entry.active;
+    return name; // fall back to raw name for tools we don't know about
+  }
+
   const activeBadges = {};
   const nameQueue = {};
   function toolStart(el, runId, name) {
     const b = document.createElement('span');
     b.className = 'tool-badge';
-    b.innerHTML = `<span class="pulse"></span>${esc(name)}`;
+    b.dataset.tool = name;
+    b.innerHTML = `<span class="pulse"></span>${esc(toolLabel(name, false))}`;
     el.appendChild(b);
     if (runId) activeBadges[runId] = b;
     else (nameQueue[name] = nameQueue[name] || []).push(b);
@@ -2601,7 +2935,7 @@
     else if (nameQueue[name] && nameQueue[name].length) { b = nameQueue[name].shift(); }
     if (!b) return;
     b.classList.add('done');
-    b.innerHTML = `<span class="pulse"></span>${esc(name)}<svg class="check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.5 2.5L10 3.5"/></svg>`;
+    b.innerHTML = `<span class="pulse"></span>${esc(toolLabel(name, true))}<svg class="check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.5 2.5L10 3.5"/></svg>`;
   }
   function enhanceCodeBlocks(scope) {
     scope.querySelectorAll('pre').forEach(pre => {
@@ -2672,21 +3006,41 @@
     try { localStorage.setItem('atelier:preview-open', open ? '1' : '0'); } catch {}
   }
 
+  function renderPreviewUrl(url, loading) {
+    if (!url) { previewUrlEl.innerHTML = ''; return; }
+    let host = '', path = '';
+    try {
+      const u = new URL(url);
+      // Drop the session subdomain prefix — that's a routing detail the
+      // user shouldn't have to see ("c9ab6bd….localhost" → "localhost").
+      host = u.host.replace(/^[^.]+\./, '');
+      // Strip our own pb_focus query param so the bar looks clean.
+      const params = new URLSearchParams(u.search);
+      params.delete('pb_focus');
+      const search = params.toString();
+      path = u.pathname + (search ? `?${search}` : '');
+    } catch {
+      path = url;
+    }
+    previewUrlEl.innerHTML = `
+      <span class="pu-status ${loading ? 'loading' : ''}"></span>
+      ${host ? `<span class="pu-host">${esc(host)}</span><span class="pu-sep">·</span>` : ''}
+      <span class="pu-path">${esc(path || '/')}</span>
+    `;
+  }
+  // Kept for backward-compat — tooltips that use it just get the plain string.
   function shortPreviewLabel(url) {
     if (!url) return '';
     try {
       const u = new URL(url);
-      // Drop the session subdomain prefix for legibility — what the user
-      // cares about is the page, not the routing trick behind it.
-      const host = u.host.replace(/^[^.]+\./, '');
-      return host + u.pathname + (u.search || '');
+      return u.host.replace(/^[^.]+\./, '') + u.pathname;
     } catch { return url; }
   }
 
   function openPreviewPanel(url) {
     if (!url) return;
     currentPreviewUrl = url;
-    previewUrlEl.textContent = shortPreviewLabel(url);
+    renderPreviewUrl(url, true);
     previewLoading.classList.add('show');
     previewEmpty.classList.add('hidden');
     previewIframe.classList.remove('hidden');
@@ -2717,6 +3071,7 @@
   function reloadPreviewPanel() {
     if (!currentPreviewUrl) return;
     previewLoading.classList.add('show');
+    renderPreviewUrl(currentPreviewUrl, true);
     // Setting .src to the same value still triggers a reload in all browsers.
     previewIframe.src = currentPreviewUrl;
   }
@@ -2728,6 +3083,9 @@
 
   previewIframe.addEventListener('load', () => {
     previewLoading.classList.remove('show');
+    // Flip the URL-bar status dot from "loading" (accent pulse) to "ready"
+    // (steady green) so the user sees the page has settled.
+    if (currentPreviewUrl) renderPreviewUrl(currentPreviewUrl, false);
   });
 
   // ── Drag-to-resize ──
@@ -2860,16 +3218,24 @@
     row.className = 'preview-row';
     row.dataset.token    = p.token;
     row.dataset.expanded = String(expanded);
+    // Single compact header row holds everything: label/title/count on the
+    // left, view actions + toggle + decisions clustered on the right.
+    // Diff body sits below; status pill appears only on error.
+    const metaTxt = fields > 0 ? `${fields} ${fields === 1 ? 'Feld' : 'Felder'}` : '';
+    const hasViewActions = !!p.preview_url || !!body;
     row.innerHTML = `
-      ${p.preview_url ? `<div class="pr-link-top"><a href="${esc(p.preview_url)}" target="_blank" rel="noopener" title="Vorschau in neuem Browser-Tab öffnen">${PV_SVG_EXT}<span>In neuem Tab öffnen</span></a></div>` : ''}
       <div class="pr-head">
         <span class="pr-label ${cls}">${esc(lbl)}</span>
         <span class="pr-title">${esc(p.collection || '')}${idTxt}</span>
-        ${body ? `<button class="pr-toggle" data-pv-toggle aria-expanded="${expanded}" title="${expanded ? 'Diff einklappen' : 'Diff ausklappen'}">${PV_SVG_CARET}</button>` : ''}
+        ${metaTxt ? `<span class="pr-meta">${esc(metaTxt)}</span>` : ''}
         <div class="pr-actions">
-          ${p.preview_url ? `<button class="pr-btn pr-preview" data-pv-preview="${esc(p.preview_url)}" title="Im Vorschau-Panel anzeigen">${PV_SVG_PREVIEW}<span>Im Panel</span></button>` : ''}
-          <button class="pr-btn is-confirm" data-pv-confirm="${esc(p.token)}" title="Änderung anwenden und speichern">${PV_SVG_CHECK}<span>Anwenden</span></button>
-          <button class="pr-btn is-discard" data-pv-discard="${esc(p.token)}" title="Änderung verwerfen">${PV_SVG_X}<span>Verwerfen</span></button>
+          ${p.preview_url ? `
+            <button class="pr-icon-btn" data-pv-preview="${esc(p.preview_url)}" title="Im Vorschau-Panel öffnen">${PV_SVG_PREVIEW}</button>
+            <a class="pr-icon-btn" href="${esc(p.preview_url)}" target="_blank" rel="noopener" title="In neuem Browser-Tab öffnen">${PV_SVG_EXT}</a>` : ''}
+          ${body ? `<button class="pr-icon-btn pr-toggle" data-pv-toggle aria-expanded="${expanded}" title="${expanded ? 'Diff einklappen' : 'Diff ausklappen'}">${PV_SVG_CARET}</button>` : ''}
+          ${hasViewActions ? `<span class="pr-actions-sep"></span>` : ''}
+          <button class="pr-btn-quiet" data-pv-discard="${esc(p.token)}" title="Änderung verwerfen">${PV_SVG_X}<span>Verwerfen</span></button>
+          <button class="pr-btn-primary" data-pv-confirm="${esc(p.token)}" title="Änderung anwenden und in der Datenbank speichern">${PV_SVG_CHECK}<span>Anwenden</span></button>
         </div>
       </div>
       ${body ? `<div class="pr-body">${body}</div>` : ''}
@@ -2886,10 +3252,32 @@
     el.classList.remove('ok', 'err', 'neutral');
     el.classList.add('show', kind);
   }
+
+  // Collapses a row to a slim one-line "receipt" — a confirmed/discarded
+  // status pill plus the original label and title. The original markup is
+  // hidden by CSS rather than removed so we can debug if needed.
   function pvMarkRemoved(row, kind, msg) {
+    if (row.classList.contains('removed')) return;
+    const labelText = row.querySelector('.pr-label')?.textContent || '';
+    const titleHtml = row.querySelector('.pr-title')?.innerHTML || '';
+    const wasConfirmed = kind === 'ok';
+    const icon = wasConfirmed ? PV_SVG_CHECK : PV_SVG_X;
+
     row.classList.add('removed');
-    pvSetStatus(row, kind, msg);
-    row.querySelectorAll('button[data-pv-confirm], button[data-pv-discard]').forEach(b => b.disabled = true);
+    row.classList.toggle('was-confirmed', wasConfirmed);
+    row.classList.toggle('was-discarded', !wasConfirmed);
+    row.querySelectorAll('button[data-pv-confirm], button[data-pv-discard]')
+      .forEach(b => b.disabled = true);
+
+    const collapsed = document.createElement('div');
+    collapsed.className = 'pr-collapsed';
+    collapsed.innerHTML = `
+      <span class="pr-coll-icon">${icon}</span>
+      <span class="pr-coll-msg">${esc(msg)}</span>
+      <span class="pr-coll-sep">·</span>
+      <span class="pr-coll-title">${titleHtml}</span>
+    `;
+    row.appendChild(collapsed);
   }
   function pvUpdateGroupHeader(group) {
     const total     = group.querySelectorAll('.preview-row').length;
@@ -2898,6 +3286,19 @@
     if (head) head.textContent = total === remaining ? String(total) : `${remaining} / ${total}`;
     const bulk = group.querySelector('.pg-bulk');
     if (bulk) bulk.style.display = remaining > 1 ? 'flex' : 'none';
+    // When everything in this group has been processed, mark the group
+    // visually "done" — the chat keeps the receipt but the group fades
+    // into background so the next conversation isn't visually crowded.
+    if (remaining === 0 && total > 0) {
+      group.classList.add('all-done');
+      const label = group.querySelector('.pg-label');
+      if (label && !label.dataset.originalLabel) {
+        label.dataset.originalLabel = label.textContent;
+        label.textContent = 'Erledigt';
+      }
+      const dot = group.querySelector('.pg-dot');
+      if (dot) dot.style.background = 'var(--ok)';
+    }
   }
 
   function pvCreateGroup(batchId, container, headerLabel) {
@@ -2910,8 +3311,8 @@
         <span class="pg-label">${esc(headerLabel || 'Änderungen vorbereitet')}</span>
         <span class="pg-count">0</span>
         <div class="pg-bulk" style="display:none">
-          <button class="pr-btn is-discard" data-pv-discard-all title="Alle Änderungen verwerfen">${PV_SVG_X}<span>Alle verwerfen</span></button>
-          <button class="pr-btn is-confirm" data-pv-confirm-all title="Alle Änderungen anwenden und speichern">${PV_SVG_CHECK}<span>Alle anwenden</span></button>
+          <button class="pr-btn-quiet" data-pv-discard-all title="Alle Änderungen verwerfen">${PV_SVG_X}<span>Alle verwerfen</span></button>
+          <button class="pr-btn-primary" data-pv-confirm-all title="Alle Änderungen anwenden">${PV_SVG_CHECK}<span>Alle anwenden</span></button>
         </div>
       </div>
       <div class="pg-rows"></div>
@@ -2946,6 +3347,12 @@
     previewState.rowByToken.set(event.token, row);
     pvUpdateGroupHeader(group);
     scrollBottomIfNeeded();
+    // Auto-open the preview panel on the first arriving card with a URL.
+    // Skipped while the panel is already open so streaming a batch of
+    // previews doesn't keep swapping the iframe out from under the user.
+    if (event.preview_url && !document.getElementById('app').classList.contains('preview-open')) {
+      openPreviewPanel(event.preview_url);
+    }
   }
 
   function pvOnRemoved(token, outcome) {
@@ -2962,16 +3369,20 @@
     if (!row || row.classList.contains('removed')) return;
     const btnC = row.querySelector('[data-pv-confirm]');
     const btnD = row.querySelector('[data-pv-discard]');
-    if (btnC) btnC.disabled = true;
+    if (btnC) { btnC.disabled = true; btnC.classList.add('pending'); }
     if (btnD) btnD.disabled = true;
     try {
       const r = await fetch(`/chats/${currentChatId}/preview/${token}/confirm`, { method: 'POST' });
       if (!r.ok) throw new Error('confirm failed');
-      pvMarkRemoved(row, 'ok', 'Angewendet und gespeichert.');
+      // Success ripple before collapsing, so the result lands with a beat.
+      row.classList.add('confirming');
+      await new Promise(res => setTimeout(res, 280));
+      pvMarkRemoved(row, 'ok', 'Angewendet');
+      setTimeout(() => row.classList.remove('confirming'), 600);
     } catch (e) {
-      pvSetStatus(row, 'err', 'Fehler beim Anwenden.');
-      if (btnC) btnC.disabled = false;
+      if (btnC) { btnC.disabled = false; btnC.classList.remove('pending'); }
       if (btnD) btnD.disabled = false;
+      pvSetStatus(row, 'err', 'Fehler beim Anwenden.');
       return;
     }
     const group = row.closest('.preview-group');
@@ -2988,7 +3399,7 @@
     try {
       const r = await fetch(`/chats/${currentChatId}/preview/${token}`, { method: 'DELETE' });
       if (!r.ok) throw new Error('discard failed');
-      pvMarkRemoved(row, 'neutral', 'Verworfen.');
+      pvMarkRemoved(row, 'neutral', 'Verworfen');
     } catch (e) {
       pvSetStatus(row, 'err', 'Fehler beim Verwerfen.');
       if (btnC) btnC.disabled = false;
@@ -3045,6 +3456,12 @@
         previewState.rowByToken.set(p.token, row);
       }
       pvUpdateGroupHeader(group);
+      // Focus the live preview on the first pending change so opening a
+      // chat with outstanding reviews immediately shows what needs attention.
+      const firstWithUrl = items.find(p => p.preview_url);
+      if (firstWithUrl && !document.getElementById('app').classList.contains('preview-open')) {
+        openPreviewPanel(firstWithUrl.preview_url);
+      }
     } catch (e) { /* ignore */ }
   }
 

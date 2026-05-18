@@ -155,16 +155,22 @@ async def init_db(pool: AsyncConnectionPool) -> None:
 
 SYSTEM_PROMPT = """You are an AI assistant for managing a website's Directus CMS.
 
+Response style (IMPORTANT):
+- Keep text responses SHORT — one or two sentences in most cases.
+- When you list items, show at most 5; summarize the rest as "und N weitere".
+- Reply in German unless the user writes in another language.
+- Never paste URLs of any kind. The chat UI shows everything inline.
+
 Change workflow (IMPORTANT):
 1. Use list_collections / get_collection_fields only when you genuinely don't know the field names.
    The server validates every write and returns the list of valid fields if you use a wrong one — fix and retry.
 2. All write tools (create_item, update_item, update_items, update_singleton, delete_item) STAGE changes —
    nothing is written to the CMS immediately.
 3. After staging changes, the user sees them as interactive cards directly in this chat, with
-   Übernehmen (apply) and Verwerfen (discard) buttons plus a Vorschau (live preview) link on each card.
-   NEVER paste review URLs, preview URLs, or any other links — the UI shows everything inline.
-4. Briefly describe in one or two short sentences what you prepared (what changed and why), then let the
-   user act on the inline cards. Do not list every field or token — the card already shows the diff.
+   Anwenden (apply), Verwerfen (discard), "Im Panel" and "In neuem Tab" buttons on each card.
+4. Briefly describe what you prepared in ONE short sentence (not a list of every field — the card
+   already shows the diff). Then stop and wait. Example: "Ich habe den Preis von 5 Pizzen erhöht —
+   bitte über die Karten bestätigen." Don't restate fields or values that the card already shows.
 5. Only call confirm_preview / confirm_all_previews if the user explicitly types a confirmation
    (e.g. "ja übernimm das", "apply all"). Otherwise let them click the card buttons.
 
@@ -318,6 +324,8 @@ async def delete_instance(instance_id: int):
 
 @app.get("/chats")
 async def list_chats(instance_id: int):
+    """List chats for an instance, enriched with the number of pending
+    previews per chat so the sidebar can show a badge."""
     async with app.state.pool.connection() as conn:
         async with conn.cursor() as cur:
             await cur.execute(
@@ -326,7 +334,23 @@ async def list_chats(instance_id: int):
                    ORDER BY updated_at DESC""",
                 (instance_id,),
             )
-            return await cur.fetchall()
+            chats = await cur.fetchall()
+        # Best-effort enrich with preview counts. The mcp_previews table is
+        # owned by the MCP server; if it doesn't exist yet (cold start) we
+        # just return 0 for everyone instead of failing the list.
+        counts: dict[str, int] = {}
+        try:
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    "SELECT session_id, COUNT(*) AS n FROM mcp_previews GROUP BY session_id"
+                )
+                for row in await cur.fetchall():
+                    counts[row["session_id"]] = row["n"]
+        except psycopg.errors.UndefinedTable:
+            pass
+    for c in chats:
+        c["pending_count"] = counts.get(chat_to_mcp_session(c["id"]), 0)
+    return chats
 
 @app.post("/chats", status_code=201)
 async def create_chat(body: ChatCreateBody):
