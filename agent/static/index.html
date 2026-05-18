@@ -3152,10 +3152,12 @@
   const previewState = {
     rowByToken: new Map(),     // token -> .preview-row element
     groupByBatch: new Map(),   // batch_id -> .preview-group element
+    lastFocusedBatch: null,    // batch key we've already auto-focused in the panel
   };
   function resetPreviewState() {
     previewState.rowByToken.clear();
     previewState.groupByBatch.clear();
+    previewState.lastFocusedBatch = null;
   }
 
   const PV_ACTION_LABEL = {
@@ -3347,10 +3349,12 @@
     previewState.rowByToken.set(event.token, row);
     pvUpdateGroupHeader(group);
     scrollBottomIfNeeded();
-    // Auto-open the preview panel on the first arriving card with a URL.
-    // Skipped while the panel is already open so streaming a batch of
-    // previews doesn't keep swapping the iframe out from under the user.
-    if (event.preview_url && !document.getElementById('app').classList.contains('preview-open')) {
+    // Auto-open the preview panel on the first card of each new batch so the
+    // user sees the latest change focused (scrolled to + highlighted via the
+    // ?pb_focus= query the URL already carries). Subsequent cards from the
+    // same batch don't swap the iframe out from under the user.
+    if (event.preview_url && previewState.lastFocusedBatch !== batchKey) {
+      previewState.lastFocusedBatch = batchKey;
       openPreviewPanel(event.preview_url);
     }
   }
@@ -3459,7 +3463,8 @@
       // Focus the live preview on the first pending change so opening a
       // chat with outstanding reviews immediately shows what needs attention.
       const firstWithUrl = items.find(p => p.preview_url);
-      if (firstWithUrl && !document.getElementById('app').classList.contains('preview-open')) {
+      if (firstWithUrl) {
+        previewState.lastFocusedBatch = 'reload';
         openPreviewPanel(firstWithUrl.preview_url);
       }
     } catch (e) { /* ignore */ }

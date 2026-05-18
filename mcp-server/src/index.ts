@@ -831,7 +831,7 @@ function buildBannerInjection(mcpUrlWithSession: string): string {
 
   var MCP=${mcp};
   var previews=[],open=false,bound=false,hlBound=false,curToken=null,pbFocusDone=false,hlIndex=-1;
-  var pbFloat,pbFl,pbFc,pbFd;
+  var pbFloat,pbFl,pbFc,pbFd,pbHideT=null;
 
   var ACT={create:'Neu',update:'Änderung',update_singleton:'Aktualisierung',delete:'Löschung'};
   var COL={
@@ -862,17 +862,31 @@ function buildBannerInjection(mcpUrlWithSession: string): string {
     };
   }
 
+  function cancelHide(){if(pbHideT){clearTimeout(pbHideT);pbHideT=null;}}
   function showFloat(el,token,action){
     if(!pbFloat||!pbFl)return;
+    cancelHide();
     curToken=token;
     pbFl.textContent=el.dataset.pbAnchor?'Änderung':(ACT[action]||action);
-    var r=el.getBoundingClientRect();
-    pbFloat.style.top=Math.max(4,r.top+4)+'px';
-    pbFloat.style.right=Math.max(4,window.innerWidth-r.right+4)+'px';
-    pbFloat.style.left='auto';
+    /* Render off-screen first so we can measure the card's size, then position
+       it outside the element so it never covers the changed text. */
+    pbFloat.style.left='-9999px';
+    pbFloat.style.right='auto';
+    pbFloat.style.top='0px';
     pbFloat.style.display='flex';
+    var r=el.getBoundingClientRect();
+    var fw=pbFloat.offsetWidth||0,fh=pbFloat.offsetHeight||0,gap=6;
+    var top=r.top-fh-gap;
+    if(top<4)top=Math.min(window.innerHeight-fh-4,r.bottom+gap);
+    if(top<4)top=4;
+    var right=Math.max(4,window.innerWidth-r.right);
+    if(right+fw>window.innerWidth-4)right=Math.max(4,window.innerWidth-fw-4);
+    pbFloat.style.top=top+'px';
+    pbFloat.style.right=right+'px';
+    pbFloat.style.left='auto';
   }
-  function hideFloat(){if(pbFloat)pbFloat.style.display='none';curToken=null;}
+  function hideFloat(){cancelHide();if(pbFloat)pbFloat.style.display='none';curToken=null;}
+  function delayedHide(){cancelHide();pbHideT=setTimeout(function(){pbHideT=null;hideFloat();},140);}
 
   function cssEscapeStr(s){return String(s).replace(/[\\"'\\\\]/g,function(c){return'\\\\'+c;});}
 
@@ -965,18 +979,22 @@ function buildBannerInjection(mcpUrlWithSession: string): string {
     hlBound=true;
     document.addEventListener('mouseover',function(e){
       var el=e.target&&e.target.closest&&e.target.closest('.pb-field');
-      if(el)showFloat(el,el.dataset.pbToken,el.dataset.pbAction);
+      if(el){showFloat(el,el.dataset.pbToken,el.dataset.pbAction);return;}
+      if(pbFloat&&e.target&&(e.target===pbFloat||pbFloat.contains(e.target)))cancelHide();
     });
     document.addEventListener('mouseout',function(e){
       var rt=e.relatedTarget;
       if(rt&&rt.closest&&(rt.closest('.pb-field')||(pbFloat&&(rt===pbFloat||pbFloat.contains(rt)))))return;
-      hideFloat();
+      delayedHide();
     });
-    if(pbFloat)pbFloat.addEventListener('mouseout',function(e){
-      var rt=e.relatedTarget;
-      if(rt&&(rt.closest&&rt.closest('.pb-field')||pbFloat.contains(rt)))return;
-      hideFloat();
-    });
+    if(pbFloat){
+      pbFloat.addEventListener('mouseover',cancelHide);
+      pbFloat.addEventListener('mouseout',function(e){
+        var rt=e.relatedTarget;
+        if(rt&&(rt.closest&&rt.closest('.pb-field')||pbFloat.contains(rt)))return;
+        delayedHide();
+      });
+    }
   }
 
   function markedTokens(){
