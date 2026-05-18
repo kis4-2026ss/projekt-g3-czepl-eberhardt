@@ -8,66 +8,110 @@ import {
 import { DirectusClient, computeDiff, type DiffEntry, type DirectusClientOpts } from "./directus.js";
 import http from "node:http";
 import { randomUUID } from "node:crypto";
+import * as cheerio from "cheerio";
 
-// ── Per-request client factory ────────────────────────────────────────────────
-//
-// Connection details may be supplied per request via HTTP headers, falling back
-// to env vars. This lets a single MCP server serve multiple Directus instances
-// (the chat-app uses this to switch between connection profiles).
+// ── Config ────────────────────────────────────────────────────────────────────
 
-function header(req: http.IncomingMessage, name: string): string | undefined {
-  const v = req.headers[name.toLowerCase()];
-  return Array.isArray(v) ? v[0] : v;
-}
-
-function makeClient(req: http.IncomingMessage): DirectusClient {
-  const opts: DirectusClientOpts = {
-    url:      header(req, "x-directus-url")      ?? process.env.DIRECTUS_URL      ?? "http://localhost:8055",
-    token:    header(req, "x-directus-token")    ?? process.env.DIRECTUS_TOKEN,
-    email:    header(req, "x-directus-email")    ?? process.env.DIRECTUS_EMAIL,
-    password: header(req, "x-directus-password") ?? process.env.DIRECTUS_PASSWORD,
-  };
-  return new DirectusClient(opts);
-}
-
-const WEBSITE_URL = (process.env.WEBSITE_URL ?? "http://localhost:4321").replace(/\/$/, "");
-const DIRECTUS_UPSTREAM = (process.env.DIRECTUS_URL ?? "http://localhost:8055").replace(/\/$/, "");
-const MCP_PUBLIC_URL = (process.env.MCP_PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 3001}`).replace(/\/$/, "");
+const PORT = Number(process.env.PORT ?? 3001);
 const PREVIEW_PROXY_PORT = Number(process.env.PREVIEW_PROXY_PORT ?? 4322);
-const PREVIEW_WEBSITE_URL = (process.env.PREVIEW_WEBSITE_URL ?? `http://localhost:${PREVIEW_PROXY_PORT}`).replace(/\/$/, "");
-const PREVIEW_WEBSITE_INTERNAL_URL = (process.env.PREVIEW_WEBSITE_INTERNAL_URL ?? "http://localhost:4321").replace(/\/$/, "");
+// Host browsers use to reach previews. Session is the subdomain.
+// e.g. PREVIEW_HOST="localhost:4322" → "abc123.localhost:4322"
+const PREVIEW_HOST = process.env.PREVIEW_HOST ?? `localhost:${PREVIEW_PROXY_PORT}`;
+// Public MCP URL (what browsers see for review/banner endpoints).
+const MCP_PUBLIC_URL = (process.env.MCP_PUBLIC_URL ?? `http://localhost:${PORT}`).replace(/\/$/, "");
+const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS ?? 60 * 60 * 1000);
+const PREVIEW_TTL_MS = Number(process.env.PREVIEW_TTL_MS ?? 60 * 60 * 1000);
 
-// Maps Directus collections to the website page that renders them.
-// Used to build the "jump to preview" link on the review page.
+// Maps Directus collections to the website page that renders them (best-effort
+// "jump to preview" links — falls back to "/" for unknown collections).
 const COLLECTION_PAGES: Record<string, string[]> = {
-  menu_items:       ["/speisekarte", "/"],   // full list + featured strip on home
+  menu_items:       ["/speisekarte", "/"],
   categories:       ["/speisekarte"],
   speisekarte_copy: ["/speisekarte"],
-  events:           ["/events", "/"],        // full list + preview on home
+  events:           ["/events", "/"],
   team:             ["/ueber-uns"],
-  about:            ["/ueber-uns", "/"],     // full page + teaser section on home
+  about:            ["/ueber-uns", "/"],
   ueber_uns_copy:   ["/ueber-uns"],
   faq_items:        ["/faq"],
   faq_copy:         ["/faq"],
   kontakt_copy:     ["/kontakt"],
-  opening_hours:    ["/kontakt", "/"],       // full table + strip on home
+  opening_hours:    ["/kontakt", "/"],
 };
 
 function previewPagesForCollection(collection: string): string[] {
   return COLLECTION_PAGES[collection] ?? ["/"];
 }
 
-/** Tool schema hint: Directus returns HTTP 403 for invalid /items/.../id paths (easy to mistake for RBAC). */
 const ITEM_PK_DESCRIPTION =
   "Exact primary key from read_items/read_item (integer or UUID). Never a title, slug, or placeholder; if you only know a name, call read_items with a filter first, then use data[0].id.";
+
+// ── Session state ─────────────────────────────────────────────────────────────
+
+interface SessionInfo {
+  directusUrl: string;
+  directusToken?: string;
+  directusEmail?: string;
+  directusPassword?: string;
+  websiteUrl?: string;        // what the preview proxy fetches from
+  websitePublicUrl?: string;  // optional display URL (not used internally)
+  lastUsed: number;
+}
+
+const sessionMap = new Map<string, SessionInfo>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [sid, info] of sessionMap.entries()) {
+    if (now - info.lastUsed > SESSION_TTL_MS) sessionMap.delete(sid);
+  }
+}, 60 * 1000).unref();
+
+// ── Request helpers ───────────────────────────────────────────────────────────
+
+function header(req: http.IncomingMessage, name: string): string | undefined {
+  const v = req.headers[name.toLowerCase()];
+  return Array.isArray(v) ? v[0] : v;
+}
+
+function getOrCreateSession(req: http.IncomingMessage): { id: string; info: SessionInfo } {
+  const id = header(req, "x-session-id") || "default";
+  const isNew = !sessionMap.has(id);
+  let info = sessionMap.get(id);
+  if (!info) {
+    info = { directusUrl: "", lastUsed: Date.now() };
+    sessionMap.set(id, info);
+  }
+  info.lastUsed = Date.now();
+
+  const dUrl  = header(req, "x-directus-url");      if (dUrl)  info.directusUrl      = dUrl;
+  const dTok  = header(req, "x-directus-token");    if (dTok  !== undefined) info.directusToken    = dTok;
+  const dMail = header(req, "x-directus-email");    if (dMail !== undefined) info.directusEmail    = dMail;
+  const dPass = header(req, "x-directus-password"); if (dPass !== undefined) info.directusPassword = dPass;
+  const wUrl  = header(req, "x-website-url");       if (wUrl)  info.websiteUrl       = wUrl;
+  const wPub  = header(req, "x-website-public-url");if (wPub)  info.websitePublicUrl = wPub;
+  if (isNew) {
+    process.stderr.write(`[session] new ${id} directus=${info.directusUrl} website=${info.websiteUrl}\n`);
+  }
+  return { id, info };
+}
+
+function makeClient(info: SessionInfo): DirectusClient {
+  const opts: DirectusClientOpts = {
+    url:      info.directusUrl      || process.env.DIRECTUS_URL || "http://localhost:8055",
+    token:    info.directusToken    ?? process.env.DIRECTUS_TOKEN,
+    email:    info.directusEmail    ?? process.env.DIRECTUS_EMAIL,
+    password: info.directusPassword ?? process.env.DIRECTUS_PASSWORD,
+  };
+  return new DirectusClient(opts);
+}
 
 // ── Preview store ─────────────────────────────────────────────────────────────
 
 interface PreviewEntry {
-  action: "create" | "update" | "update_bulk" | "delete" | "update_singleton";
+  session_id: string;
+  action: "create" | "update" | "delete" | "update_singleton";
   collection: string;
   id?: string | number;
-  ids?: (string | number)[];
   before?: Record<string, unknown>;
   after?: Record<string, unknown>;
   diff?: DiffEntry[];
@@ -75,7 +119,6 @@ interface PreviewEntry {
 }
 
 const previewStore = new Map<string, { entry: PreviewEntry; timer: ReturnType<typeof setTimeout> }>();
-const PREVIEW_TTL_MS = 30 * 60 * 1000;
 
 function storePreview(entry: PreviewEntry): string {
   const token = randomUUID();
@@ -84,9 +127,16 @@ function storePreview(entry: PreviewEntry): string {
   return token;
 }
 
+function previewsForSession(sessionId: string): { token: string; entry: PreviewEntry }[] {
+  const out: { token: string; entry: PreviewEntry }[] = [];
+  for (const [token, { entry }] of previewStore.entries()) {
+    if (entry.session_id === sessionId) out.push({ token, entry });
+  }
+  return out;
+}
+
 function buildPreviewResponse(token: string, entry: PreviewEntry): string {
-  const preview_url = PREVIEW_WEBSITE_URL;
-  const review_url = `${MCP_PUBLIC_URL}/review/${token}`;
+  const review_url = `${MCP_PUBLIC_URL}/sessions/${entry.session_id}/review/${token}`;
   const diffSummary = entry.diff && entry.diff.length > 0
     ? entry.diff.map((d) => `  ${d.field}: ${JSON.stringify(d.before)} → ${JSON.stringify(d.after)}`).join("\n")
     : entry.after
@@ -98,70 +148,126 @@ function buildPreviewResponse(token: string, entry: PreviewEntry): string {
     `preview_token: ${token}`,
     ``,
     `If you still have more changes to stage, call the next write tool now — do NOT pause to ask the user yet.`,
-    `Only after ALL changes are staged, show the user this summary:`,
-    `  Preview (live site): ${preview_url}`,
-    `  Review all changes:  ${review_url}`,
+    `Only after ALL changes are staged, show the user this link (and no other URLs):`,
+    `  Review all changes: ${review_url}`,
+    `The review page itself has a link to the live preview — never share that URL directly.`,
     `Then ask the user to confirm or discard. Use confirm_all_previews / discard_all_previews for bulk, or confirm_preview / discard_preview per token.`,
   ].join("\n");
 }
 
-// ── Proxy helpers ─────────────────────────────────────────────────────────────
+function buildBulkPreviewResponse(staged: { token: string; entry: PreviewEntry }[]): string {
+  if (!staged.length) return "Nothing to stage.";
+  const first = staged[0]!;
+  const sessionId = first.entry.session_id;
+  const review_url = `${MCP_PUBLIC_URL}/sessions/${sessionId}/review/${first.token}`;
 
-function applyPreviewsToResponse(body: unknown, collection: string): unknown {
-  if (!body || typeof body !== "object") return body;
-  const b = body as { data: unknown };
+  const lines = staged.map(({ token, entry }) => {
+    const diff = entry.diff?.map((d) => `${d.field}: ${JSON.stringify(d.before)} → ${JSON.stringify(d.after)}`).join(", ") ?? "";
+    return `  - ${entry.collection}#${entry.id}${diff ? `  (${diff})` : ""}  token: ${token}`;
+  }).join("\n");
 
-  if (Array.isArray(b.data)) {
-    let items = b.data as unknown[];
-    for (const { entry } of previewStore.values()) {
-      if (entry.collection !== collection) continue;
-      switch (entry.action) {
-        case "create":
-          items = [...items, { ...entry.after, id: "__preview_new__" }];
-          break;
-        case "update":
-          if (entry.id != null) {
-            items = items.map((item) => {
-              const i = item as Record<string, unknown>;
-              return String(i["id"]) === String(entry.id) ? { ...i, ...entry.data } : i;
-            });
-          }
-          break;
-        case "update_bulk":
-          if (entry.ids && entry.ids.length > 0) {
-            const idSet = new Set(entry.ids.map(String));
-            items = items.map((item) => {
-              const i = item as Record<string, unknown>;
-              return idSet.has(String(i["id"])) ? { ...i, ...entry.data } : i;
-            });
-          }
-          break;
-        case "delete":
-          if (entry.id != null) {
-            items = items.filter((item) => {
-              const i = item as Record<string, unknown>;
-              return String(i["id"]) !== String(entry.id);
-            });
-          }
-          break;
-      }
-    }
-    return { ...b, data: items };
-  }
-
-  if (b.data && typeof b.data === "object" && !Array.isArray(b.data)) {
-    let data = b.data as Record<string, unknown>;
-    for (const { entry } of previewStore.values()) {
-      if (entry.collection !== collection) continue;
-      if ((entry.action === "update_singleton" || entry.action === "update") && entry.after) {
-        data = { ...data, ...entry.after };
-      }
-    }
-    return { ...b, data };
-  }
-
-  return body;
+  return [
+    `Staged ${staged.length} change${staged.length === 1 ? "" : "s"} (one preview per item):`,
+    lines,
+    ``,
+    `If you still have more changes to stage, call the next write tool now — do NOT pause to ask the user yet.`,
+    `Only after ALL changes are staged, show the user this link (and no other URLs):`,
+    `  Review all changes: ${review_url}`,
+    `The review page itself has a link to the live preview — never share that URL directly.`,
+    `Then ask the user to confirm or discard. Use confirm_all_previews / discard_all_previews for bulk.`,
+  ].join("\n");
 }
+
+// ── HTML rewriting ────────────────────────────────────────────────────────────
+//
+// The proxy fetches the customer's website and inspects elements tagged with
+// data-cms-collection / data-cms-id / data-cms-field. For each staged change
+// in the session we replace the rendered content with the staged value.
+//
+// Items can be marked at two levels:
+//   <article data-cms-collection="menu_items" data-cms-id="42">
+//     <p data-cms-field="name">Tomato Soup</p>
+//   </article>
+// or with the collection on the leaf:
+//   <p data-cms-collection="menu_items" data-cms-id="42" data-cms-field="name">…</p>
+//
+// We resolve the effective collection/id by walking up the DOM.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function effectiveAttr($: any, el: any, name: string): string | undefined {
+  const $el = $(el);
+  const own = $el.attr(name);
+  if (own) return own;
+  return $el.closest(`[${name}]`).attr(name) || undefined;
+}
+
+function applyPreviewsToHtml(html: string, sessionId: string): string {
+  const entries = previewsForSession(sessionId).map((p) => p.entry);
+  if (!entries.length) return html;
+
+  const $ = cheerio.load(html);
+  let totalApplied = 0;
+
+  for (const entry of entries) {
+    const col = entry.collection;
+    const colSel = `[data-cms-collection="${col}"]`;
+    let appliedForEntry = 0;
+
+    if (entry.action === "create") {
+      process.stderr.write(`[rewrite] session=${sessionId} skip create on ${col} (cannot insert)\n`);
+      continue;
+    }
+
+    if (entry.action === "delete" && entry.id != null) {
+      const id = String(entry.id);
+      $(`${colSel}[data-cms-id="${id}"]:not([data-cms-field])`).each((_i: number, el: unknown) => {
+        $(el as never).attr("style", ($(el as never).attr("style") || "") + ";opacity:.4;text-decoration:line-through");
+        appliedForEntry++;
+      });
+      process.stderr.write(`[rewrite] session=${sessionId} delete ${col}#${id}: ${appliedForEntry} element(s) marked\n`);
+      totalApplied += appliedForEntry;
+      continue;
+    }
+
+    // For update_bulk and partial-data updates we don't have a per-field diff
+    // — synthesize one from the `data` payload so rewriting still works.
+    const diff: DiffEntry[] = (entry.diff && entry.diff.length > 0)
+      ? entry.diff
+      : Object.entries(entry.data ?? {}).map(([field, after]) => ({ field, before: undefined, after }));
+    process.stderr.write(`[rewrite]   entry ${entry.action} ${col} id=${entry.id ?? "*"} fields=[${diff.map((d) => d.field).join(",")}]\n`);
+    for (const d of diff) {
+      const fieldSel = `[data-cms-field="${d.field}"]`;
+      const candidates = $(fieldSel);
+      let appliedForField = 0;
+      candidates.each((_i: number, el: unknown) => {
+        const elCol = effectiveAttr($, el, "data-cms-collection");
+        if (elCol !== col) return;
+
+        if (entry.action !== "update_singleton") {
+          if (entry.id == null) return;
+          const elId = effectiveAttr($, el, "data-cms-id");
+          if (elId !== String(entry.id)) return;
+        }
+
+        if (d.after == null) {
+          $(el as never).text("");
+          appliedForField++;
+        } else if (typeof d.after === "string" || typeof d.after === "number" || typeof d.after === "boolean") {
+          $(el as never).text(String(d.after));
+          appliedForField++;
+        }
+      });
+      process.stderr.write(`[rewrite] session=${sessionId} ${entry.action} ${col}.${d.field}: ${appliedForField}/${candidates.length} candidates matched\n`);
+      appliedForEntry += appliedForField;
+    }
+    totalApplied += appliedForEntry;
+  }
+
+  process.stderr.write(`[rewrite] session=${sessionId} ${entries.length} entries → ${totalApplied} element(s) modified\n`);
+  return $.html();
+}
+
+// ── Review page + helpers ─────────────────────────────────────────────────────
 
 function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -211,12 +317,14 @@ function renderEntryCard(p: StoredPreview, highlighted: boolean, previewBaseUrl:
   </div>`;
 }
 
-function buildReviewPage(focusToken: string, allPreviews: StoredPreview[]): string {
-  const found = allPreviews.length > 0;
+function buildReviewPage(sessionId: string, focusToken: string, allPreviews: StoredPreview[]): string {
+  const previewBaseUrl = `http://${sessionId}.${PREVIEW_HOST}`;
+  const found   = allPreviews.length > 0;
   const hasMany = allPreviews.length > 1;
+  const apiBase = `/sessions/${encodeURIComponent(sessionId)}`;
 
   const cards = found
-    ? allPreviews.map((p) => renderEntryCard(p, p.preview_token === focusToken, PREVIEW_WEBSITE_URL)).join("")
+    ? allPreviews.map((p) => renderEntryCard(p, p.preview_token === focusToken, previewBaseUrl)).join("")
     : `<div class="card"><p style="color:#6b7280">Vorschau nicht gefunden oder abgelaufen.</p></div>`;
 
   const bulkBar = hasMany ? `
@@ -268,11 +376,12 @@ function buildReviewPage(focusToken: string, allPreviews: StoredPreview[]): stri
 <body>
   <div style="display:flex;align-items:baseline;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
     <h1>Vorschau überprüfen</h1>
-    <a href="${escHtml(PREVIEW_WEBSITE_URL)}" class="btn btn-preview" target="_blank" style="font-size:.8rem;padding:.35rem .9rem">Live-Vorschau ↗</a>
+    <a href="${escHtml(previewBaseUrl)}" class="btn btn-preview" target="_blank" style="font-size:.8rem;padding:.35rem .9rem">Live-Vorschau ↗</a>
   </div>
   ${bulkBar}
   ${cards}
   <script>
+    const API = ${JSON.stringify(apiBase)};
     async function act(url, method, statusId, okMsg, okClass) {
       const el = document.getElementById(statusId);
       const r = await fetch(url, { method });
@@ -282,26 +391,24 @@ function buildReviewPage(focusToken: string, allPreviews: StoredPreview[]): stri
         el.textContent = r.ok ? okMsg : 'Fehler (' + r.status + ')';
       }
     }
-
     document.addEventListener('click', async (e) => {
       const btn = e.target.closest('button[data-confirm],button[data-discard],#confirm-all,#discard-all');
       if (!btn || btn.disabled) return;
       btn.disabled = true;
-
       if (btn.id === 'confirm-all') {
         const tokens = ${JSON.stringify(allPreviews.map((p) => p.preview_token))};
-        await Promise.all(tokens.map(t => fetch('/confirm/' + t, { method: 'POST' })));
+        await Promise.all(tokens.map(t => fetch(API + '/confirm/' + t, { method: 'POST' })));
         const el = document.getElementById('s-all');
         if (el) { el.style.display='block'; el.className='status ok'; el.textContent='✓ Alle Änderungen übernommen.'; }
       } else if (btn.id === 'discard-all') {
         const tokens = ${JSON.stringify(allPreviews.map((p) => p.preview_token))};
-        await Promise.all(tokens.map(t => fetch('/preview/' + t, { method: 'DELETE' })));
+        await Promise.all(tokens.map(t => fetch(API + '/preview/' + t, { method: 'DELETE' })));
         const el = document.getElementById('s-all');
         if (el) { el.style.display='block'; el.className='status neutral'; el.textContent='✗ Alle Änderungen verworfen.'; }
       } else if (btn.dataset.confirm) {
-        await act('/confirm/' + btn.dataset.confirm, 'POST', 's-' + btn.dataset.confirm, '✓ Übernommen und gespeichert.', 'ok');
+        await act(API + '/confirm/' + btn.dataset.confirm, 'POST', 's-' + btn.dataset.confirm, '✓ Übernommen und gespeichert.', 'ok');
       } else if (btn.dataset.discard) {
-        await act('/preview/' + btn.dataset.discard, 'DELETE', 's-' + btn.dataset.discard, '✗ Verworfen.', 'neutral');
+        await act(API + '/preview/' + btn.dataset.discard, 'DELETE', 's-' + btn.dataset.discard, '✗ Verworfen.', 'neutral');
       }
     });
   </script>
@@ -309,20 +416,14 @@ function buildReviewPage(focusToken: string, allPreviews: StoredPreview[]): stri
 </html>`;
 }
 
-// ── Preview banner injection ──────────────────────────────────────────────────
+// ── Banner injection ──────────────────────────────────────────────────────────
 //
-// The banner is injected by the MCP proxy into every HTML page it serves.
-// The website code has zero knowledge of this banner.
-//
-// Highlighting uses a position:fixed floating bar (not position:absolute) so it
-// works even when the annotated element has overflow:hidden (events cards, faq).
-//
-// Navigation guard: Astro ViewTransitions re-executes body scripts on every
-// navigation. window.__pbLoaded ensures full init runs only once; astro:page-load
-// re-queries DOM refs and re-applies highlights after each swap.
+// Injected into the customer's HTML response by the preview proxy. Highlights
+// changed elements and provides confirm/discard UI. The injected MCP URL
+// already includes the session prefix, so all callbacks are auto-scoped.
 
-function buildBannerInjection(mcpUrl: string): string {
-  const mcp = JSON.stringify(mcpUrl);
+function buildBannerInjection(mcpUrlWithSession: string): string {
+  const mcp = JSON.stringify(mcpUrlWithSession);
   return `<style>
 #pb-root{position:fixed;bottom:0;left:0;right:0;z-index:9999;box-shadow:0 -4px 24px rgba(0,0,0,.12)}
 #pb-float{position:fixed;z-index:9998;display:none;align-items:center;gap:4px;background:rgba(15,15,15,.9);border-radius:6px;padding:4px 6px;box-shadow:0 2px 10px rgba(0,0,0,.45);pointer-events:auto}
@@ -362,9 +463,7 @@ function buildBannerInjection(mcpUrl: string): string {
 
   var ACT={create:'Neu',update:'Änderung',update_singleton:'Aktualisierung',delete:'Löschung'};
   var COL={create:{bg:'#dcfce7',fg:'#16a34a'},update:{bg:'#fef9c3',fg:'#92400e'},update_singleton:{bg:'#dbeafe',fg:'#1e40af'},delete:{bg:'#fee2e2',fg:'#dc2626'}};
-  var BRD={create:'#16a34a',update:'#d97706',update_singleton:'#2563eb',delete:'#dc2626'};
 
-  /* ---- DOM refs ---- */
   function getDom(){
     pbFloat=document.getElementById('pb-float');
     pbFl=document.getElementById('pb-fl');
@@ -386,7 +485,6 @@ function buildBannerInjection(mcpUrl: string): string {
     };
   }
 
-  /* ---- Floating action bar ---- */
   function showFloat(el,token,action){
     if(!pbFloat||!pbFl)return;
     curToken=token;
@@ -399,166 +497,37 @@ function buildBannerInjection(mcpUrl: string): string {
   }
   function hideFloat(){if(pbFloat)pbFloat.style.display='none';curToken=null;}
 
-  /* ---- Direct text-marking ----
-   * Find any text on the page that matches a changed field value and wrap it
-   * with a <span class="pb-mark"> that has a visible coloured border via CSS.
-   * Works for ANY page structure — no need to find "containers" or rely on
-   * specific HTML tags. Completely independent of the website implementation.
-   */
-
-  // Strip markdown bold and pick the longest contiguous chunk that's likely
-  // to appear in the rendered HTML as a single text node.
-  // NOTE: all regex backslashes are doubled because this entire script lives
-  // inside a TS template literal — single \\ → literal \\ in the served JS.
-  function snippets(raw){
-    if(typeof raw!=='string')return [];
-    var clean=raw.replace(/\\*\\*(.+?)\\*\\*/g,'$1').trim();
-    if(!clean)return [];
-    var out=[];
-    // First paragraph only — multi-line text becomes <p>…</p><p>…</p> in HTML
-    var paras=clean.split(/\\n\\n+/);
-    var first=(paras[0]||'').trim();
-    if(first.length>=4)out.push(first.length>180?first.slice(0,180):first);
-    // Plain single-line full string
-    if(!clean.includes('\\n')&&clean.length>=4&&clean.length<=180&&out.indexOf(clean)===-1)out.push(clean);
-    return out;
-  }
-
-  // Only return strings from fields that ACTUALLY CHANGED (from diff).
-  // Numeric changes (e.g. price) are excluded — the template formats them
-  // (e.g. price 100 → "€100.00") so a raw value search won't find them.
-  function changedCandidates(p){
-    var cands=[];
-    var diff=p.diff||[];
-    var action=p.action;
-    if(diff.length>0){
-      diff.forEach(function(d){
-        // Preview DOM shows AFTER values (proxy applied them)
-        if(typeof d.after==='string')snippets(d.after).forEach(function(s){cands.push(s);});
-        // Before value may still appear for non-applied contexts
-        if(typeof d.before==='string'&&d.before!==d.after)snippets(d.before).forEach(function(s){cands.push(s);});
-      });
-    } else {
-      // No diff array — fall back to field values based on action type
-      var after=p.after||{};
-      var before=p.before||{};
-      if(action==='delete'){
-        Object.values(before).forEach(function(v){if(typeof v==='string')snippets(v).forEach(function(s){cands.push(s);});});
-      } else {
-        Object.values(after).forEach(function(v){if(typeof v==='string')snippets(v).forEach(function(s){cands.push(s);});});
-      }
-    }
-    var seen={};
-    return cands.filter(function(v){
-      if(seen[v])return false;seen[v]=true;
-      return v&&v.length>=4
-        &&!/^https?:\\/\\//.test(v)
-        &&!/^\\d{4}-\\d{2}-\\d{2}/.test(v);
-    }).sort(function(a,b){return b.length-a.length;});
-  }
-
-  // Unchanged identifying fields used as positional anchor when no changed text
-  // can be found (e.g. only numeric fields changed). Marked with .pb-anchor —
-  // a dashed outline that signals "this item has a change" without implying the
-  // text itself changed.
-  function anchorCandidates(p){
-    var after=p.after||{};var before=p.before||{};
-    var cands=[];
-    ['name','title','bezeichnung','question','first_name','last_name'].forEach(function(k){
-      var v=String(after[k]||before[k]||'');
-      if(v.length>=4)cands.push(v);
-    });
-    Object.keys(after).forEach(function(k){
-      var v=after[k];
-      if(typeof v==='string'&&v===before[k]&&v.length>=4&&cands.indexOf(v)===-1)cands.push(v);
-    });
-    return cands.slice(0,3);
-  }
-
-  // True if this text node is a candidate for marking.
-  function isMarkableNode(n){
-    if(!n.parentElement)return false;
-    var p=n.parentElement;
-    if(p.closest('#pb-root')||p.closest('#pb-float'))return false;
-    if(p.closest('.pb-mark')||p.closest('.pb-anchor'))return false;
-    var tag=p.tagName;
-    if(tag==='SCRIPT'||tag==='STYLE'||tag==='NOSCRIPT'||tag==='TEMPLATE')return false;
-    return true;
-  }
-
-  // Walk the DOM and mark EVERY occurrence of searchText — both across
-  // multiple text nodes and multiple occurrences within a single node.
-  // Collect nodes first so DOM mutations don't invalidate the walker.
-  // Returns the count of spans inserted (0 = not found on this page).
-  function markTextInDom(searchText,token,action,isAnchor){
-    if(!searchText||searchText.length<3)return 0;
-    var nodes=[];
-    var tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null);
-    var node;
-    while((node=tw.nextNode())){
-      if(node.nodeValue&&isMarkableNode(node)&&node.nodeValue.indexOf(searchText)!==-1)nodes.push(node);
-    }
-    var total=0;
-    nodes.forEach(function(n){
-      if(!n.parentNode)return;
-      var text=n.nodeValue;
-      var frag=document.createDocumentFragment();
-      var pos=0;
-      while(pos<=text.length){
-        var i=text.indexOf(searchText,pos);
-        if(i===-1)break;
-        if(i>pos)frag.appendChild(document.createTextNode(text.slice(pos,i)));
-        var span=document.createElement('span');
-        span.className=isAnchor?'pb-anchor':'pb-mark';
-        span.setAttribute('data-pb-token',token);
-        span.setAttribute('data-pb-action',action);
-        if(isAnchor)span.setAttribute('data-pb-anchor','1');
-        span.textContent=searchText;
-        frag.appendChild(span);
-        total++;
-        pos=i+searchText.length;
-      }
-      if(pos<text.length)frag.appendChild(document.createTextNode(text.slice(pos)));
-      n.parentNode.replaceChild(frag,n);
-    });
-    return total;
-  }
-
-  /* ---- Attribute-based marking ----
-   * The website templates annotate every CMS-bound element with
-   *   data-cms-collection="<col>" data-cms-field="<field>" [data-cms-id="<id>"]
-   * and every item-container with data-cms-collection + data-cms-id (no field).
-   * This lets us mark the EXACT element rendering a changed value without
-   * fragile text matching. The MCP code owns the review/preview logic;
-   * the website only declares which collection/field each element binds to.
-   * Returns the number of marks applied — 0 means fall back to text-search.
-   */
   function cssEscapeStr(s){return String(s).replace(/[\\"'\\\\]/g,function(c){return'\\\\'+c;});}
+
+  /* Mark matching elements so the user can see WHERE things changed.
+     The actual content has already been replaced server-side. */
   function markByAttributes(p){
     var col=p.collection;
     var token=p.preview_token;
     var action=p.action;
-    // For non-singleton actions we filter by id. Creates show up in the DOM
-    // with the placeholder id "__preview_new__" thanks to applyPreviewsToResponse().
     var rawId=p.id!=null?String(p.id):null;
-    var matchId=action==='create'?'__preview_new__':rawId;
+    var matchIds=p.ids?p.ids.reduce(function(m,id){m[String(id)]=true;return m;},{}):null;
     var needId=action!=='update_singleton';
 
-    // Helper: figure out the collection that scopes this element. An element may
-    // declare data-cms-collection itself, or inherit it from the nearest ancestor.
     function effectiveCollection(el){
       var own=el.getAttribute('data-cms-collection');
       if(own)return own;
       var anc=el.closest('[data-cms-collection]');
       return anc?anc.getAttribute('data-cms-collection'):null;
     }
-    // Helper: does this element belong to the right item (by id, if applicable)?
     function inScope(el){
-      if(!needId||!matchId)return true;
+      if(!needId)return true;
+      if(matchIds){
+        var ownId=el.getAttribute('data-cms-id');
+        if(ownId)return!!matchIds[ownId];
+        var anc=el.closest('[data-cms-collection="'+cssEscapeStr(col)+'"][data-cms-id]');
+        return!!anc&&!!matchIds[anc.getAttribute('data-cms-id')];
+      }
+      if(!rawId)return true;
       var ownId=el.getAttribute('data-cms-id');
-      if(ownId)return ownId===matchId;
+      if(ownId)return ownId===rawId;
       var anc=el.closest('[data-cms-collection="'+cssEscapeStr(col)+'"][data-cms-id]');
-      return!!anc&&anc.getAttribute('data-cms-id')===matchId;
+      return!!anc&&anc.getAttribute('data-cms-id')===rawId;
     }
     function tag(el,isAnchor){
       el.classList.add('pb-field');
@@ -568,11 +537,6 @@ function buildBannerInjection(mcpUrl: string): string {
     }
 
     var marked=0;
-    // Pass 1: mark each diff field on its dedicated element. We query by field
-    // name only and then verify collection via the element itself or an ancestor
-    // — that way nested items (e.g. <article data-cms-collection="menu_items">
-    // with bare <p data-cms-field="name"> inside) work without repeating the
-    // collection on every leaf.
     var fields=[];
     if(p.diff&&p.diff.length)p.diff.forEach(function(d){fields.push(d.field);});
     fields.forEach(function(field){
@@ -585,30 +549,28 @@ function buildBannerInjection(mcpUrl: string): string {
       });
     });
 
-    // Pass 2: nothing matched at field level — fall back to the item container.
-    // For create/delete or non-string-diff updates the field elements may not be
-    // present, so the user still gets a visual anchor on the affected item.
     if(marked===0){
-      var anchorSel=needId&&matchId
-        ?'[data-cms-collection="'+cssEscapeStr(col)+'"][data-cms-id="'+cssEscapeStr(matchId)+'"]:not([data-cms-field])'
-        :'[data-cms-collection="'+cssEscapeStr(col)+'"]:not([data-cms-field])';
-      document.querySelectorAll(anchorSel).forEach(function(el){
-        if(el.classList.contains('pb-field'))return;
-        tag(el,true);marked++;
-      });
+      if(matchIds){
+        Object.keys(matchIds).forEach(function(id){
+          document.querySelectorAll('[data-cms-collection="'+cssEscapeStr(col)+'"][data-cms-id="'+cssEscapeStr(id)+'"]:not([data-cms-field])').forEach(function(el){
+            if(el.classList.contains('pb-field'))return;
+            tag(el,true);marked++;
+          });
+        });
+      } else {
+        var anchorSel=needId&&rawId
+          ?'[data-cms-collection="'+cssEscapeStr(col)+'"][data-cms-id="'+cssEscapeStr(rawId)+'"]:not([data-cms-field])'
+          :'[data-cms-collection="'+cssEscapeStr(col)+'"]:not([data-cms-field])';
+        document.querySelectorAll(anchorSel).forEach(function(el){
+          if(el.classList.contains('pb-field'))return;
+          tag(el,true);marked++;
+        });
+      }
     }
     return marked;
   }
 
-  /* ---- Clear / Apply marks ---- */
   function clearHighlights(){
-    // Unwrap text-search spans (fallback path)
-    document.querySelectorAll('.pb-mark,.pb-anchor').forEach(function(span){
-      var p=span.parentNode;if(!p)return;
-      p.replaceChild(document.createTextNode(span.textContent||''),span);
-      p.normalize();
-    });
-    // Remove in-place marks (attribute path)
     document.querySelectorAll('.pb-field').forEach(function(el){
       el.classList.remove('pb-field');
       el.removeAttribute('data-pb-token');
@@ -621,58 +583,28 @@ function buildBannerInjection(mcpUrl: string): string {
     clearHighlights();
     hlIndex=-1;
     if(!previews.length){hideFloat();return;}
-    var totalMarked=0;
-    previews.forEach(function(p){
-      // Preferred path: use data-cms-* attributes declared by the website.
-      var attrHits=markByAttributes(p);
-      if(attrHits>0){totalMarked+=attrHits;return;}
-
-      // Fallback: text-search the rendered DOM for changed values.
-      var texts=changedCandidates(p);
-      var hitsThisPreview=0;
-      for(var i=0;i<texts.length;i++){
-        hitsThisPreview+=markTextInDom(texts[i],p.preview_token,p.action,false);
-      }
-      totalMarked+=hitsThisPreview;
-      // Pass 2: if no changed text found (e.g. only numeric fields changed),
-      // use an anchor mark on the item's name so the user can still locate it.
-      if(hitsThisPreview===0){
-        var anchors=anchorCandidates(p);
-        for(var j=0;j<anchors.length;j++){
-          var n=markTextInDom(anchors[j],p.preview_token,p.action,true);
-          if(n){totalMarked+=n;break;}
-        }
-        // Only warn if the change should be visible on this page but wasn't found
-        var pages=p.preview_pages||[];
-        if(pages.indexOf(location.pathname)!==-1){
-          console.warn('[preview-banner] no text matched for',p.collection,p.id||'',{tried:texts,anchors:anchors});
-        }
-      }
-    });
-    console.info('[preview-banner]',previews.length,'preview(s),',totalMarked,'element(s) marked');
+    previews.forEach(function(p){ markByAttributes(p); });
     if(hlBound)return;
     hlBound=true;
     document.addEventListener('mouseover',function(e){
-      var el=e.target&&e.target.closest&&(e.target.closest('.pb-mark')||e.target.closest('.pb-anchor')||e.target.closest('.pb-field'));
+      var el=e.target&&e.target.closest&&e.target.closest('.pb-field');
       if(el)showFloat(el,el.dataset.pbToken,el.dataset.pbAction);
     });
     document.addEventListener('mouseout',function(e){
       var rt=e.relatedTarget;
-      if(rt&&rt.closest&&((rt.closest('.pb-mark')||rt.closest('.pb-anchor')||rt.closest('.pb-field'))||(pbFloat&&(rt===pbFloat||pbFloat.contains(rt)))))return;
+      if(rt&&rt.closest&&(rt.closest('.pb-field')||(pbFloat&&(rt===pbFloat||pbFloat.contains(rt)))))return;
       hideFloat();
     });
     if(pbFloat)pbFloat.addEventListener('mouseout',function(e){
       var rt=e.relatedTarget;
-      if(rt&&(rt.closest&&(rt.closest('.pb-mark')||rt.closest('.pb-anchor')||rt.closest('.pb-field'))||pbFloat.contains(rt)))return;
+      if(rt&&(rt.closest&&rt.closest('.pb-field')||pbFloat.contains(rt)))return;
       hideFloat();
     });
   }
 
-  // Group marks by preview_token — multiple marks per preview should count as one
-  // navigation stop. Includes .pb-mark/.pb-anchor (text-fallback) and .pb-field (attribute path).
   function markedTokens(){
     var seen={},order=[];
-    document.querySelectorAll('.pb-mark,.pb-anchor,.pb-field').forEach(function(s){
+    document.querySelectorAll('.pb-field').forEach(function(s){
       var t=s.dataset.pbToken;
       if(!seen[t]){seen[t]=s;order.push(t);}
     });
@@ -689,7 +621,6 @@ function buildBannerInjection(mcpUrl: string): string {
     render();
   }
 
-  /* ---- Bottom banner ---- */
   function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function diffText(p){
     if(p.diff&&p.diff.length)return p.diff.map(function(d){return d.field+': '+JSON.stringify(d.before)+' → '+JSON.stringify(d.after);}).join(' · ');
@@ -718,7 +649,7 @@ function buildBannerInjection(mcpUrl: string): string {
           return'<a href="'+escH(pg)+'?pb_focus='+escH(p.preview_token)+'" style="padding:3px 10px;background:#2563eb;color:#fff;border-radius:3px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;display:inline-block">↗ '+escH(lbl)+'</a>';
         }).join('');
         return'<div style="display:flex;align-items:center;gap:10px;padding:9px 20px;border-bottom:1px solid #fef3c7;font-size:13px;flex-wrap:wrap">'
-          +badge(p)+'<span style="font-weight:600;color:#1a1816;white-space:nowrap">'+escH(p.collection)+(p.id!=null?' #'+escH(String(p.id)):'')+'</span>'
+          +badge(p)+'<span style="font-weight:600;color:#1a1816;white-space:nowrap">'+escH(p.collection)+(p.id!=null?' #'+escH(String(p.id)):p.ids?' ('+p.ids.length+' items)':'')+'</span>'
           +'<span style="color:#6b7280;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0">'+escH(diffText(p))+'</span>'
           +jumpLink
           +'<button data-pb="confirm-one" data-token="'+escH(p.preview_token)+'" style="padding:3px 10px;background:#16a34a;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600">✓ Übernehmen</button>'
@@ -761,10 +692,6 @@ function buildBannerInjection(mcpUrl: string): string {
     if(!bound){root.addEventListener('click',onBannerClick);bound=true;}
   }
 
-  /* ---- Jump-to-element from review page ---- */
-  // The review page links to the preview with ?pb_focus=<token>. On load we read
-  // that param, find the element that was highlighted for that token, and scroll to it.
-  // Runs only once per page load (pbFocusDone flag) so repeat load() calls don't re-scroll.
   function focusFromURL(){
     if(pbFocusDone)return;
     var token=(new URLSearchParams(location.search)).get('pb_focus');
@@ -776,7 +703,7 @@ function buildBannerInjection(mcpUrl: string): string {
     hlIndex=idx;
     els[idx].scrollIntoView({behavior:'smooth',block:'center'});
     showFloat(els[idx],token,els[idx].dataset.pbAction||'update');
-    render(); // update nav counter to show correct position
+    render();
   }
 
   async function load(){
@@ -784,25 +711,20 @@ function buildBannerInjection(mcpUrl: string): string {
     render();applyHighlights();focusFromURL();
   }
 
-  /* ---- Init & navigation ---- */
   getDom();
   load();
 
-  // Re-query DOM refs after each Astro ViewTransitions swap and reload data.
-  // hlBound stays true across navigations — the delegated listeners on document
-  // persist and still work after the body swap.
   document.addEventListener('astro:page-load',function(){
     bound=false;
     pbFocusDone=false;
     getDom();
     load();
   });
-})();
-</script>`;
+})();</script>`;
 }
 
-function injectBanner(html: string, mcpUrl: string): string {
-  const injection = buildBannerInjection(mcpUrl);
+function injectBanner(html: string, mcpUrlWithSession: string): string {
+  const injection = buildBannerInjection(mcpUrlWithSession);
   const idx = html.lastIndexOf("</body>");
   if (idx === -1) return html + injection;
   return html.slice(0, idx) + injection + html.slice(idx);
@@ -811,236 +733,29 @@ function injectBanner(html: string, mcpUrl: string): string {
 // ── Tool definitions ──────────────────────────────────────────────────────────
 
 const TOOLS: Tool[] = [
-  // Introspection
-  {
-    name: "list_collections",
-    description:
-      "List all user-facing collections in the Directus instance. Shows collection name, singleton status, icon, and note. Call this first to understand the available data model.",
-    inputSchema: { type: "object", properties: {}, required: [] },
-  },
-  {
-    name: "get_collection_fields",
-    description:
-      "Get all fields for a specific collection, including field type, whether it is required, and UI options. Use this to understand what data a collection holds before reading or writing.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        collection: { type: "string", description: "Collection name (e.g. 'menu_items')" },
-      },
-      required: ["collection"],
-    },
-  },
-  {
-    name: "get_schema",
-    description:
-      "Get the full schema: all collections, all fields, and all relations in one call. Useful for a complete picture of the data model.",
-    inputSchema: { type: "object", properties: {}, required: [] },
-  },
-
-  // Read
-  {
-    name: "read_items",
-    description:
-      "Read multiple items from a collection. Supports field selection, Directus filter objects, sorting, pagination, and full-text search.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        collection: { type: "string", description: "Collection name" },
-        fields: {
-          type: "array",
-          items: { type: "string" },
-          description: "Fields to include in the response. Omit for all fields.",
-        },
-        filter: {
-          type: "object",
-          description: "Directus filter object, e.g. { \"available\": { \"_eq\": true } }",
-        },
-        sort: {
-          type: "array",
-          items: { type: "string" },
-          description: "Sort fields. Prefix with '-' for descending, e.g. [\"-price\"]",
-        },
-        limit: { type: "number", description: "Maximum number of items to return" },
-        offset: { type: "number", description: "Number of items to skip (for pagination)" },
-        search: { type: "string", description: "Full-text search string" },
-      },
-      required: ["collection"],
-    },
-  },
-  {
-    name: "read_item",
-    description:
-      "Read a single item by primary key. If you only know a human-readable field (e.g. dish name), use read_items with a filter instead.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        collection: { type: "string", description: "Collection name" },
-        id: { description: ITEM_PK_DESCRIPTION },
-        fields: {
-          type: "array",
-          items: { type: "string" },
-          description: "Fields to include in the response",
-        },
-      },
-      required: ["collection", "id"],
-    },
-  },
-  {
-    name: "read_singleton",
-    description:
-      "Read the data of a singleton collection (a collection with exactly one record, e.g. 'site_settings', 'hero', 'about'). Use list_collections to identify which collections are singletons.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        collection: { type: "string", description: "Singleton collection name" },
-        fields: {
-          type: "array",
-          items: { type: "string" },
-          description: "Fields to include in the response",
-        },
-      },
-      required: ["collection"],
-    },
-  },
-
-  // Write (all write tools always stage a preview — nothing is written until the user confirms via the review link)
-  {
-    name: "confirm_preview",
-    description:
-      "Apply a staged change to Directus. Call this only after the user has explicitly confirmed they want to apply the change. Pass the preview_token from the staging tool response. Returns a success message when the change has been written.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        token: { type: "string", description: "The preview_token returned by create_item, update_item, update_items, update_singleton, or delete_item." },
-      },
-      required: ["token"],
-    },
-  },
-  {
-    name: "discard_preview",
-    description:
-      "Discard a staged change without writing anything. Call this when the user wants to cancel the pending change. Pass the preview_token from the staging tool response.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        token: { type: "string", description: "The preview_token returned by the staging tool." },
-      },
-      required: ["token"],
-    },
-  },
-  {
-    name: "list_previews",
-    description:
-      "List all currently staged (unconfirmed) changes. Use this to show the user what is pending before a bulk confirm or discard.",
-    inputSchema: { type: "object", properties: {}, required: [] },
-  },
-  {
-    name: "confirm_all_previews",
-    description:
-      "Confirm and apply every staged change at once. Call this only after the user has explicitly approved applying all pending changes.",
-    inputSchema: { type: "object", properties: {}, required: [] },
-  },
-  {
-    name: "discard_all_previews",
-    description:
-      "Discard every staged change without writing anything. Nothing is written to Directus.",
-    inputSchema: { type: "object", properties: {}, required: [] },
-  },
-
-  {
-    name: "create_item",
-    description:
-      "Stage a new item for creation. If you need to create multiple items, call this tool for each one before presenting anything to the user. Nothing is written until confirmed.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        collection: { type: "string", description: "Collection name" },
-        data: {
-          type: "object",
-          description: "Item data as key-value pairs matching the collection's fields",
-        },
-      },
-      required: ["collection", "data"],
-    },
-  },
-  {
-    name: "update_item",
-    description:
-      "Stage an update to an existing item. If you need to update multiple items, call this tool for each one before presenting anything to the user. Nothing is written until confirmed.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        collection: { type: "string", description: "Collection name" },
-        id: { description: ITEM_PK_DESCRIPTION },
-        data: {
-          type: "object",
-          description: "Fields to update as key-value pairs (partial update)",
-        },
-      },
-      required: ["collection", "id", "data"],
-    },
-  },
-  {
-    name: "update_items",
-    description:
-      "Stage a bulk update for multiple items in a collection. Returns a preview_token for in-chat confirmation and a preview_url for visual inspection. Nothing is written until confirm_preview is called. Use this instead of calling update_item in a loop.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        collection: { type: "string", description: "Collection name" },
-        ids: {
-          type: "array",
-          items: { type: "string" },
-          description: `List of primary keys to update. ${ITEM_PK_DESCRIPTION}`,
-        },
-        data: {
-          type: "object",
-          description: "Fields to set on all matched items (partial update)",
-        },
-      },
-      required: ["collection", "ids", "data"],
-    },
-  },
-  {
-    name: "update_singleton",
-    description:
-      "Stage an update to a singleton collection (e.g. 'site_settings', 'hero', 'about'). Returns a before/after diff, a preview_token for in-chat confirmation, and a preview_url for visual inspection. Nothing is written until confirm_preview is called.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        collection: { type: "string", description: "Singleton collection name" },
-        data: {
-          type: "object",
-          description: "Fields to update as key-value pairs",
-        },
-      },
-      required: ["collection", "data"],
-    },
-  },
-  {
-    name: "delete_item",
-    description:
-      "Stage a deletion. If you need to delete multiple items, call this tool for each one before presenting anything to the user. Nothing is deleted until confirmed.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        collection: { type: "string", description: "Collection name" },
-        id: { description: ITEM_PK_DESCRIPTION },
-      },
-      required: ["collection", "id"],
-    },
-  },
+  { name: "list_collections", description: "List all user-facing collections in the Directus instance. Shows collection name, singleton status, icon, and note. Call this first to understand the available data model.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "get_collection_fields", description: "Get all fields for a specific collection, including field type, whether it is required, and UI options. Use this to understand what data a collection holds before reading or writing.", inputSchema: { type: "object", properties: { collection: { type: "string", description: "Collection name (e.g. 'menu_items')" } }, required: ["collection"] } },
+  { name: "get_schema", description: "Get the full schema: all collections, all fields, and all relations in one call. Useful for a complete picture of the data model.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "read_items", description: "Read multiple items from a collection. Supports field selection, Directus filter objects, sorting, pagination, and full-text search.", inputSchema: { type: "object", properties: { collection: { type: "string", description: "Collection name" }, fields: { type: "array", items: { type: "string" }, description: "Fields to include in the response. Omit for all fields." }, filter: { type: "object", description: "Directus filter object, e.g. { \"available\": { \"_eq\": true } }" }, sort: { type: "array", items: { type: "string" }, description: "Sort fields. Prefix with '-' for descending, e.g. [\"-price\"]" }, limit: { type: "number", description: "Maximum number of items to return" }, offset: { type: "number", description: "Number of items to skip (for pagination)" }, search: { type: "string", description: "Full-text search string" } }, required: ["collection"] } },
+  { name: "read_item", description: "Read a single item by primary key. If you only know a human-readable field (e.g. dish name), use read_items with a filter instead.", inputSchema: { type: "object", properties: { collection: { type: "string", description: "Collection name" }, id: { description: ITEM_PK_DESCRIPTION }, fields: { type: "array", items: { type: "string" }, description: "Fields to include in the response" } }, required: ["collection", "id"] } },
+  { name: "read_singleton", description: "Read the data of a singleton collection (a collection with exactly one record, e.g. 'site_settings', 'hero', 'about'). Use list_collections to identify which collections are singletons.", inputSchema: { type: "object", properties: { collection: { type: "string", description: "Singleton collection name" }, fields: { type: "array", items: { type: "string" }, description: "Fields to include in the response" } }, required: ["collection"] } },
+  { name: "confirm_preview", description: "Apply a staged change to Directus. Call this only after the user has explicitly confirmed they want to apply the change. Pass the preview_token from the staging tool response. Returns a success message when the change has been written.", inputSchema: { type: "object", properties: { token: { type: "string", description: "The preview_token returned by create_item, update_item, update_items, update_singleton, or delete_item." } }, required: ["token"] } },
+  { name: "discard_preview", description: "Discard a staged change without writing anything. Call this when the user wants to cancel the pending change. Pass the preview_token from the staging tool response.", inputSchema: { type: "object", properties: { token: { type: "string", description: "The preview_token returned by the staging tool." } }, required: ["token"] } },
+  { name: "list_previews", description: "List all currently staged (unconfirmed) changes for this session. Use this to show the user what is pending before a bulk confirm or discard.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "confirm_all_previews", description: "Confirm and apply every staged change at once. Call this only after the user has explicitly approved applying all pending changes.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "discard_all_previews", description: "Discard every staged change without writing anything. Nothing is written to Directus.", inputSchema: { type: "object", properties: {}, required: [] } },
+  { name: "create_item", description: "Stage a new item for creation. If you need to create multiple items, call this tool for each one before presenting anything to the user. Nothing is written until confirmed.", inputSchema: { type: "object", properties: { collection: { type: "string", description: "Collection name" }, data: { type: "object", description: "Item data as key-value pairs matching the collection's fields" } }, required: ["collection", "data"] } },
+  { name: "update_item", description: "Stage an update to an existing item. If you need to update multiple items, call this tool for each one before presenting anything to the user. Nothing is written until confirmed.", inputSchema: { type: "object", properties: { collection: { type: "string", description: "Collection name" }, id: { description: ITEM_PK_DESCRIPTION }, data: { type: "object", description: "Fields to update as key-value pairs (partial update)" } }, required: ["collection", "id", "data"] } },
+  { name: "update_items", description: "Stage the same update for multiple items in a collection at once. Internally creates one preview per item (each with its own before/after diff) — equivalent to calling update_item N times but in a single tool call. Returns one preview_token per item. Nothing is written until confirmed.", inputSchema: { type: "object", properties: { collection: { type: "string", description: "Collection name" }, ids: { type: "array", items: { type: "string" }, description: `List of primary keys to update. ${ITEM_PK_DESCRIPTION}` }, data: { type: "object", description: "Fields to set on all matched items (partial update)" } }, required: ["collection", "ids", "data"] } },
+  { name: "update_singleton", description: "Stage an update to a singleton collection (e.g. 'site_settings', 'hero', 'about'). Returns a before/after diff, a preview_token for in-chat confirmation, and a preview_url for visual inspection. Nothing is written until confirm_preview is called.", inputSchema: { type: "object", properties: { collection: { type: "string", description: "Singleton collection name" }, data: { type: "object", description: "Fields to update as key-value pairs" } }, required: ["collection", "data"] } },
+  { name: "delete_item", description: "Stage a deletion. If you need to delete multiple items, call this tool for each one before presenting anything to the user. Nothing is deleted until confirmed.", inputSchema: { type: "object", properties: { collection: { type: "string", description: "Collection name" }, id: { description: ITEM_PK_DESCRIPTION } }, required: ["collection", "id"] } },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function ok(data: unknown) {
-  return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
-}
-
-function text(s: string) {
-  return { content: [{ type: "text" as const, text: s }] };
-}
+function ok(data: unknown)    { return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] }; }
+function text(s: string)      { return { content: [{ type: "text" as const, text: s }] }; }
+function err(message: string) { return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true }; }
 
 function parseData(raw: unknown): Record<string, unknown> {
   if (typeof raw === "string") {
@@ -1062,28 +777,29 @@ async function validateFields(
   return `Unknown field(s) for '${collection}': ${unknown.join(", ")}.\nValid fields: ${valid}.\nOnly use fields from that list.`;
 }
 
-function err(message: string) {
-  return { content: [{ type: "text" as const, text: `Error: ${message}` }], isError: true };
+async function applyEntry(client: DirectusClient, entry: PreviewEntry): Promise<void> {
+  switch (entry.action) {
+    case "create":           await client.createItem(entry.collection, entry.data!); break;
+    case "update":           await client.updateItem(entry.collection, entry.id!, entry.data!); break;
+    case "update_singleton": await client.updateSingleton(entry.collection, entry.data!); break;
+    case "delete":           await client.deleteItem(entry.collection, entry.id!); break;
+  }
 }
 
 // ── MCP Server factory ────────────────────────────────────────────────────────
 
-function makeServer(client: DirectusClient): Server {
-  const server = new Server(
-    { name: "directus-mcp", version: "1.0.0" },
-    { capabilities: { tools: {} } },
-  );
+function makeServer(sessionId: string, info: SessionInfo): Server {
+  const server = new Server({ name: "directus-mcp", version: "1.0.0" }, { capabilities: { tools: {} } });
+  const client = makeClient(info);
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args = {} } = request.params;
-    process.stderr.write(`[MCP] tool_call: ${name} args=${JSON.stringify(args)}\n`);
+    process.stderr.write(`[mcp] session=${sessionId} tool=${name}\n`);
 
     try {
       switch (name) {
-        // ── Introspection ────────────────────────────────────────────────────
-
         case "list_collections":
           return ok(await client.listCollections());
 
@@ -1095,27 +811,16 @@ function makeServer(client: DirectusClient): Server {
         case "get_schema":
           return ok(await client.getSchema());
 
-        // ── Read ─────────────────────────────────────────────────────────────
-
         case "read_items": {
           const { collection, fields, filter, sort, limit, offset, search } = args as {
-            collection: string;
-            fields?: string[];
-            filter?: Record<string, unknown>;
-            sort?: string[];
-            limit?: number;
-            offset?: number;
-            search?: string;
+            collection: string; fields?: string[]; filter?: Record<string, unknown>;
+            sort?: string[]; limit?: number; offset?: number; search?: string;
           };
           return ok(await client.readItems(collection, { fields, filter, sort, limit, offset, search }));
         }
 
         case "read_item": {
-          const { collection, id, fields } = args as {
-            collection: string;
-            id: string | number;
-            fields?: string[];
-          };
+          const { collection, id, fields } = args as { collection: string; id: string | number; fields?: string[] };
           return ok(await client.readItem(collection, id, fields));
         }
 
@@ -1124,23 +829,18 @@ function makeServer(client: DirectusClient): Server {
           return ok(await client.readSingleton(collection, fields));
         }
 
-        // ── Write ────────────────────────────────────────────────────────────
-
         case "create_item": {
           const { collection } = args as { collection: string };
           const data = parseData((args as { data?: unknown }).data);
           const fieldErr = await validateFields(client, collection, data);
           if (fieldErr) return err(fieldErr);
-          const entry: PreviewEntry = { action: "create", collection, after: data, data };
+          const entry: PreviewEntry = { session_id: sessionId, action: "create", collection, after: data, data };
           const token = storePreview(entry);
           return text(buildPreviewResponse(token, entry));
         }
 
         case "update_item": {
-          const { collection, id } = args as {
-            collection: string;
-            id: string | number;
-          };
+          const { collection, id } = args as { collection: string; id: string | number };
           const data = parseData((args as { data?: unknown }).data);
           const fieldErr = await validateFields(client, collection, data);
           if (fieldErr) return err(fieldErr);
@@ -1148,7 +848,7 @@ function makeServer(client: DirectusClient): Server {
           const before = res.data;
           const after = { ...before, ...data };
           const entry: PreviewEntry = {
-            action: "update", collection, id,
+            session_id: sessionId, action: "update", collection, id,
             before, after, diff: computeDiff(before, data), data,
           };
           const token = storePreview(entry);
@@ -1168,11 +868,22 @@ function makeServer(client: DirectusClient): Server {
               : typeof rawIds === "number"
                 ? [rawIds]
                 : [];
-          const entry: PreviewEntry = {
-            action: "update_bulk", collection, ids, after: data, data,
-          };
-          const token = storePreview(entry);
-          return text(buildPreviewResponse(token, entry));
+          if (!ids.length) return err("No ids provided to update_items.");
+
+          // Behave like calling update_item in a loop — one preview entry per item,
+          // each with its own before/after diff so HTML rewriting works cleanly.
+          const staged: { token: string; entry: PreviewEntry }[] = [];
+          for (const id of ids) {
+            const res = await client.readItem(collection, id) as { data: Record<string, unknown> };
+            const before = res.data;
+            const after = { ...before, ...data };
+            const entry: PreviewEntry = {
+              session_id: sessionId, action: "update", collection, id,
+              before, after, diff: computeDiff(before, data), data,
+            };
+            staged.push({ token: storePreview(entry), entry });
+          }
+          return text(buildBulkPreviewResponse(staged));
         }
 
         case "update_singleton": {
@@ -1184,7 +895,7 @@ function makeServer(client: DirectusClient): Server {
           const before = res.data;
           const after = { ...before, ...data };
           const entry: PreviewEntry = {
-            action: "update_singleton", collection,
+            session_id: sessionId, action: "update_singleton", collection,
             before, after, diff: computeDiff(before, data), data,
           };
           const token = storePreview(entry);
@@ -1192,13 +903,10 @@ function makeServer(client: DirectusClient): Server {
         }
 
         case "delete_item": {
-          const { collection, id } = args as {
-            collection: string;
-            id: string | number;
-          };
+          const { collection, id } = args as { collection: string; id: string | number };
           const res = await client.readItem(collection, id) as { data: Record<string, unknown> };
           const entry: PreviewEntry = {
-            action: "delete", collection, id, before: res.data,
+            session_id: sessionId, action: "delete", collection, id, before: res.data,
           };
           const token = storePreview(entry);
           return text(buildPreviewResponse(token, entry));
@@ -1207,61 +915,56 @@ function makeServer(client: DirectusClient): Server {
         case "confirm_preview": {
           const { token } = args as { token: string };
           const stored = previewStore.get(token);
-          if (!stored) return err("Preview not found — it may have already been confirmed, discarded, or expired.");
+          if (!stored || stored.entry.session_id !== sessionId) {
+            return err("Preview not found — it may have already been confirmed, discarded, or expired.");
+          }
           const { entry } = stored;
           clearTimeout(stored.timer);
           previewStore.delete(token);
-          switch (entry.action) {
-            case "create":           await client.createItem(entry.collection, entry.data!); break;
-            case "update":           await client.updateItem(entry.collection, entry.id!, entry.data!); break;
-            case "update_bulk":      await client.updateItems(entry.collection, entry.ids!, entry.data!); break;
-            case "update_singleton": await client.updateSingleton(entry.collection, entry.data!); break;
-            case "delete":           await client.deleteItem(entry.collection, entry.id!); break;
-          }
+          await applyEntry(client, entry);
           return text(`✓ Done. ${entry.action} on ${entry.collection}${entry.id != null ? ` #${entry.id}` : ""} has been written to Directus.`);
         }
 
         case "discard_preview": {
           const { token } = args as { token: string };
           const stored = previewStore.get(token);
-          if (!stored) return err("Preview not found — it may have already been confirmed, discarded, or expired.");
+          if (!stored || stored.entry.session_id !== sessionId) {
+            return err("Preview not found — it may have already been confirmed, discarded, or expired.");
+          }
           clearTimeout(stored.timer);
           previewStore.delete(token);
           return text(`✗ Discarded. Nothing was written to Directus.`);
         }
 
         case "list_previews": {
-          if (previewStore.size === 0) return text("No staged changes.");
-          const lines = Array.from(previewStore.entries()).map(([token, { entry }]) => {
+          const ours = previewsForSession(sessionId);
+          if (ours.length === 0) return text("No staged changes.");
+          const lines = ours.map(({ token, entry }) => {
             const diff = entry.diff?.map((d) => `${d.field}: ${JSON.stringify(d.before)} → ${JSON.stringify(d.after)}`).join(", ") ?? "";
             return `- [${entry.action}] ${entry.collection}${entry.id != null ? ` #${entry.id}` : ""}${diff ? `  (${diff})` : ""}  token: ${token}`;
           });
-          return text(`Staged changes (${previewStore.size}):\n${lines.join("\n")}`);
+          return text(`Staged changes (${ours.length}):\n${lines.join("\n")}`);
         }
 
         case "confirm_all_previews": {
-          const entries = Array.from(previewStore.entries());
-          if (!entries.length) return text("No staged changes to confirm.");
-          for (const [token, { entry, timer }] of entries) {
-            clearTimeout(timer);
-            previewStore.delete(token);
-            switch (entry.action) {
-              case "create":           await client.createItem(entry.collection, entry.data!); break;
-              case "update":           await client.updateItem(entry.collection, entry.id!, entry.data!); break;
-              case "update_bulk":      await client.updateItems(entry.collection, entry.ids!, entry.data!); break;
-              case "update_singleton": await client.updateSingleton(entry.collection, entry.data!); break;
-              case "delete":           await client.deleteItem(entry.collection, entry.id!); break;
-            }
+          const ours = previewsForSession(sessionId);
+          if (!ours.length) return text("No staged changes to confirm.");
+          for (const { token, entry } of ours) {
+            const stored = previewStore.get(token);
+            if (stored) { clearTimeout(stored.timer); previewStore.delete(token); }
+            await applyEntry(client, entry);
           }
-          return text(`✓ All ${entries.length} change(s) confirmed and written to Directus.`);
+          return text(`✓ All ${ours.length} change(s) confirmed and written to Directus.`);
         }
 
         case "discard_all_previews": {
-          const count = previewStore.size;
-          if (!count) return text("No staged changes to discard.");
-          for (const { timer } of previewStore.values()) clearTimeout(timer);
-          previewStore.clear();
-          return text(`✗ All ${count} staged change(s) discarded. Nothing was written to Directus.`);
+          const ours = previewsForSession(sessionId);
+          if (!ours.length) return text("No staged changes to discard.");
+          for (const { token } of ours) {
+            const stored = previewStore.get(token);
+            if (stored) { clearTimeout(stored.timer); previewStore.delete(token); }
+          }
+          return text(`✗ All ${ours.length} staged change(s) discarded. Nothing was written to Directus.`);
         }
 
         default:
@@ -1275,14 +978,23 @@ function makeServer(client: DirectusClient): Server {
   return server;
 }
 
-// ── HTTP server ───────────────────────────────────────────────────────────────
+// ── Main HTTP server ──────────────────────────────────────────────────────────
 
-const PORT = Number(process.env.PORT ?? 3001);
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, mcp-session-id",
+  "Access-Control-Allow-Headers": "Content-Type, mcp-session-id, x-session-id, x-directus-url, x-directus-token, x-directus-email, x-directus-password, x-website-url, x-website-public-url",
 };
+
+async function readBody(req: http.IncomingMessage): Promise<Buffer | undefined> {
+  const chunks: Buffer[] = [];
+  await new Promise<void>((resolve, reject) => {
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", resolve);
+    req.on("error", reject);
+  });
+  return chunks.length ? Buffer.concat(chunks) : undefined;
+}
 
 const httpServer = http.createServer();
 
@@ -1292,35 +1004,27 @@ httpServer.on("request", (req, res) => {
     const path = url.pathname;
     const method = req.method ?? "GET";
 
-    // CORS preflight
-    if (method === "OPTIONS") {
-      res.writeHead(204, CORS_HEADERS).end();
-      return;
-    }
+    if (method === "OPTIONS") { res.writeHead(204, CORS_HEADERS).end(); return; }
 
-    // ── MCP endpoint ──────────────────────────────────────────────────────────
+    // ── MCP tool endpoint ──────────────────────────────────────────────────
     if (path === "/mcp") {
-      const chunks: Buffer[] = [];
-      await new Promise<void>((resolve, reject) => {
-        req.on("data", (chunk: Buffer) => chunks.push(chunk));
-        req.on("end", resolve);
-        req.on("error", reject);
-      });
-      const body = chunks.length
-        ? (JSON.parse(Buffer.concat(chunks).toString()) as unknown)
-        : undefined;
+      const buf = await readBody(req);
+      const body = buf ? (JSON.parse(buf.toString()) as unknown) : undefined;
+      const { id: sessionId, info } = getOrCreateSession(req);
 
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-      const server = makeServer(makeClient(req));
+      const server = makeServer(sessionId, info);
       res.on("close", () => transport.close().catch(() => {}));
       await server.connect(transport);
       await transport.handleRequest(req, res, body);
       return;
     }
 
-    // ── GET /previews ─────────────────────────────────────────────────────────
-    if (method === "GET" && path === "/previews") {
-      const entries = Array.from(previewStore.entries()).map(([token, { entry }]) => ({
+    // ── /sessions/:sid/previews ────────────────────────────────────────────
+    const sessionPreviewsMatch = /^\/sessions\/([^/]+)\/previews$/.exec(path);
+    if (method === "GET" && sessionPreviewsMatch) {
+      const sid = decodeURIComponent(sessionPreviewsMatch[1]!);
+      const entries = previewsForSession(sid).map(({ token, entry }) => ({
         ...entry,
         preview_token: token,
         preview_pages: previewPagesForCollection(entry.collection),
@@ -1330,134 +1034,65 @@ httpServer.on("request", (req, res) => {
       return;
     }
 
-    // ── GET /preview/:token ───────────────────────────────────────────────────
-    if (method === "GET" && path.startsWith("/preview/")) {
-      const token = path.slice("/preview/".length);
+    // ── /sessions/:sid/preview/:token (GET / DELETE) ───────────────────────
+    const sessionPreviewTokenMatch = /^\/sessions\/([^/]+)\/preview\/([^/]+)$/.exec(path);
+    if (sessionPreviewTokenMatch) {
+      const sid = decodeURIComponent(sessionPreviewTokenMatch[1]!);
+      const token = decodeURIComponent(sessionPreviewTokenMatch[2]!);
       const stored = previewStore.get(token);
-      if (!stored) {
-        res.writeHead(404, { "Content-Type": "application/json", ...CORS_HEADERS })
-          .end(JSON.stringify({ error: "Preview not found or expired" }));
+      const valid = stored && stored.entry.session_id === sid;
+      if (method === "GET") {
+        if (!valid) { res.writeHead(404, { "Content-Type": "application/json", ...CORS_HEADERS }).end(JSON.stringify({ error: "Preview not found or expired" })); return; }
+        res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
+          .end(JSON.stringify({ ...stored!.entry, preview_token: token }));
         return;
       }
-      res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
-        .end(JSON.stringify({ ...stored.entry, preview_token: token }));
-      return;
+      if (method === "DELETE") {
+        if (valid) { clearTimeout(stored!.timer); previewStore.delete(token); }
+        res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS }).end(JSON.stringify({ success: true }));
+        return;
+      }
     }
 
-    // ── POST /confirm/:token ──────────────────────────────────────────────────
-    if (method === "POST" && path.startsWith("/confirm/")) {
-      const token = path.slice("/confirm/".length);
+    // ── POST /sessions/:sid/confirm/:token ─────────────────────────────────
+    const sessionConfirmMatch = /^\/sessions\/([^/]+)\/confirm\/([^/]+)$/.exec(path);
+    if (method === "POST" && sessionConfirmMatch) {
+      const sid = decodeURIComponent(sessionConfirmMatch[1]!);
+      const token = decodeURIComponent(sessionConfirmMatch[2]!);
       const stored = previewStore.get(token);
-      if (!stored) {
+      if (!stored || stored.entry.session_id !== sid) {
         res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
           .end(JSON.stringify({ success: true, alreadyApplied: true }));
         return;
       }
-
       const { entry } = stored;
       clearTimeout(stored.timer);
       previewStore.delete(token);
-
-      const confirmClient = makeClient(req);
-      switch (entry.action) {
-        case "create":
-          await confirmClient.createItem(entry.collection, entry.data!);
-          break;
-        case "update":
-          await confirmClient.updateItem(entry.collection, entry.id!, entry.data!);
-          break;
-        case "update_bulk":
-          await confirmClient.updateItems(entry.collection, entry.ids!, entry.data!);
-          break;
-        case "update_singleton":
-          await confirmClient.updateSingleton(entry.collection, entry.data!);
-          break;
-        case "delete":
-          await confirmClient.deleteItem(entry.collection, entry.id!);
-          break;
-      }
-
+      const info: SessionInfo = sessionMap.get(sid) ?? { directusUrl: "", lastUsed: Date.now() };
+      const client = makeClient(info);
+      await applyEntry(client, entry);
       res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
         .end(JSON.stringify({ success: true, action: entry.action, collection: entry.collection }));
       return;
     }
 
-    // ── DELETE /preview/:token ────────────────────────────────────────────────
-    if (method === "DELETE" && path.startsWith("/preview/")) {
-      const token = path.slice("/preview/".length);
+    // ── GET /sessions/:sid/review/:token ───────────────────────────────────
+    const sessionReviewMatch = /^\/sessions\/([^/]+)\/review\/([^/]+)$/.exec(path);
+    if (method === "GET" && sessionReviewMatch) {
+      const sid = decodeURIComponent(sessionReviewMatch[1]!);
+      const token = decodeURIComponent(sessionReviewMatch[2]!);
+      const previews = previewsForSession(sid).map(({ token: t, entry }) => ({ ...entry, preview_token: t }));
+      const html = buildReviewPage(sid, token, previews);
       const stored = previewStore.get(token);
-      if (stored) {
-        clearTimeout(stored.timer);
-        previewStore.delete(token);
-      }
-      res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
-        .end(JSON.stringify({ success: true }));
-      return;
-    }
-
-    // ── GET /review/:token ────────────────────────────────────────────────────
-    if (method === "GET" && path.startsWith("/review/")) {
-      const token = path.slice("/review/".length);
-      const allPreviews = Array.from(previewStore.entries()).map(([t, { entry }]) => ({
-        ...entry,
-        preview_token: t,
-      }));
-      const html = buildReviewPage(token, allPreviews);
-      res.writeHead(previewStore.has(token) ? 200 : 404, { "Content-Type": "text/html; charset=utf-8" })
-        .end(html);
-      return;
-    }
-
-    // ── /directus-proxy/* ─────────────────────────────────────────────────────
-    if (path.startsWith("/directus-proxy")) {
-      const directusPath = path.slice("/directus-proxy".length) || "/";
-      const directusUrl = `${DIRECTUS_UPSTREAM}${directusPath}${url.search || ""}`;
-
-      const chunks: Buffer[] = [];
-      await new Promise<void>((resolve, reject) => {
-        req.on("data", (chunk: Buffer) => chunks.push(chunk));
-        req.on("end", resolve);
-        req.on("error", reject);
-      });
-      const reqBody = chunks.length ? Buffer.concat(chunks) : undefined;
-
-      const forwardHeaders: Record<string, string> = {};
-      const auth = req.headers["authorization"];
-      if (auth) forwardHeaders["Authorization"] = Array.isArray(auth) ? auth[0]! : auth;
-      const ct = req.headers["content-type"];
-      if (ct) forwardHeaders["Content-Type"] = Array.isArray(ct) ? ct[0]! : ct;
-
-      const upstream = await fetch(directusUrl, {
-        method,
-        headers: forwardHeaders,
-        body: reqBody?.length ? reqBody : undefined,
-      });
-
-      // Intercept GET /items/:collection and apply staged previews
-      const itemsMatch = /^\/items\/([^/]+)(?:\/[^/]+)?$/.exec(directusPath);
-      if (method === "GET" && itemsMatch && upstream.ok) {
-        const collection = itemsMatch[1]!;
-        const body = await upstream.json() as unknown;
-        const modified = applyPreviewsToResponse(body, collection);
-        res.writeHead(upstream.status, { "Content-Type": "application/json", ...CORS_HEADERS })
-          .end(JSON.stringify(modified));
-        return;
-      }
-
-      // Pass everything else through unchanged
-      const resContentType = upstream.headers.get("content-type") ?? "application/octet-stream";
-      const resBody = Buffer.from(await upstream.arrayBuffer());
-      const cacheControl = upstream.headers.get("cache-control");
-      const extraHeaders: Record<string, string> = { "Content-Type": resContentType, ...CORS_HEADERS };
-      if (cacheControl) extraHeaders["Cache-Control"] = cacheControl;
-      res.writeHead(upstream.status, extraHeaders).end(resBody);
+      const status = stored && stored.entry.session_id === sid ? 200 : 404;
+      res.writeHead(status, { "Content-Type": "text/html; charset=utf-8" }).end(html);
       return;
     }
 
     res.writeHead(404, { "Content-Type": "application/json" })
       .end(JSON.stringify({ error: "Not found" }));
   })().catch((e: unknown) => {
-    process.stderr.write(`Request error: ${e instanceof Error ? e.message : String(e)}\n`);
+    process.stderr.write(`[http] error: ${e instanceof Error ? e.message : String(e)}\n`);
     if (!res.headersSent) res.writeHead(500).end();
   });
 });
@@ -1466,60 +1101,97 @@ httpServer.listen(PORT, () => {
   process.stderr.write(`directus-mcp listening on http://0.0.0.0:${PORT}/mcp\n`);
 });
 
-// ── Preview proxy server ──────────────────────────────────────────────────────
-// Proxies the Astro website-preview instance and injects the banner into HTML.
-// This keeps all preview UI logic out of the website codebase.
+// ── Preview proxy (subdomain-routed) ──────────────────────────────────────────
+//
+// Browser hits e.g. http://abc123.localhost:4322/menu. The proxy reads the
+// subdomain to find the session, fetches the customer's website at the
+// session's configured websiteUrl, applies staged changes to the HTML, and
+// injects the banner.
+
+function extractSessionFromHost(hostHeader: string | undefined): string | null {
+  if (!hostHeader) return null;
+  const host = hostHeader.split(":")[0]!;
+  const parts = host.split(".");
+  if (parts.length < 2) return null;
+  return parts[0] || null;
+}
 
 const previewProxyServer = http.createServer();
 
 previewProxyServer.on("request", (req, res) => {
   void (async () => {
-    const url = new URL(req.url ?? "/", `http://localhost:${PREVIEW_PROXY_PORT}`);
     const method = req.method ?? "GET";
+    if (method === "OPTIONS") { res.writeHead(204, CORS_HEADERS).end(); return; }
 
-    if (method === "OPTIONS") {
-      res.writeHead(204, CORS_HEADERS).end();
+    const hostHeader = req.headers.host;
+    const sid = extractSessionFromHost(hostHeader);
+    if (!sid) {
+      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" })
+        .end(`<h1>404 — Missing session subdomain</h1>`);
       return;
     }
+    const info = sessionMap.get(sid);
+    if (!info || !info.websiteUrl) {
+      res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" })
+        .end(`<h1>404 — Unknown preview session</h1><p>No website URL configured for session <code>${escHtml(sid)}</code>.</p>`);
+      return;
+    }
+    info.lastUsed = Date.now();
 
-    const targetUrl = `${PREVIEW_WEBSITE_INTERNAL_URL}${url.pathname}${url.search || ""}`;
+    const url = new URL(req.url ?? "/", `http://localhost:${PREVIEW_PROXY_PORT}`);
+    const targetBase = info.websiteUrl.replace(/\/$/, "");
+    const targetUrl = `${targetBase}${url.pathname}${url.search || ""}`;
+    process.stderr.write(`[preview-proxy] session=${sid} ${method} ${url.pathname} → ${targetUrl}\n`);
 
-    const chunks: Buffer[] = [];
-    await new Promise<void>((resolve, reject) => {
-      req.on("data", (chunk: Buffer) => chunks.push(chunk));
-      req.on("end", resolve);
-      req.on("error", reject);
-    });
-    const reqBody = chunks.length ? Buffer.concat(chunks) : undefined;
+    const reqBody = await readBody(req);
 
     const forwardHeaders: Record<string, string> = {};
     for (const [key, value] of Object.entries(req.headers)) {
-      if (["host", "connection", "transfer-encoding"].includes(key.toLowerCase())) continue;
+      if (["host", "connection", "transfer-encoding", "content-length"].includes(key.toLowerCase())) continue;
       forwardHeaders[key] = Array.isArray(value) ? value[0]! : (value ?? "");
     }
 
-    const upstream = await fetch(targetUrl, {
-      method,
-      headers: forwardHeaders,
-      body: reqBody?.length ? reqBody : undefined,
-    });
-
-    const contentType = upstream.headers.get("content-type") ?? "";
-
-    if (method === "GET" && contentType.includes("text/html") && upstream.ok) {
-      const html = injectBanner(await upstream.text(), MCP_PUBLIC_URL);
-      res.writeHead(upstream.status, { "Content-Type": "text/html; charset=utf-8" }).end(html);
+    let upstream: Response;
+    try {
+      upstream = await fetch(targetUrl, {
+        method,
+        headers: forwardHeaders,
+        body: reqBody?.length ? new Uint8Array(reqBody) : undefined,
+        redirect: "manual",
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      process.stderr.write(`[preview-proxy] fetch failed: ${msg}\n`);
+      res.writeHead(502, { "Content-Type": "text/html; charset=utf-8" })
+        .end(`<h1>502 — Cannot reach upstream</h1><p>Target: <code>${escHtml(targetUrl)}</code></p><pre>${escHtml(msg)}</pre>`);
       return;
     }
 
+    const contentType = upstream.headers.get("content-type") ?? "";
+    const mcpForSession = `${MCP_PUBLIC_URL}/sessions/${encodeURIComponent(sid)}`;
+
+    if (method === "GET" && contentType.includes("text/html") && upstream.ok) {
+      let html = await upstream.text();
+      html = applyPreviewsToHtml(html, sid);
+      html = injectBanner(html, mcpForSession);
+      const outHeaders: Record<string, string> = { "Content-Type": "text/html; charset=utf-8" };
+      const cc = upstream.headers.get("cache-control");
+      if (cc) outHeaders["Cache-Control"] = "no-store"; // never cache rewritten HTML
+      res.writeHead(upstream.status, outHeaders).end(html);
+      return;
+    }
+
+    // Pass through everything else verbatim (assets, JSON, redirects, etc.)
     const resBody = Buffer.from(await upstream.arrayBuffer());
-    const outHeaders: Record<string, string> = { "Content-Type": contentType };
-    const cacheControl = upstream.headers.get("cache-control");
-    if (cacheControl) outHeaders["Cache-Control"] = cacheControl;
+    const outHeaders: Record<string, string> = {};
+    upstream.headers.forEach((value, key) => {
+      if (["content-encoding", "transfer-encoding", "content-length"].includes(key.toLowerCase())) return;
+      outHeaders[key] = value;
+    });
     res.writeHead(upstream.status, outHeaders).end(resBody);
   })().catch((e: unknown) => {
     const msg = e instanceof Error ? e.message : String(e);
-    process.stderr.write(`Preview proxy error: ${msg}\n`);
+    process.stderr.write(`[preview-proxy] error: ${msg}\n`);
     if (!res.headersSent) res.writeHead(502).end(`Preview proxy error: ${msg}`);
   });
 });

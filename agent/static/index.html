@@ -424,16 +424,20 @@
             <input id="f-name" placeholder="z.B. Adlerwirt">
           </div>
           <div class="field span2">
-            <label>Directus URL <span style="font-weight:400;color:#b0a99f">(intern, für MCP-Server)</span></label>
-            <input id="f-directus-url" placeholder="http://adlerwirt-directus:8055">
+            <label>Directus URL <span style="font-weight:400;color:#b0a99f">(intern, vom MCP erreichbar)</span></label>
+            <input id="f-directus-url" placeholder="http://directus.example.com">
           </div>
           <div class="field">
             <label>API Token</label>
-            <input id="f-token" placeholder="adlerwirt-dev-token">
+            <input id="f-token" placeholder="dev-token">
           </div>
           <div class="field">
-            <label>Website URL</label>
-            <input id="f-website-url" placeholder="http://localhost:4321">
+            <label>Website URL <span style="font-weight:400;color:#b0a99f">(öffentlich)</span></label>
+            <input id="f-website-url" placeholder="https://example.com">
+          </div>
+          <div class="field span2">
+            <label>Website Internal URL <span style="font-weight:400;color:#b0a99f">(optional, falls intern anders erreichbar als öffentlich)</span></label>
+            <input id="f-website-internal-url" placeholder="http://website-container:4321">
           </div>
           <div class="field">
             <label>Admin E-Mail</label>
@@ -593,15 +597,24 @@
     return { tools, bub };
   }
 
-  const activeBadges = {};
+  // Keyed by run_id so parallel/repeated tool calls don't trample each other.
+  // Fallback to name-queue when no run_id is provided.
+  const activeBadges = {};       // run_id → badge
+  const nameQueue    = {};       // name → array of badges (fallback)
 
-  function toolStart(el, name) {
+  function toolStart(el, runId, name) {
     const b = document.createElement('span'); b.className = 'tool-badge';
     b.innerHTML = `<span class="dot"></span>${name}`;
-    el.appendChild(b); activeBadges[name] = b; scrollBottom();
+    el.appendChild(b);
+    if (runId) activeBadges[runId] = b;
+    else (nameQueue[name] = nameQueue[name] || []).push(b);
+    scrollBottom();
   }
-  function toolDone(name) {
-    const b = activeBadges[name]; if (!b) return;
+  function toolDone(runId, name) {
+    let b;
+    if (runId && activeBadges[runId]) { b = activeBadges[runId]; delete activeBadges[runId]; }
+    else if (nameQueue[name] && nameQueue[name].length) { b = nameQueue[name].shift(); }
+    if (!b) return;
     b.classList.add('done'); b.innerHTML = `<span class="dot"></span>${name} ✓`;
   }
 
@@ -611,6 +624,7 @@
     streaming = true; sendBtn.disabled = true;
     input.value = ''; input.style.height = 'auto';
     for (const k of Object.keys(activeBadges)) delete activeBadges[k];
+    for (const k of Object.keys(nameQueue))    delete nameQueue[k];
 
     appendUser(text);
     const { tools: toolsEl, bub } = createAiRow();
@@ -635,8 +649,8 @@
           if (ev.type === 'token') {
             if (!started) { bub.innerHTML = ''; started = true; }
             raw += ev.content; bub.innerHTML = marked.parse(raw); scrollBottom();
-          } else if (ev.type === 'tool_start') { toolStart(toolsEl, ev.name);
-          } else if (ev.type === 'tool_end')   { toolDone(ev.name);
+          } else if (ev.type === 'tool_start') { toolStart(toolsEl, ev.run_id, ev.name);
+          } else if (ev.type === 'tool_end')   { toolDone(ev.run_id, ev.name);
           } else if (ev.type === 'error') {
             bub.innerHTML = ''; const e = document.createElement('div');
             e.className = 'bubble-error'; e.textContent = `Fehler: ${ev.content}`; bub.replaceWith(e);
@@ -670,12 +684,13 @@
     form.classList.add('visible');
     document.getElementById('form-heading').textContent = id ? 'Bearbeiten' : 'Neue Instanz';
     const i = id ? (instances.find(x => x.id === id) || {}) : {};
-    document.getElementById('f-name').value        = i.name || '';
-    document.getElementById('f-directus-url').value= i.directus_url || '';
-    document.getElementById('f-token').value       = i.directus_token || '';
-    document.getElementById('f-website-url').value = i.website_url || '';
-    document.getElementById('f-email').value       = i.directus_email || '';
-    document.getElementById('f-password').value    = i.directus_password || '';
+    document.getElementById('f-name').value                = i.name || '';
+    document.getElementById('f-directus-url').value        = i.directus_url || '';
+    document.getElementById('f-token').value               = i.directus_token || '';
+    document.getElementById('f-website-url').value         = i.website_url || '';
+    document.getElementById('f-website-internal-url').value= i.website_internal_url || '';
+    document.getElementById('f-email').value               = i.directus_email || '';
+    document.getElementById('f-password').value            = i.directus_password || '';
     form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
   function cancelForm() {
@@ -684,12 +699,13 @@
   }
   async function saveInstance() {
     const body = {
-      name:              document.getElementById('f-name').value.trim(),
-      directus_url:      document.getElementById('f-directus-url').value.trim(),
-      directus_token:    document.getElementById('f-token').value.trim() || null,
-      website_url:       document.getElementById('f-website-url').value.trim() || null,
-      directus_email:    document.getElementById('f-email').value.trim() || null,
-      directus_password: document.getElementById('f-password').value || null,
+      name:                  document.getElementById('f-name').value.trim(),
+      directus_url:          document.getElementById('f-directus-url').value.trim(),
+      directus_token:        document.getElementById('f-token').value.trim() || null,
+      website_url:           document.getElementById('f-website-url').value.trim() || null,
+      website_internal_url:  document.getElementById('f-website-internal-url').value.trim() || null,
+      directus_email:        document.getElementById('f-email').value.trim() || null,
+      directus_password:     document.getElementById('f-password').value || null,
     };
     if (!body.name || !body.directus_url) { alert('Name und Directus URL sind Pflichtfelder.'); return; }
     const url = editingId ? `/instances/${editingId}` : '/instances';

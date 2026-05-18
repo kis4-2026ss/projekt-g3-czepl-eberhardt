@@ -7,11 +7,7 @@ cd "$(dirname "$0")"
 WIPE="adlerwirt_db adlerwirt_uploads fitcore_db fitcore_uploads agent_data"
 
 # Volumes preserved by default — slow to rebuild and rarely the source of bugs:
-#   adlerwirt_website_modules ~ Astro deps for the Adlerwirt site
-#   adlerwirt_preview_modules ~ Astro deps for the Adlerwirt preview instance
-#   fitcore_website_modules   ~ Astro deps for the FitCore site
-#   fitcore_preview_modules   ~ Astro deps for the FitCore preview instance
-KEEP="adlerwirt_website_modules adlerwirt_preview_modules fitcore_website_modules fitcore_preview_modules"
+KEEP="adlerwirt_website_modules fitcore_website_modules"
 
 FULL=0
 NO_CACHE=0
@@ -23,8 +19,6 @@ for arg in "$@"; do
       echo "Usage: $0 [--full] [--no-cache]"
       echo ""
       echo "  Resets the stack to a clean state and re-seeds both Directus instances."
-      echo "  By default node_modules volumes are preserved."
-      echo "  All built images are ALWAYS rebuilt from source."
       echo ""
       echo "  --full      Also wipe: $KEEP"
       echo "  --no-cache  Force a no-cache rebuild of all built images"
@@ -54,16 +48,16 @@ fi
 
 # Remove built images so they always pick up the latest source code.
 echo "Removing built images (forces fresh rebuild)..."
-docker compose rm -f adlerwirt-mcp fitcore-mcp agent >/dev/null 2>&1 || true
-for svc in adlerwirt-mcp fitcore-mcp agent; do
+docker compose rm -f mcp agent >/dev/null 2>&1 || true
+for svc in mcp agent; do
   docker image rm -f "${PROJECT}-${svc}" "${PROJECT}_${svc}" >/dev/null 2>&1 || true
 done
 
 echo "Building images..."
 if [ "$NO_CACHE" -eq 1 ]; then
-  docker compose build --no-cache --pull adlerwirt-mcp fitcore-mcp agent
+  docker compose build --no-cache --pull mcp agent
 else
-  docker compose build adlerwirt-mcp fitcore-mcp agent
+  docker compose build mcp agent
 fi
 
 echo "Starting stack..."
@@ -86,19 +80,18 @@ cat <<'EOF'
 ┌─────────────────────────────────────────────────────────────┐
 │  Stack ready                                                 │
 ├──────────────────┬──────────────────────────────────────────┤
-│  Adlerwirt       │                                          │
+│  Agent UI        │  http://localhost:8000                   │
+│  MCP             │  http://localhost:3001/mcp               │
+│  Preview proxy   │  http://*.localhost:4322                 │
+├──────────────────┼──────────────────────────────────────────┤
+│  Adlerwirt                                                  │
 │    Directus      │  http://localhost:8055                   │
 │                  │  admin@gmail.at / admin                  │
 │    Website       │  http://localhost:4321                   │
-│    Preview       │  http://localhost:4322                   │
-│    MCP           │  http://localhost:3001/mcp               │
-│    Agent         │  http://localhost:8000                   │
 ├──────────────────┼──────────────────────────────────────────┤
-│  FitCore         │                                          │
+│  FitCore                                                    │
 │    Directus      │  http://localhost:8056                   │
 │                  │  admin@fitcore.studio / admin            │
 │    Website       │  http://localhost:4323                   │
-│    Preview       │  http://localhost:4324                   │
-│    MCP           │  http://localhost:3002/mcp               │
 └──────────────────┴──────────────────────────────────────────┘
 EOF

@@ -1,4 +1,35 @@
 services:
+  # ── Shared agent UI + MCP server ──────────────────────────────────────────────
+
+  mcp:
+    build: ./mcp-server
+    container_name: mcp
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+      - "4322:4322"
+    environment:
+      PORT: "3001"
+      PREVIEW_PROXY_PORT: "4322"
+      PREVIEW_HOST: "localhost:4322"
+      MCP_PUBLIC_URL: "http://localhost:3001"
+
+  agent:
+    build: ./agent
+    container_name: agent
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mcp
+    volumes:
+      - agent_data:/app/data
+    env_file:
+      - ./agent/.env.example
+    environment:
+      PORT: "8000"
+      MCP_URL: "http://mcp:3001/mcp"
+
   # ── Adlerwirt ─────────────────────────────────────────────────────────────────
 
   adlerwirt-db:
@@ -60,59 +91,6 @@ services:
       DIRECTUS_TOKEN: "adlerwirt-dev-token"
       ADMIN_EMAIL: "admin@gmail.at"
       ADMIN_PASSWORD: "admin"
-
-  adlerwirt-website-preview:
-    build: ./adlerwirt/website
-    container_name: adlerwirt-website-preview
-    restart: unless-stopped
-    volumes:
-      - ./adlerwirt/website:/app
-      - adlerwirt_preview_modules:/app/node_modules
-    depends_on:
-      - adlerwirt-mcp
-    environment:
-      DIRECTUS_URL: "http://adlerwirt-mcp:3001/directus-proxy"
-      PUBLIC_DIRECTUS_URL: "http://localhost:8055"
-      DIRECTUS_TOKEN: "adlerwirt-dev-token"
-      ADMIN_EMAIL: "admin@gmail.at"
-      ADMIN_PASSWORD: "admin"
-
-  adlerwirt-mcp:
-    build: ./mcp-server
-    container_name: adlerwirt-mcp
-    restart: unless-stopped
-    ports:
-      - "3001:3001"
-      - "4322:4322"
-    depends_on:
-      - adlerwirt-directus
-    environment:
-      DIRECTUS_URL: "http://adlerwirt-directus:8055"
-      DIRECTUS_EMAIL: "admin@gmail.at"
-      DIRECTUS_PASSWORD: "admin"
-      PORT: "3001"
-      WEBSITE_URL: "http://localhost:4321"
-      PREVIEW_WEBSITE_URL: "http://localhost:4322"
-      PREVIEW_WEBSITE_INTERNAL_URL: "http://adlerwirt-website-preview:4321"
-      PREVIEW_PROXY_PORT: "4322"
-      MCP_PUBLIC_URL: "http://localhost:3001"
-
-  agent:
-    build: ./agent
-    container_name: agent
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    depends_on:
-      - adlerwirt-mcp
-      - fitcore-mcp
-    volumes:
-      - agent_data:/app/data
-    env_file:
-      - ./agent/.env.example
-    environment:
-      PORT: "8000"
-      MCP_URL: "http://adlerwirt-mcp:3001/mcp"
 
   adlerwirt-seed:
     build: ./adlerwirt/seed
@@ -190,42 +168,6 @@ services:
       ADMIN_EMAIL: "admin@fitcore.studio"
       ADMIN_PASSWORD: "admin"
 
-  fitcore-website-preview:
-    build: ./fitnessstudio/website
-    container_name: fitcore-website-preview
-    restart: unless-stopped
-    volumes:
-      - ./fitnessstudio/website:/app
-      - fitcore_preview_modules:/app/node_modules
-    depends_on:
-      - fitcore-mcp
-    environment:
-      DIRECTUS_URL: "http://fitcore-mcp:3002/directus-proxy"
-      PUBLIC_DIRECTUS_URL: "http://localhost:8056"
-      DIRECTUS_TOKEN: "fitcore-dev-token"
-      ADMIN_EMAIL: "admin@fitcore.studio"
-      ADMIN_PASSWORD: "admin"
-
-  fitcore-mcp:
-    build: ./mcp-server
-    container_name: fitcore-mcp
-    restart: unless-stopped
-    ports:
-      - "3002:3002"
-      - "4324:4324"
-    depends_on:
-      - fitcore-directus
-    environment:
-      DIRECTUS_URL: "http://fitcore-directus:8055"
-      DIRECTUS_EMAIL: "admin@fitcore.studio"
-      DIRECTUS_PASSWORD: "admin"
-      PORT: "3002"
-      WEBSITE_URL: "http://localhost:4323"
-      PREVIEW_WEBSITE_URL: "http://localhost:4324"
-      PREVIEW_WEBSITE_INTERNAL_URL: "http://fitcore-website-preview:4321"
-      PREVIEW_PROXY_PORT: "4324"
-      MCP_PUBLIC_URL: "http://localhost:3002"
-
   fitcore-seed:
     build: ./fitnessstudio/seed
     container_name: fitcore-seed
@@ -244,9 +186,7 @@ volumes:
   adlerwirt_db:
   adlerwirt_uploads:
   adlerwirt_website_modules:
-  adlerwirt_preview_modules:
   fitcore_db:
   fitcore_uploads:
   fitcore_website_modules:
-  fitcore_preview_modules:
   agent_data:
