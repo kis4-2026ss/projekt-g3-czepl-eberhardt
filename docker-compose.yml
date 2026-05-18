@@ -1,4 +1,22 @@
 services:
+  # ── Shared app state (chats, previews, langgraph checkpoints) ────────────────
+
+  app-db:
+    image: postgres:16-alpine
+    container_name: app-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    volumes:
+      - app_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   # ── Shared agent UI + MCP server ──────────────────────────────────────────────
 
   mcp:
@@ -8,11 +26,15 @@ services:
     ports:
       - "3001:3001"
       - "4322:4322"
+    depends_on:
+      app-db:
+        condition: service_healthy
     environment:
       PORT: "3001"
       PREVIEW_PROXY_PORT: "4322"
       PREVIEW_HOST: "localhost:4322"
       MCP_PUBLIC_URL: "http://localhost:3001"
+      DATABASE_URL: "postgres://app:app@app-db:5432/app"
 
   agent:
     build: ./agent
@@ -21,14 +43,17 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - mcp
-    volumes:
-      - agent_data:/app/data
+      mcp:
+        condition: service_started
+      app-db:
+        condition: service_healthy
     env_file:
       - ./agent/.env.example
     environment:
       PORT: "8000"
       MCP_URL: "http://mcp:3001/mcp"
+      PREVIEW_HOST: "localhost:4322"
+      DATABASE_URL: "postgres://app:app@app-db:5432/app"
 
   # ── Adlerwirt ─────────────────────────────────────────────────────────────────
 
@@ -183,10 +208,10 @@ services:
     restart: "no"
 
 volumes:
+  app_db:
   adlerwirt_db:
   adlerwirt_uploads:
   adlerwirt_website_modules:
   fitcore_db:
   fitcore_uploads:
   fitcore_website_modules:
-  agent_data:

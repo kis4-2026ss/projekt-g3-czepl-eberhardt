@@ -3,8 +3,9 @@ set -e
 cd "$(dirname "$0")"
 
 # Volumes wiped on a normal clean restart.
-# agent_data is always wiped so the instance DB re-seeds with correct defaults.
-WIPE="adlerwirt_db adlerwirt_uploads fitcore_db fitcore_uploads agent_data"
+# app_db is always wiped so chats, MCP previews, and langgraph checkpoints
+# start fresh; the per-instance Directus DBs re-seed below.
+WIPE="adlerwirt_db adlerwirt_uploads fitcore_db fitcore_uploads app_db"
 
 # Volumes preserved by default — slow to rebuild and rarely the source of bugs:
 KEEP="adlerwirt_website_modules fitcore_website_modules"

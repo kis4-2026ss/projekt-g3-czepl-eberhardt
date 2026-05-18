@@ -66,6 +66,7 @@
 
       --sidebar-w: 272px;
       --topbar-h: 56px;
+      --preview-w: 520px;
 
       --t-fast: 120ms cubic-bezier(.2,.6,.3,1);
       --t-med:  220ms cubic-bezier(.2,.6,.3,1);
@@ -147,8 +148,14 @@
       height: 100dvh;
       position: relative;
       z-index: 2;
+      transition: grid-template-columns var(--t-med);
     }
     .app.sidebar-collapsed { grid-template-columns: 0 1fr; }
+    .app.preview-open { grid-template-columns: var(--sidebar-w) 1fr var(--preview-w); }
+    .app.sidebar-collapsed.preview-open { grid-template-columns: 0 1fr var(--preview-w); }
+    /* While the user is dragging the resize handle we suppress the transition
+       so the panel tracks the cursor 1:1 instead of lagging behind. */
+    .app.dragging-preview, .app.dragging-preview * { transition: none !important; }
 
     /* ── Sidebar ───────────────────────────────────────────────────────── */
     .sidebar {
@@ -391,6 +398,11 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
+      /* Without this, the grid row + flex column layout lets .messages-region
+         expand to fit its content instead of overflowing, so scroll silently
+         dies once the chat is taller than the viewport. */
+      min-height: 0;
+      height: 100%;
       position: relative;
     }
 
@@ -448,6 +460,10 @@
     .messages-wrap {
       max-width: 760px;
       margin: 0 auto;
+      /* Bottom padding is overridden in JS to track the composer's actual
+         height (textarea grows up to 220px tall) so the last message — or
+         the bottom of an inline preview card — is always scrollable past
+         the composer overlay. */
       padding: 1.5rem 1.5rem 7rem;
       display: flex;
       flex-direction: column;
@@ -702,13 +718,17 @@
     .msg-content pre .copy-code:hover { background: rgba(255,255,255,.16); color: #f4efe4; }
     .msg-content pre .copy-code.copied { background: var(--ok); color: #fff; border-color: var(--ok); opacity: 1; }
 
-    /* User bubble */
+    /* User bubble — right-aligned */
+    .msg-row.msg-user { flex-direction: row-reverse; }
+    .msg-user .msg-head { justify-content: flex-end; }
+    .msg-user .msg-body { display: flex; flex-direction: column; align-items: flex-end; }
+    .msg-user .msg-actions { justify-content: flex-end; }
     .msg-user .msg-content {
       background: var(--ink);
       color: var(--paper);
       padding: .7rem .95rem;
       border-radius: var(--radius-3);
-      border-top-left-radius: 6px;
+      border-top-right-radius: 6px;
       display: inline-block;
       max-width: 100%;
       white-space: pre-wrap;
@@ -846,6 +866,316 @@
       animation: blink 1s steps(2) infinite;
     }
     @keyframes blink { 50% { opacity: 0; } }
+
+    /* ── Inline preview cards ──────────────────────────────────────────── */
+    .msg-previews {
+      margin-top: .75rem;
+      display: flex;
+      flex-direction: column;
+      gap: .65rem;
+    }
+    .msg-previews-reload {
+      max-width: 760px;
+      margin: 1.25rem auto 0;
+    }
+
+    .preview-group {
+      background: var(--paper-card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-3);
+      overflow: hidden;
+      box-shadow: var(--shadow-1);
+      animation: msg-in 280ms cubic-bezier(.2,.6,.3,1);
+    }
+    .pg-head {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      padding: .55rem .85rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--paper-2);
+      flex-wrap: wrap;
+    }
+    .pg-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+    .pg-label {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 14.5px;
+      color: var(--ink);
+      letter-spacing: -.01em;
+    }
+    .pg-count {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 500;
+      padding: 1px 7px;
+      background: var(--paper-card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-pill);
+      color: var(--ink-3);
+      letter-spacing: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .pg-bulk {
+      margin-left: auto;
+      display: flex;
+      gap: .3rem;
+    }
+
+    .pg-rows { display: flex; flex-direction: column; }
+
+    .preview-row {
+      display: flex;
+      flex-direction: column;
+      padding: .65rem .85rem;
+      border-bottom: 1px solid var(--line);
+      transition: background var(--t-fast);
+    }
+    .preview-row:last-child { border-bottom: none; }
+    .preview-row.removed { opacity: .55; filter: saturate(.55); }
+
+    .pr-link-top {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: .45rem;
+    }
+    .pr-link-top a {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .1rem .35rem;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ink-4);
+      text-decoration: none;
+      letter-spacing: .002em;
+      border-radius: var(--radius-1);
+      transition: color var(--t-fast), background var(--t-fast);
+    }
+    .pr-link-top a:hover {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .pr-link-top svg {
+      width: 10px; height: 10px;
+      transition: transform var(--t-fast);
+    }
+    .pr-link-top a:hover svg { transform: translate(1px, -1px); }
+
+    .pr-head {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      flex-wrap: wrap;
+    }
+    .pr-label {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .15rem .5rem .15rem .45rem;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+    .pr-label::before {
+      content: '';
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .pr-lbl-create    { color: var(--ok);     background: var(--ok-soft);     border-color: color-mix(in srgb, var(--ok) 25%, transparent); }
+    .pr-lbl-update    { color: var(--accent); background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 28%, transparent); }
+    .pr-lbl-singleton { color: #2e5d8a;       background: #dde9f3;            border-color: color-mix(in srgb, #2e5d8a 25%, transparent); }
+    .pr-lbl-delete    { color: var(--err);    background: var(--err-soft);    border-color: color-mix(in srgb, var(--err) 25%, transparent); }
+    :root[data-theme="dark"] .pr-lbl-singleton { color: #9bb8d2; background: #1d2c3a; border-color: rgba(155,184,210,.25); }
+
+    .pr-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -.005em;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pr-title .pr-id {
+      font-family: var(--font-mono);
+      font-weight: 500;
+      font-size: 12px;
+      color: var(--ink-4);
+      margin-left: .25rem;
+    }
+    .pr-toggle {
+      width: 22px; height: 22px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius-1);
+      color: var(--ink-4);
+      transition: color var(--t-fast), background var(--t-fast);
+      flex-shrink: 0;
+    }
+    .pr-toggle:hover { color: var(--ink); background: var(--paper-2); }
+    .pr-toggle svg { width: 11px; height: 11px; transition: transform 180ms; }
+    .preview-row[data-expanded="true"] .pr-toggle svg { transform: rotate(180deg); }
+
+    .pr-actions { display: flex; gap: .25rem; flex-shrink: 0; }
+    .pr-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .3rem;
+      padding: .3rem .6rem;
+      border-radius: var(--radius-1);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: -.003em;
+      border: 1px solid var(--line);
+      background: var(--paper-card);
+      color: var(--ink-2);
+      cursor: pointer;
+      transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast), transform var(--t-fast), opacity var(--t-fast);
+      text-decoration: none;
+      line-height: 1.3;
+    }
+    .pr-btn svg { width: 11px; height: 11px; flex-shrink: 0; }
+    .pr-btn:hover:not(:disabled) { background: var(--paper-2); border-color: var(--line-strong); color: var(--ink); }
+    .pr-btn:disabled { opacity: .45; cursor: not-allowed; }
+    .pr-btn.is-confirm {
+      background: var(--ok);
+      color: #fff;
+      border-color: var(--ok);
+    }
+    .pr-btn.is-confirm:hover:not(:disabled) {
+      filter: brightness(.94);
+      color: #fff;
+      background: var(--ok);
+      border-color: var(--ok);
+    }
+    .pr-btn.is-discard {
+      background: var(--paper-card);
+      color: var(--err);
+      border-color: color-mix(in srgb, var(--err) 32%, var(--line));
+    }
+    .pr-btn.is-discard:hover:not(:disabled) {
+      background: var(--err-soft);
+      border-color: var(--err);
+      color: var(--err);
+    }
+
+    .pr-body {
+      margin-top: .55rem;
+      overflow: hidden;
+    }
+    .preview-row[data-expanded="false"] .pr-body { display: none; }
+
+    .pr-diff {
+      display: flex;
+      flex-direction: column;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-2);
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      overflow: hidden;
+    }
+    .pr-diff-row {
+      display: grid;
+      grid-template-columns: minmax(110px, 1fr) 1.4fr 16px 1.4fr;
+      gap: .4rem;
+      align-items: start;
+      padding: .4rem .7rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .pr-diff-row:last-child { border-bottom: none; }
+    .prd-field { color: var(--ink-2); font-weight: 500; word-break: break-word; }
+    .prd-before {
+      color: var(--err);
+      background: var(--err-soft);
+      padding: .1rem .4rem;
+      border-radius: var(--radius-1);
+      text-decoration: line-through;
+      text-decoration-color: color-mix(in srgb, var(--err) 55%, transparent);
+      word-break: break-word;
+      line-height: 1.5;
+    }
+    .prd-arrow {
+      color: var(--ink-4);
+      text-align: center;
+      font-family: var(--font-body);
+      font-size: 13px;
+      padding-top: .05rem;
+    }
+    .prd-after {
+      color: var(--ok);
+      background: var(--ok-soft);
+      padding: .1rem .4rem;
+      border-radius: var(--radius-1);
+      font-weight: 500;
+      word-break: break-word;
+      line-height: 1.5;
+    }
+
+    .pr-raw {
+      background: var(--ink);
+      color: #f4efe4;
+      border-radius: var(--radius-2);
+      padding: .6rem .8rem;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      line-height: 1.5;
+      max-height: 220px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .pr-status {
+      display: none;
+      align-items: center;
+      gap: .4rem;
+      margin-top: .5rem;
+      padding: .35rem .65rem;
+      border-radius: var(--radius-1);
+      font-size: 12px;
+      font-weight: 500;
+      width: fit-content;
+      animation: msg-in 220ms cubic-bezier(.2,.6,.3,1);
+    }
+    .pr-status.show { display: inline-flex; }
+    .pr-status svg { width: 11px; height: 11px; }
+    .pr-status.ok      { background: var(--ok-soft);  color: var(--ok);  border: 1px solid color-mix(in srgb, var(--ok) 28%, transparent); }
+    .pr-status.err     { background: var(--err-soft); color: var(--err); border: 1px solid color-mix(in srgb, var(--err) 28%, transparent); }
+    .pr-status.neutral { background: var(--paper-2);  color: var(--ink-3); border: 1px solid var(--line); }
+
+    @media (max-width: 680px) {
+      .pr-head { gap: .4rem; }
+      .pr-actions { width: 100%; justify-content: flex-end; margin-top: .35rem; }
+      .pr-btn span { display: none; }
+      .pr-btn { padding: .35rem .5rem; }
+      .pr-diff-row { grid-template-columns: 1fr; gap: .2rem; padding: .45rem .65rem; }
+      .prd-arrow { display: none; }
+      .prd-field {
+        color: var(--ink-4);
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        padding-top: .15rem;
+      }
+    }
 
     /* ── Composer ──────────────────────────────────────────────────────── */
     .composer-region {
@@ -1328,9 +1658,197 @@
       to   { transform: none; opacity: 1; }
     }
 
+    /* ── Live-preview panel ────────────────────────────────────────────── */
+    .preview-panel {
+      display: none;
+      position: relative;
+      flex-direction: column;
+      background: var(--paper);
+      border-left: 1px solid var(--line);
+      min-width: 0;
+      overflow: hidden;
+    }
+    .app.preview-open .preview-panel { display: flex; }
+
+    .preview-resize {
+      position: absolute;
+      top: 0; bottom: 0;
+      left: -3px;
+      width: 6px;
+      cursor: ew-resize;
+      z-index: 6;
+      background: transparent;
+      transition: background var(--t-fast);
+    }
+    .preview-resize::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 2px;
+      height: 28px;
+      border-radius: 2px;
+      background: var(--ink-4);
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+    .preview-resize:hover::after,
+    .preview-resize.dragging::after { opacity: .6; }
+    .preview-resize:hover,
+    .preview-resize.dragging { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+    .preview-head {
+      height: var(--topbar-h);
+      flex-shrink: 0;
+      padding: 0 .55rem 0 .85rem;
+      display: flex;
+      align-items: center;
+      gap: .35rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--paper);
+    }
+    .preview-head-eyebrow {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink-4);
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      flex-shrink: 0;
+    }
+    .preview-head-eyebrow .dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pp-pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes pp-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 35%, transparent); }
+      50%      { opacity: .55; box-shadow: 0 0 0 4px transparent; }
+    }
+    .preview-url {
+      flex: 1;
+      min-width: 0;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--ink-3);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: .25rem .55rem;
+      border-radius: var(--radius-1);
+      background: var(--paper-2);
+      border: 1px solid var(--line);
+    }
+    .preview-url:empty { display: none; }
+
+    .preview-body {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      background: var(--paper-2);
+    }
+    .preview-iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: var(--paper-card);
+      display: block;
+    }
+    .preview-iframe.hidden { display: none; }
+
+    .preview-empty {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .65rem;
+      padding: 2rem;
+      text-align: center;
+      color: var(--ink-4);
+    }
+    .preview-empty.hidden { display: none; }
+    .preview-empty-glyph {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      display: grid; place-items: center;
+      background: var(--paper-card);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-1);
+      color: var(--ink-4);
+      margin-bottom: .25rem;
+    }
+    .preview-empty-glyph svg { width: 20px; height: 20px; }
+    .preview-empty-title {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 17px;
+      color: var(--ink-2);
+      letter-spacing: -.01em;
+    }
+    .preview-empty-msg {
+      font-size: 12.5px;
+      max-width: 280px;
+      line-height: 1.5;
+    }
+
+    .preview-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .55rem;
+      background: var(--paper-2);
+      color: var(--ink-3);
+      font-style: italic;
+      font-family: var(--font-display);
+      font-size: 14px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity var(--t-fast);
+    }
+    .preview-loading.show { opacity: 1; }
+    .preview-loading .dots {
+      display: inline-flex;
+      gap: 3px;
+    }
+    .preview-loading .dots span {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--ink-4);
+      animation: dot-bounce 1.2s ease-in-out infinite;
+    }
+    .preview-loading .dots span:nth-child(2) { animation-delay: .15s; }
+    .preview-loading .dots span:nth-child(3) { animation-delay: .3s; }
+
+    .preview-toggle.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    .preview-toggle.active:hover { background: var(--accent-soft); color: var(--accent); }
+
+    /* When the panel is open we hide the iframe behind a drag-cover element
+       so the iframe doesn't swallow mouseup events outside its origin. */
+    .preview-drag-cover {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      cursor: ew-resize;
+    }
+    .preview-drag-cover.show { display: block; }
+
     /* ── Responsive ────────────────────────────────────────────────────── */
     @media (max-width: 840px) {
       .app { grid-template-columns: 0 1fr; }
+      .app.preview-open { grid-template-columns: 0 1fr; }
       .app .sidebar {
         position: fixed;
         top: 0; left: 0; bottom: 0;
@@ -1354,6 +1872,14 @@
       .inst-grid { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr; }
       .field.span2 { grid-column: span 1; }
+      .app.preview-open .preview-panel {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        border-left: none;
+        animation: msg-in var(--t-med);
+      }
+      .preview-resize { display: none; }
     }
   </style>
 </head>
@@ -1418,6 +1944,9 @@
         <span class="crumb-inst">—</span>
       </div>
       <div class="topbar-actions">
+        <button class="icon-btn preview-toggle" id="preview-toggle" onclick="togglePreviewPanel()" title="Live-Vorschau anzeigen" aria-label="Live-Vorschau" aria-pressed="false">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><path d="M2 5.5h12"/><circle cx="4" cy="4.25" r=".4" fill="currentColor"/><circle cx="5.4" cy="4.25" r=".4" fill="currentColor"/></svg>
+        </button>
         <button class="icon-btn" onclick="openStart(true)" title="Chat starten">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5L8 8.5l5.5-4M2.5 4.5v7l5.5 1.5 5.5-1.5v-7"/></svg>
         </button>
@@ -1454,6 +1983,36 @@
       </div>
     </div>
   </main>
+
+  <!-- ─── Live-preview panel ──────────────────────────────────────── -->
+  <aside class="preview-panel" id="preview-panel" aria-label="Live-Vorschau">
+    <div class="preview-resize" id="preview-resize" title="Breite anpassen" aria-label="Breite anpassen"></div>
+    <div class="preview-head">
+      <span class="preview-head-eyebrow"><span class="dot"></span>Vorschau</span>
+      <span class="preview-url" id="preview-url"></span>
+      <button class="icon-btn" id="preview-reload" onclick="reloadPreviewPanel()" title="Neu laden" aria-label="Neu laden">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.61-3.89"/><path d="M13.5 2.5v3h-3"/></svg>
+      </button>
+      <button class="icon-btn" id="preview-open-new" onclick="openPreviewInNewTab()" title="In neuem Tab öffnen" aria-label="In neuem Tab öffnen">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10l4-4M6.5 6H10v3.5"/><rect x="2" y="2" width="12" height="12" rx="2"/></svg>
+      </button>
+      <button class="icon-btn" onclick="closePreviewPanel()" title="Vorschau schließen" aria-label="Schließen">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+    </div>
+    <div class="preview-body">
+      <iframe class="preview-iframe hidden" id="preview-iframe" title="Live-Vorschau" referrerpolicy="no-referrer"></iframe>
+      <div class="preview-empty" id="preview-empty">
+        <div class="preview-empty-glyph">
+          <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="16" height="14" rx="2"/><path d="M3 8h16"/></svg>
+        </div>
+        <div class="preview-empty-title">Live-<em>Vorschau</em></div>
+        <div class="preview-empty-msg">Klicke auf <strong>Vorschau</strong> bei einer Änderung, um sie hier im Kontext der Website zu sehen.</div>
+      </div>
+      <div class="preview-loading" id="preview-loading"><span>lädt</span><span class="dots"><span></span><span></span><span></span></span></div>
+    </div>
+  </aside>
+  <div class="preview-drag-cover" id="preview-drag-cover"></div>
 </div>
 
 <!-- ─── Start chat modal ────────────────────────────────────────────── -->
@@ -1581,14 +2140,16 @@
   const AI_AVATAR_SVG = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.4 3.2L12.8 6 10 8l-.8 3.5L8 9.5 6.8 11.5 6 8 3.2 6l3.4-.8L8 2z"/></svg>';
 
   // ── State ────────────────────────────────────────────────────────────
-  let sessionId   = crypto.randomUUID();
+  // Chats and messages live on the server (Postgres). `chats` is a per-instance
+  // cache of {id, title, updated_at} populated from GET /chats. The chat id
+  // doubles as the MCP session id so previews persist across page reloads.
   let streaming   = false;
   let activeInst  = null;
   let instances   = [];
   let editingId   = null;
   let allowClose  = false;
   let currentReader = null;
-  let chats       = {};        // { instanceId: [ {id, title, messages, updatedAt} ] }
+  let chats       = {};        // { instanceId: [ {id, title, updated_at} ] }
   let currentChatId = null;
   let autoScroll  = true;
 
@@ -1759,37 +2320,41 @@
     }
   }
 
-  // ── Chats persistence ────────────────────────────────────────────────
-  function loadChats() {
-    try { chats = JSON.parse(localStorage.getItem('atelier:chats') || '{}'); }
-    catch { chats = {}; }
-  }
-  function saveChats() {
-    try { localStorage.setItem('atelier:chats', JSON.stringify(chats)); } catch {}
+  // ── Chats persistence (server-backed) ────────────────────────────────
+  async function refreshChats() {
+    if (!activeInst) { renderHistory(); return; }
+    try {
+      const r = await fetch(`/chats?instance_id=${activeInst.id}`);
+      if (!r.ok) throw new Error('list chats failed');
+      chats[activeInst.id] = await r.json();
+    } catch {
+      chats[activeInst.id] = chats[activeInst.id] || [];
+    }
+    renderHistory();
   }
   function chatsForActive() {
     if (!activeInst) return [];
-    return (chats[activeInst.id] || []).slice().sort((a,b) => b.updatedAt - a.updatedAt);
+    return (chats[activeInst.id] || []).slice();
   }
-  function persistCurrentChat(messages, autoTitle) {
-    if (!activeInst || !currentChatId) return;
+  async function createServerChat() {
+    const r = await fetch('/chats', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instance_id: activeInst.id }),
+    });
+    if (!r.ok) throw new Error('Chat konnte nicht angelegt werden');
+    const chat = await r.json();
     const list = chats[activeInst.id] || (chats[activeInst.id] = []);
-    let entry = list.find(c => c.id === currentChatId);
-    if (!entry) {
-      entry = { id: currentChatId, title: autoTitle || 'Neuer Chat', messages: [], updatedAt: Date.now() };
-      list.push(entry);
-    }
-    entry.messages = messages;
-    entry.updatedAt = Date.now();
-    if (autoTitle && (!entry.title || entry.title === 'Neuer Chat')) entry.title = autoTitle;
-    saveChats();
-    renderHistory();
+    list.unshift(chat);
+    return chat;
   }
-  function deleteChat(id) {
+  async function deleteChat(id) {
     if (!activeInst) return;
+    try {
+      await fetch(`/chats/${id}`, { method: 'DELETE' });
+    } catch {}
     chats[activeInst.id] = (chats[activeInst.id] || []).filter(c => c.id !== id);
-    saveChats();
-    if (currentChatId === id) newChat();
+    if (currentChatId === id) { currentChatId = null; await newChat(); }
     renderHistory();
   }
   function renderHistory() {
@@ -1819,7 +2384,7 @@
     if (!allowClose && !activeInst) return;
     document.getElementById('start-overlay').classList.remove('open');
   }
-  function pickInstance(id) {
+  async function pickInstance(id) {
     const inst = instances.find(i => i.id === id);
     if (!inst) return;
     const changed = !activeInst || activeInst.id !== inst.id;
@@ -1828,8 +2393,12 @@
     allowClose = true;
     closeStart();
     document.getElementById('app').classList.remove('sidebar-open');
-    if (changed) newChat();
-    renderHistory();
+    await refreshChats();
+    if (changed) {
+      const list = chats[activeInst.id] || [];
+      if (list.length) await loadChat(list[0].id);
+      else await newChat();
+    }
   }
 
   // ── Welcome screen ───────────────────────────────────────────────────
@@ -1861,12 +2430,19 @@
   }
 
   // ── Chat ────────────────────────────────────────────────────────────
-  function newChat() {
+  async function newChat() {
     if (streaming) abortStream();
-    sessionId = crypto.randomUUID();
-    currentChatId = crypto.randomUUID();
     msgList.innerHTML = '';
+    resetPreviewState();
+    currentChatId = null;
     if (activeInst) {
+      try {
+        const chat = await createServerChat();
+        currentChatId = chat.id;
+      } catch (e) {
+        toast('Konnte keinen Chat anlegen.', 'err');
+        return;
+      }
       input.disabled = false;
       sendBtn.disabled = false;
       composer.classList.remove('disabled');
@@ -1881,18 +2457,27 @@
     document.getElementById('app').classList.remove('sidebar-open');
   }
 
-  function loadChat(id) {
+  async function loadChat(id) {
     if (!activeInst) return;
     if (streaming) abortStream();
-    const entry = (chats[activeInst.id] || []).find(c => c.id === id);
-    if (!entry) return;
     currentChatId = id;
-    sessionId = crypto.randomUUID(); // new server session; warn lightly
     msgList.innerHTML = '';
-    for (const m of entry.messages) {
-      if (m.role === 'user') appendUser(m.content, false);
-      else appendAiStatic(m.content, m.tools || []);
+    resetPreviewState();
+    try {
+      const r = await fetch(`/chats/${id}/messages`);
+      if (!r.ok) throw new Error('load messages failed');
+      const messages = await r.json();
+      for (const m of messages) {
+        if (m.role === 'user') appendUser(m.content, false);
+        else appendAiStatic(m.content, m.tools || []);
+      }
+    } catch {
+      toast('Konnte Chat nicht laden.', 'err');
     }
+    await pvLoadPendingForChat();
+    input.disabled = false;
+    sendBtn.disabled = false;
+    composer.classList.remove('disabled');
     renderHistory();
     document.getElementById('app').classList.remove('sidebar-open');
     setTimeout(() => msgRegion.scrollTop = msgRegion.scrollHeight, 0);
@@ -1907,6 +2492,25 @@
   function scrollBottomIfNeeded() {
     if (autoScroll) msgRegion.scrollTop = msgRegion.scrollHeight;
   }
+
+  // Keep the messages-wrap bottom padding in sync with the composer's
+  // actual height — the composer is absolute-positioned and overlays the
+  // bottom of the scroll area, so without this the last message (or the
+  // bottom of an inline preview card) gets covered with no way to scroll
+  // past it. The textarea can grow up to 220px, so a static padding
+  // doesn't cut it.
+  const composerRegion = document.querySelector('.composer-region');
+  function syncComposerPad() {
+    if (!composerRegion) return;
+    const h = composerRegion.offsetHeight;
+    msgList.style.paddingBottom = (h + 24) + 'px';
+    if (autoScroll) msgRegion.scrollTop = msgRegion.scrollHeight;
+  }
+  if (composerRegion && 'ResizeObserver' in window) {
+    new ResizeObserver(syncComposerPad).observe(composerRegion);
+  }
+  window.addEventListener('resize', syncComposerPad);
+  syncComposerPad();
 
   function ensureNoWelcome() {
     const w = msgList.querySelector('.welcome');
@@ -1999,10 +2603,6 @@
     b.classList.add('done');
     b.innerHTML = `<span class="pulse"></span>${esc(name)}<svg class="check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.5 2.5L10 3.5"/></svg>`;
   }
-  function collectToolBadgeNames(el) {
-    return Array.from(el.querySelectorAll('.tool-badge')).map(b => b.textContent.replace(/✓/g,'').trim());
-  }
-
   function enhanceCodeBlocks(scope) {
     scope.querySelectorAll('pre').forEach(pre => {
       let btn = pre.querySelector('.copy-code');
@@ -2035,6 +2635,419 @@
     });
   }
 
+  // ── Live-preview panel ──────────────────────────────────────────────
+  // A right-side iframe panel that shows the customer's website with the
+  // staged changes rendered in-place. Replaces the old "new tab" flow so
+  // users can confirm visually without leaving the chat. The panel is
+  // collapsible, drag-resizable, and remembers width + open-state across
+  // reloads. On narrow viewports it falls back to a fullscreen overlay.
+
+  const previewPanel   = document.getElementById('preview-panel');
+  const previewIframe  = document.getElementById('preview-iframe');
+  const previewEmpty   = document.getElementById('preview-empty');
+  const previewLoading = document.getElementById('preview-loading');
+  const previewUrlEl   = document.getElementById('preview-url');
+  const previewToggle  = document.getElementById('preview-toggle');
+  const previewResize  = document.getElementById('preview-resize');
+  const previewCover   = document.getElementById('preview-drag-cover');
+  const previewOpenNew = document.getElementById('preview-open-new');
+  let currentPreviewUrl = null;
+
+  // Restore persisted width + open state. Width is clamped to the same
+  // range the drag handle enforces so a previously oversized panel
+  // doesn't push the chat off-screen on a smaller viewport.
+  try {
+    const savedW = parseFloat(localStorage.getItem('atelier:preview-w'));
+    if (Number.isFinite(savedW) && savedW > 0) {
+      const w = Math.max(320, Math.min(window.innerWidth * 0.7, savedW));
+      document.documentElement.style.setProperty('--preview-w', w + 'px');
+    }
+  } catch {}
+
+  function setPreviewOpen(open) {
+    const app = document.getElementById('app');
+    app.classList.toggle('preview-open', open);
+    previewToggle?.classList.toggle('active', open);
+    previewToggle?.setAttribute('aria-pressed', open ? 'true' : 'false');
+    try { localStorage.setItem('atelier:preview-open', open ? '1' : '0'); } catch {}
+  }
+
+  function shortPreviewLabel(url) {
+    if (!url) return '';
+    try {
+      const u = new URL(url);
+      // Drop the session subdomain prefix for legibility — what the user
+      // cares about is the page, not the routing trick behind it.
+      const host = u.host.replace(/^[^.]+\./, '');
+      return host + u.pathname + (u.search || '');
+    } catch { return url; }
+  }
+
+  function openPreviewPanel(url) {
+    if (!url) return;
+    currentPreviewUrl = url;
+    previewUrlEl.textContent = shortPreviewLabel(url);
+    previewLoading.classList.add('show');
+    previewEmpty.classList.add('hidden');
+    previewIframe.classList.remove('hidden');
+    // Always re-assign src so the same URL forces a reload (useful after
+    // confirming a change — the page reflects the new persisted state).
+    previewIframe.src = url;
+    setPreviewOpen(true);
+  }
+
+  function closePreviewPanel() { setPreviewOpen(false); }
+
+  function togglePreviewPanel() {
+    const app = document.getElementById('app');
+    if (app.classList.contains('preview-open')) {
+      closePreviewPanel();
+    } else if (currentPreviewUrl) {
+      openPreviewPanel(currentPreviewUrl);
+    } else {
+      // No URL yet — show the empty state and let the user click Vorschau
+      // on a card to populate it.
+      previewIframe.classList.add('hidden');
+      previewEmpty.classList.remove('hidden');
+      previewLoading.classList.remove('show');
+      setPreviewOpen(true);
+    }
+  }
+
+  function reloadPreviewPanel() {
+    if (!currentPreviewUrl) return;
+    previewLoading.classList.add('show');
+    // Setting .src to the same value still triggers a reload in all browsers.
+    previewIframe.src = currentPreviewUrl;
+  }
+
+  function openPreviewInNewTab() {
+    if (!currentPreviewUrl) return;
+    window.open(currentPreviewUrl, '_blank', 'noopener');
+  }
+
+  previewIframe.addEventListener('load', () => {
+    previewLoading.classList.remove('show');
+  });
+
+  // ── Drag-to-resize ──
+  if (previewResize) {
+    let startX = 0, startW = 0;
+    function onMove(e) {
+      const dx = startX - e.clientX;
+      const desired = startW + dx;
+      const w = Math.max(320, Math.min(window.innerWidth * 0.7, desired));
+      document.documentElement.style.setProperty('--preview-w', w + 'px');
+    }
+    function endDrag() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', endDrag);
+      previewResize.classList.remove('dragging');
+      previewCover.classList.remove('show');
+      document.getElementById('app').classList.remove('dragging-preview');
+      document.body.style.userSelect = '';
+      try {
+        const cs = getComputedStyle(document.documentElement).getPropertyValue('--preview-w');
+        localStorage.setItem('atelier:preview-w', String(parseFloat(cs) || 520));
+      } catch {}
+    }
+    previewResize.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      startX = e.clientX;
+      startW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--preview-w')) || 520;
+      previewResize.classList.add('dragging');
+      // The drag-cover sits above the iframe so mouseup events still reach
+      // the parent document — without it the cross-origin iframe would
+      // swallow the mouseup once the cursor entered the iframe area.
+      previewCover.classList.add('show');
+      document.getElementById('app').classList.add('dragging-preview');
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', endDrag);
+    });
+  }
+
+  // Clamp width on viewport resize so the panel never exceeds 70% of width.
+  window.addEventListener('resize', () => {
+    const cur = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--preview-w')) || 520;
+    const w = Math.max(320, Math.min(window.innerWidth * 0.7, cur));
+    if (w !== cur) document.documentElement.style.setProperty('--preview-w', w + 'px');
+  });
+
+  // Restore open state after panel-open URL handling is wired up — but
+  // without a URL we just show the empty state.
+  try {
+    if (localStorage.getItem('atelier:preview-open') === '1') {
+      previewIframe.classList.add('hidden');
+      previewEmpty.classList.remove('hidden');
+      previewLoading.classList.remove('show');
+      setPreviewOpen(true);
+    }
+  } catch {}
+
+  // ── Inline preview cards ────────────────────────────────────────────
+  // Cards live inside an AI message's .msg-previews container, grouped by
+  // batch_id (= the tool_call_id that staged them). Buttons hit the agent
+  // proxy endpoints, which forward to MCP. Confirm/discard outcomes either
+  // arrive locally (button click) or as preview_removed SSE events (when the
+  // agent calls confirm_preview/discard_preview itself).
+  const previewState = {
+    rowByToken: new Map(),     // token -> .preview-row element
+    groupByBatch: new Map(),   // batch_id -> .preview-group element
+  };
+  function resetPreviewState() {
+    previewState.rowByToken.clear();
+    previewState.groupByBatch.clear();
+  }
+
+  const PV_ACTION_LABEL = {
+    create: 'Neu', update: 'Änderung',
+    update_singleton: 'Aktualisierung', delete: 'Löschung',
+  };
+  const PV_ACTION_CLASS = {
+    create: 'pr-lbl-create', update: 'pr-lbl-update',
+    update_singleton: 'pr-lbl-singleton', delete: 'pr-lbl-delete',
+  };
+  const PV_SVG_CHECK   = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6l2.5 2.5L9.5 3"/></svg>';
+  const PV_SVG_X       = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 3l6 6M9 3l-6 6"/></svg>';
+  const PV_SVG_PREVIEW = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="8" height="6" rx="1"/><path d="M2 4.5h8"/></svg>';
+  const PV_SVG_CARET   = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5l3 3 3-3"/></svg>';
+  const PV_SVG_ERROR   = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="4.5"/><path d="M6 4v2.5M6 8h0"/></svg>';
+  const PV_SVG_EXT     = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7l4-4M5.5 3H9v3.5"/></svg>';
+
+  function pvFormat(v) {
+    if (v === undefined || v === null) return '—';
+    if (typeof v === 'string') return v === '' ? '""' : v;
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    return JSON.stringify(v);
+  }
+  function pvRenderDiff(diff) {
+    if (!Array.isArray(diff) || !diff.length) return '';
+    return `<div class="pr-diff">${diff.map(d => `
+      <div class="pr-diff-row">
+        <span class="prd-field">${esc(d.field)}</span>
+        <span class="prd-before">${esc(pvFormat(d.before))}</span>
+        <span class="prd-arrow">→</span>
+        <span class="prd-after">${esc(pvFormat(d.after))}</span>
+      </div>`).join('')}</div>`;
+  }
+  function pvRenderBody(p) {
+    if (Array.isArray(p.diff) && p.diff.length) return pvRenderDiff(p.diff);
+    if (p.action === 'delete' && p.before) {
+      return `<div class="pr-raw">${esc(JSON.stringify(p.before, null, 2))}</div>`;
+    }
+    if (p.after) {
+      return `<div class="pr-raw">${esc(JSON.stringify(p.after, null, 2))}</div>`;
+    }
+    return '';
+  }
+  function pvFieldCount(p) {
+    if (Array.isArray(p.diff)) return p.diff.length;
+    if (p.action === 'create' && p.after) return Object.keys(p.after).length;
+    return 0;
+  }
+
+  function pvBuildRow(p) {
+    const cls   = PV_ACTION_CLASS[p.action] || 'pr-lbl-update';
+    const lbl   = PV_ACTION_LABEL[p.action] || p.action;
+    const idTxt = (p.item_id !== null && p.item_id !== undefined && p.item_id !== '')
+      ? ` <span class="pr-id">#${esc(String(p.item_id))}</span>` : '';
+    const fields   = pvFieldCount(p);
+    const body     = pvRenderBody(p);
+    const expanded = fields > 0 && fields <= 3;
+
+    const row = document.createElement('div');
+    row.className = 'preview-row';
+    row.dataset.token    = p.token;
+    row.dataset.expanded = String(expanded);
+    row.innerHTML = `
+      ${p.preview_url ? `<div class="pr-link-top"><a href="${esc(p.preview_url)}" target="_blank" rel="noopener" title="Vorschau in neuem Browser-Tab öffnen">${PV_SVG_EXT}<span>In neuem Tab öffnen</span></a></div>` : ''}
+      <div class="pr-head">
+        <span class="pr-label ${cls}">${esc(lbl)}</span>
+        <span class="pr-title">${esc(p.collection || '')}${idTxt}</span>
+        ${body ? `<button class="pr-toggle" data-pv-toggle aria-expanded="${expanded}" title="${expanded ? 'Diff einklappen' : 'Diff ausklappen'}">${PV_SVG_CARET}</button>` : ''}
+        <div class="pr-actions">
+          ${p.preview_url ? `<button class="pr-btn pr-preview" data-pv-preview="${esc(p.preview_url)}" title="Im Vorschau-Panel anzeigen">${PV_SVG_PREVIEW}<span>Im Panel</span></button>` : ''}
+          <button class="pr-btn is-confirm" data-pv-confirm="${esc(p.token)}" title="Änderung anwenden und speichern">${PV_SVG_CHECK}<span>Anwenden</span></button>
+          <button class="pr-btn is-discard" data-pv-discard="${esc(p.token)}" title="Änderung verwerfen">${PV_SVG_X}<span>Verwerfen</span></button>
+        </div>
+      </div>
+      ${body ? `<div class="pr-body">${body}</div>` : ''}
+      <div class="pr-status"></div>
+    `;
+    return row;
+  }
+
+  function pvSetStatus(row, kind, msg) {
+    const el = row.querySelector('.pr-status');
+    if (!el) return;
+    const icon = kind === 'ok' ? PV_SVG_CHECK : kind === 'err' ? PV_SVG_ERROR : PV_SVG_X;
+    el.innerHTML = `${icon}<span>${esc(msg)}</span>`;
+    el.classList.remove('ok', 'err', 'neutral');
+    el.classList.add('show', kind);
+  }
+  function pvMarkRemoved(row, kind, msg) {
+    row.classList.add('removed');
+    pvSetStatus(row, kind, msg);
+    row.querySelectorAll('button[data-pv-confirm], button[data-pv-discard]').forEach(b => b.disabled = true);
+  }
+  function pvUpdateGroupHeader(group) {
+    const total     = group.querySelectorAll('.preview-row').length;
+    const remaining = group.querySelectorAll('.preview-row:not(.removed)').length;
+    const head = group.querySelector('.pg-count');
+    if (head) head.textContent = total === remaining ? String(total) : `${remaining} / ${total}`;
+    const bulk = group.querySelector('.pg-bulk');
+    if (bulk) bulk.style.display = remaining > 1 ? 'flex' : 'none';
+  }
+
+  function pvCreateGroup(batchId, container, headerLabel) {
+    const group = document.createElement('div');
+    group.className = 'preview-group';
+    if (batchId) group.dataset.batch = batchId;
+    group.innerHTML = `
+      <div class="pg-head">
+        <span class="pg-dot"></span>
+        <span class="pg-label">${esc(headerLabel || 'Änderungen vorbereitet')}</span>
+        <span class="pg-count">0</span>
+        <div class="pg-bulk" style="display:none">
+          <button class="pr-btn is-discard" data-pv-discard-all title="Alle Änderungen verwerfen">${PV_SVG_X}<span>Alle verwerfen</span></button>
+          <button class="pr-btn is-confirm" data-pv-confirm-all title="Alle Änderungen anwenden und speichern">${PV_SVG_CHECK}<span>Alle anwenden</span></button>
+        </div>
+      </div>
+      <div class="pg-rows"></div>
+    `;
+    container.appendChild(group);
+    return group;
+  }
+
+  function pvEnsureMsgContainer(aiRow) {
+    let container = aiRow.querySelector('.msg-previews');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'msg-previews';
+      const actions = aiRow.querySelector('.msg-actions');
+      if (actions) actions.before(container);
+      else aiRow.querySelector('.msg-body').appendChild(container);
+    }
+    return container;
+  }
+
+  function pvAppendPreview(event, aiRow) {
+    if (!aiRow) return;
+    const container = pvEnsureMsgContainer(aiRow);
+    const batchKey = event.batch_id || ('row-' + event.token);
+    let group = previewState.groupByBatch.get(batchKey);
+    if (!group || !group.isConnected) {
+      group = pvCreateGroup(event.batch_id, container);
+      previewState.groupByBatch.set(batchKey, group);
+    }
+    const row = pvBuildRow(event);
+    group.querySelector('.pg-rows').appendChild(row);
+    previewState.rowByToken.set(event.token, row);
+    pvUpdateGroupHeader(group);
+    scrollBottomIfNeeded();
+  }
+
+  function pvOnRemoved(token, outcome) {
+    const row = previewState.rowByToken.get(token);
+    if (!row || row.classList.contains('removed')) return;
+    const isConfirm = outcome === 'confirmed';
+    pvMarkRemoved(row, isConfirm ? 'ok' : 'neutral', isConfirm ? 'Angewendet' : 'Verworfen');
+    const group = row.closest('.preview-group');
+    if (group) pvUpdateGroupHeader(group);
+  }
+
+  async function pvConfirmOne(token) {
+    const row = previewState.rowByToken.get(token);
+    if (!row || row.classList.contains('removed')) return;
+    const btnC = row.querySelector('[data-pv-confirm]');
+    const btnD = row.querySelector('[data-pv-discard]');
+    if (btnC) btnC.disabled = true;
+    if (btnD) btnD.disabled = true;
+    try {
+      const r = await fetch(`/chats/${currentChatId}/preview/${token}/confirm`, { method: 'POST' });
+      if (!r.ok) throw new Error('confirm failed');
+      pvMarkRemoved(row, 'ok', 'Angewendet und gespeichert.');
+    } catch (e) {
+      pvSetStatus(row, 'err', 'Fehler beim Anwenden.');
+      if (btnC) btnC.disabled = false;
+      if (btnD) btnD.disabled = false;
+      return;
+    }
+    const group = row.closest('.preview-group');
+    if (group) pvUpdateGroupHeader(group);
+  }
+
+  async function pvDiscardOne(token) {
+    const row = previewState.rowByToken.get(token);
+    if (!row || row.classList.contains('removed')) return;
+    const btnC = row.querySelector('[data-pv-confirm]');
+    const btnD = row.querySelector('[data-pv-discard]');
+    if (btnC) btnC.disabled = true;
+    if (btnD) btnD.disabled = true;
+    try {
+      const r = await fetch(`/chats/${currentChatId}/preview/${token}`, { method: 'DELETE' });
+      if (!r.ok) throw new Error('discard failed');
+      pvMarkRemoved(row, 'neutral', 'Verworfen.');
+    } catch (e) {
+      pvSetStatus(row, 'err', 'Fehler beim Verwerfen.');
+      if (btnC) btnC.disabled = false;
+      if (btnD) btnD.disabled = false;
+      return;
+    }
+    const group = row.closest('.preview-group');
+    if (group) pvUpdateGroupHeader(group);
+  }
+
+  async function pvBulk(group, fn) {
+    const tokens = Array.from(group.querySelectorAll('.preview-row:not(.removed)'))
+      .map(r => r.dataset.token).filter(Boolean);
+    await Promise.allSettled(tokens.map(t => fn(t)));
+  }
+
+  document.addEventListener('click', e => {
+    const toggle = e.target.closest('[data-pv-toggle]');
+    if (toggle) {
+      const row = toggle.closest('.preview-row');
+      const expanded = row.dataset.expanded === 'true';
+      row.dataset.expanded = String(!expanded);
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      toggle.title = !expanded ? 'Diff einklappen' : 'Diff ausklappen';
+      return;
+    }
+    const pv = e.target.closest('[data-pv-preview]');
+    if (pv) { openPreviewPanel(pv.dataset.pvPreview); return; }
+    const c = e.target.closest('[data-pv-confirm]');
+    if (c) { pvConfirmOne(c.dataset.pvConfirm); return; }
+    const d = e.target.closest('[data-pv-discard]');
+    if (d) { pvDiscardOne(d.dataset.pvDiscard); return; }
+    const ca = e.target.closest('[data-pv-confirm-all]');
+    if (ca) { const g = ca.closest('.preview-group'); if (g) pvBulk(g, pvConfirmOne); return; }
+    const da = e.target.closest('[data-pv-discard-all]');
+    if (da) { const g = da.closest('.preview-group'); if (g) pvBulk(g, pvDiscardOne); return; }
+  });
+
+  async function pvLoadPendingForChat() {
+    if (!currentChatId) return;
+    try {
+      const r = await fetch(`/chats/${currentChatId}/previews`);
+      if (!r.ok) return;
+      const items = await r.json();
+      if (!Array.isArray(items) || !items.length) return;
+      const container = document.createElement('div');
+      container.className = 'msg-previews msg-previews-reload';
+      msgList.appendChild(container);
+      const group = pvCreateGroup('reload', container, 'Ausstehende Änderungen');
+      previewState.groupByBatch.set('reload', group);
+      for (const p of items) {
+        const row = pvBuildRow(p);
+        group.querySelector('.pg-rows').appendChild(row);
+        previewState.rowByToken.set(p.token, row);
+      }
+      pvUpdateGroupHeader(group);
+    } catch (e) { /* ignore */ }
+  }
+
   // ── Send / stream ───────────────────────────────────────────────────
   function setStreamingState(on) {
     streaming = on;
@@ -2051,22 +3064,9 @@
     setStreamingState(false);
   }
 
-  function collectMessagesForPersist() {
-    const out = [];
-    msgList.querySelectorAll('.msg-row').forEach(r => {
-      if (r.classList.contains('msg-user')) {
-        out.push({ role: 'user', content: r.querySelector('.msg-content').textContent });
-      } else if (r.classList.contains('msg-ai')) {
-        const tools = collectToolBadgeNames(r);
-        out.push({ role: 'assistant', content: r.querySelector('.msg-content').innerHTML, tools });
-      }
-    });
-    return out;
-  }
-
   async function sendMessage() {
     const text = input.value.trim();
-    if (!text || streaming || !activeInst) return;
+    if (!text || streaming || !activeInst || !currentChatId) return;
     setStreamingState(true);
     input.value = '';
     input.style.height = 'auto';
@@ -2074,20 +3074,15 @@
     for (const k of Object.keys(nameQueue))    delete nameQueue[k];
 
     appendUser(text);
-    const isFirstUserMsg = msgList.querySelectorAll('.msg-user').length === 1;
-    if (isFirstUserMsg) {
-      const title = text.length > 60 ? text.slice(0, 58).trim() + '…' : text;
-      persistCurrentChat(collectMessagesForPersist(), title);
-    }
 
-    const { row, tools: toolsEl, bub } = createAiRow();
+    const { row: aiRow, tools: toolsEl, bub } = createAiRow();
     let raw = '', started = false, errored = false;
 
     try {
       const resp = await fetch('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, session_id: sessionId, instance_id: activeInst.id }),
+        body: JSON.stringify({ message: text, chat_id: currentChatId, instance_id: activeInst.id }),
       });
       if (!resp.ok) throw new Error(`Server-Fehler ${resp.status}`);
       currentReader = resp.body.getReader();
@@ -2112,6 +3107,10 @@
             toolStart(toolsEl, ev.run_id, ev.name);
           } else if (ev.type === 'tool_end') {
             toolDone(ev.run_id, ev.name);
+          } else if (ev.type === 'preview') {
+            pvAppendPreview(ev, aiRow);
+          } else if (ev.type === 'preview_removed') {
+            pvOnRemoved(ev.token, ev.outcome || 'confirmed');
           } else if (ev.type === 'error') {
             errored = true;
             bub.innerHTML = '';
@@ -2139,7 +3138,7 @@
       currentReader = null;
       setStreamingState(false);
       input.focus();
-      persistCurrentChat(collectMessagesForPersist());
+      refreshChats();
     }
   }
 
@@ -2250,9 +3249,7 @@
   });
 
   // ── Init ────────────────────────────────────────────────────────────
-  loadChats();
   loadInstances().then(() => {
-    newChat();
     openStart(false);
   });
 </script>

@@ -6,6 +6,7 @@ import {
   type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { DirectusClient, computeDiff, type DiffEntry, type DirectusClientOpts } from "./directus.js";
+import * as db from "./db.js";
 import http from "node:http";
 import { randomUUID } from "node:crypto";
 import * as cheerio from "cheerio";
@@ -19,8 +20,6 @@ const PREVIEW_PROXY_PORT = Number(process.env.PREVIEW_PROXY_PORT ?? 4322);
 const PREVIEW_HOST = process.env.PREVIEW_HOST ?? `localhost:${PREVIEW_PROXY_PORT}`;
 // Public MCP URL (what browsers see for review/banner endpoints).
 const MCP_PUBLIC_URL = (process.env.MCP_PUBLIC_URL ?? `http://localhost:${PORT}`).replace(/\/$/, "");
-const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS ?? 60 * 60 * 1000);
-const PREVIEW_TTL_MS = Number(process.env.PREVIEW_TTL_MS ?? 60 * 60 * 1000);
 
 // Maps Directus collections to the website page that renders them (best-effort
 // "jump to preview" links — falls back to "/" for unknown collections).
@@ -46,6 +45,11 @@ const ITEM_PK_DESCRIPTION =
   "Exact primary key from read_items/read_item (integer or UUID). Never a title, slug, or placeholder; if you only know a name, call read_items with a filter first, then use data[0].id.";
 
 // ── Session state ─────────────────────────────────────────────────────────────
+//
+// Sessions and previews live in Postgres (see ./db.ts) — no in-memory store,
+// no TTL. A session row is the "address book" for a chat: which Directus and
+// which website does this chat operate against. Previews stay until the user
+// explicitly confirms or discards them.
 
 interface SessionInfo {
   directusUrl: string;
@@ -54,17 +58,18 @@ interface SessionInfo {
   directusPassword?: string;
   websiteUrl?: string;        // what the preview proxy fetches from
   websitePublicUrl?: string;  // optional display URL (not used internally)
-  lastUsed: number;
 }
 
-const sessionMap = new Map<string, SessionInfo>();
-
-setInterval(() => {
-  const now = Date.now();
-  for (const [sid, info] of sessionMap.entries()) {
-    if (now - info.lastUsed > SESSION_TTL_MS) sessionMap.delete(sid);
-  }
-}, 60 * 1000).unref();
+function rowToInfo(row: db.SessionRow): SessionInfo {
+  return {
+    directusUrl:       row.directus_url,
+    directusToken:     row.directus_token ?? undefined,
+    directusEmail:     row.directus_email ?? undefined,
+    directusPassword:  row.directus_password ?? undefined,
+    websiteUrl:        row.website_url ?? undefined,
+    websitePublicUrl:  row.website_public_url ?? undefined,
+  };
+}
 
 // ── Request helpers ───────────────────────────────────────────────────────────
 
@@ -73,26 +78,24 @@ function header(req: http.IncomingMessage, name: string): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-function getOrCreateSession(req: http.IncomingMessage): { id: string; info: SessionInfo } {
+async function getOrCreateSession(req: http.IncomingMessage): Promise<{ id: string; info: SessionInfo }> {
   const id = header(req, "x-session-id") || "default";
-  const isNew = !sessionMap.has(id);
-  let info = sessionMap.get(id);
-  if (!info) {
-    info = { directusUrl: "", lastUsed: Date.now() };
-    sessionMap.set(id, info);
-  }
-  info.lastUsed = Date.now();
+  const existing = await db.getSession(id);
+  const isNew = !existing;
 
-  const dUrl  = header(req, "x-directus-url");      if (dUrl)  info.directusUrl      = dUrl;
-  const dTok  = header(req, "x-directus-token");    if (dTok  !== undefined) info.directusToken    = dTok;
-  const dMail = header(req, "x-directus-email");    if (dMail !== undefined) info.directusEmail    = dMail;
-  const dPass = header(req, "x-directus-password"); if (dPass !== undefined) info.directusPassword = dPass;
-  const wUrl  = header(req, "x-website-url");       if (wUrl)  info.websiteUrl       = wUrl;
-  const wPub  = header(req, "x-website-public-url");if (wPub)  info.websitePublicUrl = wPub;
+  const row = await db.upsertSession(id, {
+    directusUrl:       header(req, "x-directus-url"),
+    directusToken:     header(req, "x-directus-token"),
+    directusEmail:     header(req, "x-directus-email"),
+    directusPassword:  header(req, "x-directus-password"),
+    websiteUrl:        header(req, "x-website-url"),
+    websitePublicUrl:  header(req, "x-website-public-url"),
+  });
+
   if (isNew) {
-    process.stderr.write(`[session] new ${id} directus=${info.directusUrl} website=${info.websiteUrl}\n`);
+    process.stderr.write(`[session] new ${id} directus=${row.directus_url} website=${row.website_url ?? ""}\n`);
   }
-  return { id, info };
+  return { id, info: rowToInfo(row) };
 }
 
 function makeClient(info: SessionInfo): DirectusClient {
@@ -118,25 +121,41 @@ interface PreviewEntry {
   data?: Record<string, unknown>;
 }
 
-const previewStore = new Map<string, { entry: PreviewEntry; timer: ReturnType<typeof setTimeout> }>();
+function rowToEntry(row: db.PreviewRow): PreviewEntry {
+  return {
+    session_id: row.session_id,
+    action: row.action,
+    collection: row.collection,
+    id: row.item_id ?? undefined,
+    before: row.before_json ?? undefined,
+    after: row.after_json ?? undefined,
+    diff: (row.diff_json as DiffEntry[] | null) ?? undefined,
+    data: row.data_json ?? undefined,
+  };
+}
 
-function storePreview(entry: PreviewEntry): string {
+async function storePreview(entry: PreviewEntry): Promise<string> {
   const token = randomUUID();
-  const timer = setTimeout(() => previewStore.delete(token), PREVIEW_TTL_MS);
-  previewStore.set(token, { entry, timer });
+  await db.insertPreview({
+    token,
+    sessionId: entry.session_id,
+    action: entry.action,
+    collection: entry.collection,
+    itemId: entry.id,
+    before: entry.before,
+    after: entry.after,
+    diff: entry.diff,
+    data: entry.data,
+  });
   return token;
 }
 
-function previewsForSession(sessionId: string): { token: string; entry: PreviewEntry }[] {
-  const out: { token: string; entry: PreviewEntry }[] = [];
-  for (const [token, { entry }] of previewStore.entries()) {
-    if (entry.session_id === sessionId) out.push({ token, entry });
-  }
-  return out;
+async function previewsForSession(sessionId: string): Promise<{ token: string; entry: PreviewEntry }[]> {
+  const rows = await db.getPreviewsForSession(sessionId);
+  return rows.map((r) => ({ token: r.token, entry: rowToEntry(r) }));
 }
 
 function buildPreviewResponse(token: string, entry: PreviewEntry): string {
-  const review_url = `${MCP_PUBLIC_URL}/sessions/${entry.session_id}/review/${token}`;
   const diffSummary = entry.diff && entry.diff.length > 0
     ? entry.diff.map((d) => `  ${d.field}: ${JSON.stringify(d.before)} → ${JSON.stringify(d.after)}`).join("\n")
     : entry.after
@@ -147,19 +166,14 @@ function buildPreviewResponse(token: string, entry: PreviewEntry): string {
     ...(diffSummary ? [`Changes:\n${diffSummary}`] : []),
     `preview_token: ${token}`,
     ``,
-    `If you still have more changes to stage, call the next write tool now — do NOT pause to ask the user yet.`,
-    `Only after ALL changes are staged, show the user this link (and no other URLs):`,
-    `  Review all changes: ${review_url}`,
-    `The review page itself has a link to the live preview — never share that URL directly.`,
-    `Then ask the user to confirm or discard. Use confirm_all_previews / discard_all_previews for bulk, or confirm_preview / discard_preview per token.`,
+    `The user sees this change as an interactive card in the chat with Übernehmen/Verwerfen buttons — do NOT share any URLs.`,
+    `If you still have more changes to stage, call the next write tool now without pausing.`,
+    `When all changes are staged, briefly tell the user what you prepared (one short sentence) and let them confirm via the inline card.`,
   ].join("\n");
 }
 
 function buildBulkPreviewResponse(staged: { token: string; entry: PreviewEntry }[]): string {
   if (!staged.length) return "Nothing to stage.";
-  const first = staged[0]!;
-  const sessionId = first.entry.session_id;
-  const review_url = `${MCP_PUBLIC_URL}/sessions/${sessionId}/review/${first.token}`;
 
   const lines = staged.map(({ token, entry }) => {
     const diff = entry.diff?.map((d) => `${d.field}: ${JSON.stringify(d.before)} → ${JSON.stringify(d.after)}`).join(", ") ?? "";
@@ -170,11 +184,9 @@ function buildBulkPreviewResponse(staged: { token: string; entry: PreviewEntry }
     `Staged ${staged.length} change${staged.length === 1 ? "" : "s"} (one preview per item):`,
     lines,
     ``,
-    `If you still have more changes to stage, call the next write tool now — do NOT pause to ask the user yet.`,
-    `Only after ALL changes are staged, show the user this link (and no other URLs):`,
-    `  Review all changes: ${review_url}`,
-    `The review page itself has a link to the live preview — never share that URL directly.`,
-    `Then ask the user to confirm or discard. Use confirm_all_previews / discard_all_previews for bulk.`,
+    `The user sees these changes as an interactive group card in the chat with per-item Übernehmen/Verwerfen buttons — do NOT share any URLs.`,
+    `If you still have more changes to stage, call the next write tool now without pausing.`,
+    `When all changes are staged, briefly tell the user what you prepared (one short sentence) and let them confirm via the inline cards.`,
   ].join("\n");
 }
 
@@ -201,8 +213,8 @@ function effectiveAttr($: any, el: any, name: string): string | undefined {
   return $el.closest(`[${name}]`).attr(name) || undefined;
 }
 
-function applyPreviewsToHtml(html: string, sessionId: string): string {
-  const entries = previewsForSession(sessionId).map((p) => p.entry);
+async function applyPreviewsToHtml(html: string, sessionId: string): Promise<string> {
+  const entries = (await previewsForSession(sessionId)).map((p) => p.entry);
   if (!entries.length) return html;
 
   const $ = cheerio.load(html);
@@ -1221,7 +1233,7 @@ function makeServer(sessionId: string, info: SessionInfo): Server {
           const fieldErr = await validateFields(client, collection, data);
           if (fieldErr) return err(fieldErr);
           const entry: PreviewEntry = { session_id: sessionId, action: "create", collection, after: data, data };
-          const token = storePreview(entry);
+          const token = await storePreview(entry);
           return text(buildPreviewResponse(token, entry));
         }
 
@@ -1237,7 +1249,7 @@ function makeServer(sessionId: string, info: SessionInfo): Server {
             session_id: sessionId, action: "update", collection, id,
             before, after, diff: computeDiff(before, data), data,
           };
-          const token = storePreview(entry);
+          const token = await storePreview(entry);
           return text(buildPreviewResponse(token, entry));
         }
 
@@ -1267,7 +1279,7 @@ function makeServer(sessionId: string, info: SessionInfo): Server {
               session_id: sessionId, action: "update", collection, id,
               before, after, diff: computeDiff(before, data), data,
             };
-            staged.push({ token: storePreview(entry), entry });
+            staged.push({ token: await storePreview(entry), entry });
           }
           return text(buildBulkPreviewResponse(staged));
         }
@@ -1284,7 +1296,7 @@ function makeServer(sessionId: string, info: SessionInfo): Server {
             session_id: sessionId, action: "update_singleton", collection,
             before, after, diff: computeDiff(before, data), data,
           };
-          const token = storePreview(entry);
+          const token = await storePreview(entry);
           return text(buildPreviewResponse(token, entry));
         }
 
@@ -1294,36 +1306,34 @@ function makeServer(sessionId: string, info: SessionInfo): Server {
           const entry: PreviewEntry = {
             session_id: sessionId, action: "delete", collection, id, before: res.data,
           };
-          const token = storePreview(entry);
+          const token = await storePreview(entry);
           return text(buildPreviewResponse(token, entry));
         }
 
         case "confirm_preview": {
           const { token } = args as { token: string };
-          const stored = previewStore.get(token);
-          if (!stored || stored.entry.session_id !== sessionId) {
-            return err("Preview not found — it may have already been confirmed, discarded, or expired.");
+          const row = await db.getPreview(token);
+          if (!row || row.session_id !== sessionId) {
+            return err("Preview not found — it may have already been confirmed or discarded.");
           }
-          const { entry } = stored;
-          clearTimeout(stored.timer);
-          previewStore.delete(token);
+          const entry = rowToEntry(row);
+          await db.deletePreview(token);
           await applyEntry(client, entry);
           return text(`✓ Done. ${entry.action} on ${entry.collection}${entry.id != null ? ` #${entry.id}` : ""} has been written to Directus.`);
         }
 
         case "discard_preview": {
           const { token } = args as { token: string };
-          const stored = previewStore.get(token);
-          if (!stored || stored.entry.session_id !== sessionId) {
-            return err("Preview not found — it may have already been confirmed, discarded, or expired.");
+          const row = await db.getPreview(token);
+          if (!row || row.session_id !== sessionId) {
+            return err("Preview not found — it may have already been confirmed or discarded.");
           }
-          clearTimeout(stored.timer);
-          previewStore.delete(token);
+          await db.deletePreview(token);
           return text(`✗ Discarded. Nothing was written to Directus.`);
         }
 
         case "list_previews": {
-          const ours = previewsForSession(sessionId);
+          const ours = await previewsForSession(sessionId);
           if (ours.length === 0) return text("No staged changes.");
           const lines = ours.map(({ token, entry }) => {
             const diff = entry.diff?.map((d) => `${d.field}: ${JSON.stringify(d.before)} → ${JSON.stringify(d.after)}`).join(", ") ?? "";
@@ -1333,23 +1343,19 @@ function makeServer(sessionId: string, info: SessionInfo): Server {
         }
 
         case "confirm_all_previews": {
-          const ours = previewsForSession(sessionId);
+          const ours = await previewsForSession(sessionId);
           if (!ours.length) return text("No staged changes to confirm.");
           for (const { token, entry } of ours) {
-            const stored = previewStore.get(token);
-            if (stored) { clearTimeout(stored.timer); previewStore.delete(token); }
+            await db.deletePreview(token);
             await applyEntry(client, entry);
           }
           return text(`✓ All ${ours.length} change(s) confirmed and written to Directus.`);
         }
 
         case "discard_all_previews": {
-          const ours = previewsForSession(sessionId);
+          const ours = await previewsForSession(sessionId);
           if (!ours.length) return text("No staged changes to discard.");
-          for (const { token } of ours) {
-            const stored = previewStore.get(token);
-            if (stored) { clearTimeout(stored.timer); previewStore.delete(token); }
-          }
+          await db.deletePreviewsForSession(sessionId);
           return text(`✗ All ${ours.length} staged change(s) discarded. Nothing was written to Directus.`);
         }
 
@@ -1396,7 +1402,7 @@ httpServer.on("request", (req, res) => {
     if (path === "/mcp") {
       const buf = await readBody(req);
       const body = buf ? (JSON.parse(buf.toString()) as unknown) : undefined;
-      const { id: sessionId, info } = getOrCreateSession(req);
+      const { id: sessionId, info } = await getOrCreateSession(req);
 
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       const server = makeServer(sessionId, info);
@@ -1410,7 +1416,7 @@ httpServer.on("request", (req, res) => {
     const sessionPreviewsMatch = /^\/sessions\/([^/]+)\/previews$/.exec(path);
     if (method === "GET" && sessionPreviewsMatch) {
       const sid = decodeURIComponent(sessionPreviewsMatch[1]!);
-      const entries = previewsForSession(sid).map(({ token, entry }) => ({
+      const entries = (await previewsForSession(sid)).map(({ token, entry }) => ({
         ...entry,
         preview_token: token,
         preview_pages: previewPagesForCollection(entry.collection),
@@ -1425,16 +1431,16 @@ httpServer.on("request", (req, res) => {
     if (sessionPreviewTokenMatch) {
       const sid = decodeURIComponent(sessionPreviewTokenMatch[1]!);
       const token = decodeURIComponent(sessionPreviewTokenMatch[2]!);
-      const stored = previewStore.get(token);
-      const valid = stored && stored.entry.session_id === sid;
+      const row = await db.getPreview(token);
+      const valid = !!row && row.session_id === sid;
       if (method === "GET") {
-        if (!valid) { res.writeHead(404, { "Content-Type": "application/json", ...CORS_HEADERS }).end(JSON.stringify({ error: "Preview not found or expired" })); return; }
+        if (!valid) { res.writeHead(404, { "Content-Type": "application/json", ...CORS_HEADERS }).end(JSON.stringify({ error: "Preview not found" })); return; }
         res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
-          .end(JSON.stringify({ ...stored!.entry, preview_token: token }));
+          .end(JSON.stringify({ ...rowToEntry(row!), preview_token: token }));
         return;
       }
       if (method === "DELETE") {
-        if (valid) { clearTimeout(stored!.timer); previewStore.delete(token); }
+        if (valid) await db.deletePreview(token);
         res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS }).end(JSON.stringify({ success: true }));
         return;
       }
@@ -1445,16 +1451,16 @@ httpServer.on("request", (req, res) => {
     if (method === "POST" && sessionConfirmMatch) {
       const sid = decodeURIComponent(sessionConfirmMatch[1]!);
       const token = decodeURIComponent(sessionConfirmMatch[2]!);
-      const stored = previewStore.get(token);
-      if (!stored || stored.entry.session_id !== sid) {
+      const row = await db.getPreview(token);
+      if (!row || row.session_id !== sid) {
         res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
           .end(JSON.stringify({ success: true, alreadyApplied: true }));
         return;
       }
-      const { entry } = stored;
-      clearTimeout(stored.timer);
-      previewStore.delete(token);
-      const info: SessionInfo = sessionMap.get(sid) ?? { directusUrl: "", lastUsed: Date.now() };
+      const entry = rowToEntry(row);
+      await db.deletePreview(token);
+      const sessionRow = await db.getSession(sid);
+      const info: SessionInfo = sessionRow ? rowToInfo(sessionRow) : { directusUrl: "" };
       const client = makeClient(info);
       await applyEntry(client, entry);
       res.writeHead(200, { "Content-Type": "application/json", ...CORS_HEADERS })
@@ -1467,10 +1473,10 @@ httpServer.on("request", (req, res) => {
     if (method === "GET" && sessionReviewMatch) {
       const sid = decodeURIComponent(sessionReviewMatch[1]!);
       const token = decodeURIComponent(sessionReviewMatch[2]!);
-      const previews = previewsForSession(sid).map(({ token: t, entry }) => ({ ...entry, preview_token: t }));
+      const previews = (await previewsForSession(sid)).map(({ token: t, entry }) => ({ ...entry, preview_token: t }));
       const html = buildReviewPage(sid, token, previews);
-      const stored = previewStore.get(token);
-      const status = stored && stored.entry.session_id === sid ? 200 : 404;
+      const row = await db.getPreview(token);
+      const status = row && row.session_id === sid ? 200 : 404;
       res.writeHead(status, { "Content-Type": "text/html; charset=utf-8" }).end(html);
       return;
     }
@@ -1482,6 +1488,13 @@ httpServer.on("request", (req, res) => {
     if (!res.headersSent) res.writeHead(500).end();
   });
 });
+
+db.initSchema()
+  .then(() => process.stderr.write(`[db] schema ready\n`))
+  .catch((e: unknown) => {
+    process.stderr.write(`[db] init failed: ${e instanceof Error ? e.message : String(e)}\n`);
+    process.exit(1);
+  });
 
 httpServer.listen(PORT, () => {
   process.stderr.write(`directus-mcp listening on http://0.0.0.0:${PORT}/mcp\n`);
@@ -1516,16 +1529,16 @@ previewProxyServer.on("request", (req, res) => {
         .end(`<h1>404 — Missing session subdomain</h1>`);
       return;
     }
-    const info = sessionMap.get(sid);
-    if (!info || !info.websiteUrl) {
+    const sessionRow = await db.getSession(sid);
+    if (!sessionRow || !sessionRow.website_url) {
       res.writeHead(404, { "Content-Type": "text/html; charset=utf-8" })
         .end(`<h1>404 — Unknown preview session</h1><p>No website URL configured for session <code>${escHtml(sid)}</code>.</p>`);
       return;
     }
-    info.lastUsed = Date.now();
+    await db.touchSession(sid);
 
     const url = new URL(req.url ?? "/", `http://localhost:${PREVIEW_PROXY_PORT}`);
-    const targetBase = info.websiteUrl.replace(/\/$/, "");
+    const targetBase = sessionRow.website_url.replace(/\/$/, "");
     const targetUrl = `${targetBase}${url.pathname}${url.search || ""}`;
     process.stderr.write(`[preview-proxy] session=${sid} ${method} ${url.pathname} → ${targetUrl}\n`);
 
@@ -1558,7 +1571,7 @@ previewProxyServer.on("request", (req, res) => {
 
     if (method === "GET" && contentType.includes("text/html") && upstream.ok) {
       let html = await upstream.text();
-      html = applyPreviewsToHtml(html, sid);
+      html = await applyPreviewsToHtml(html, sid);
       html = injectBanner(html, mcpForSession);
       const outHeaders: Record<string, string> = { "Content-Type": "text/html; charset=utf-8" };
       const cc = upstream.headers.get("cache-control");
