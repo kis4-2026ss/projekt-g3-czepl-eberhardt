@@ -76,23 +76,29 @@ echo "Running seeds..."
 docker compose run --rm adlerwirt-seed
 docker compose run --rm fitcore-seed
 
-cat <<'EOF'
+# Helper for clickable terminal links
+link() {
+  printf '\033]8;;%s\033\\%s\033]8;;\033\\' "$1" "$2"
+}
+
+cat <<EOF
 
 ┌─────────────────────────────────────────────────────────────┐
-│  Stack ready                                                 │
+│  Stack ready                                                │
 ├──────────────────┬──────────────────────────────────────────┤
-│  Agent UI        │  http://localhost:8000                   │
-│  MCP             │  http://localhost:3001/mcp               │
-│  Preview proxy   │  http://*.localhost:4322                 │
+│  Agent UI        │  $(link "http://localhost:8000" "http://localhost:8000")                   │
+│  MCP             │  $(link "http://localhost:3001/mcp" "http://localhost:3001/mcp")               │
+│  Preview proxy   │  $(link "http://*.localhost:4322" "http://*.localhost:4322")                 │
 ├──────────────────┼──────────────────────────────────────────┤
-│  Adlerwirt                                                  │
-│    Directus      │  http://localhost:8055                   │
+│  Adlerwirt       │                                          │
+│  - Directus      │  $(link "http://localhost:8055" "http://localhost:8055")                   │
 │                  │  admin@gmail.at / admin                  │
-│    Website       │  http://localhost:4321                   │
+│  - Website       │  $(link "http://localhost:4321" "http://localhost:4321")                   │
 ├──────────────────┼──────────────────────────────────────────┤
-│  FitCore                                                    │
-│    Directus      │  http://localhost:8056                   │
+│  FitCore         │                                          │
+│  - Directus      │  $(link "http://localhost:8056" "http://localhost:8056")                   │
 │                  │  admin@fitcore.studio / admin            │
-│    Website       │  http://localhost:4323                   │
+│  - Website       │  $(link "http://localhost:4323" "http://localhost:4323")                   │
 └──────────────────┴──────────────────────────────────────────┘
+
 EOF
