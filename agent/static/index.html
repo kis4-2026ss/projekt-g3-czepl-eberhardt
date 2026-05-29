@@ -3088,6 +3088,38 @@
     if (currentPreviewUrl) renderPreviewUrl(currentPreviewUrl, false);
   });
 
+  // The preview page lives on a different origin (…localhost:4322) so we can't
+  // read its location directly. Its injected banner posts the real URL up to us
+  // on every (re)load and client-side navigation — keep the address bar in sync
+  // so it always reflects the page the user is actually looking at.
+  //
+  // We validate by ORIGIN rather than by `e.source === iframe.contentWindow`:
+  // under Astro's ViewTransitions the in-iframe navigation is client-side, and
+  // the strict source-identity check proved unreliable there. The iframe's
+  // origin (…localhost:4322) never changes, so it's a stable, safe gate.
+  function previewOrigin() {
+    try { return new URL(previewIframe.src || currentPreviewUrl).origin; }
+    catch { return null; }
+  }
+  window.addEventListener('message', (e) => {
+    const d = e.data;
+    if (!d) return;
+    const origin = previewOrigin();
+    if (origin && e.origin !== origin && e.source !== previewIframe.contentWindow) return;
+    if (d.__pbNav === true && typeof d.href === 'string') {
+      currentPreviewUrl = d.href;
+      renderPreviewUrl(d.href, false);
+      return;
+    }
+    // A change was confirmed/discarded from inside the live preview banner —
+    // mirror the outcome onto the in-chat card so both views stay in sync.
+    // (No reload is sent back down: the banner already refreshed itself.)
+    if (d.__pbRemoved === true && typeof d.token === 'string') {
+      pvOnRemoved(d.token, d.outcome === 'confirmed' ? 'confirmed' : 'discarded');
+      return;
+    }
+  });
+
   // ── Drag-to-resize ──
   if (previewResize) {
     let startX = 0, startW = 0;
@@ -3132,16 +3164,9 @@
     if (w !== cur) document.documentElement.style.setProperty('--preview-w', w + 'px');
   });
 
-  // Restore open state after panel-open URL handling is wired up — but
-  // without a URL we just show the empty state.
-  try {
-    if (localStorage.getItem('atelier:preview-open') === '1') {
-      previewIframe.classList.add('hidden');
-      previewEmpty.classList.remove('hidden');
-      previewLoading.classList.remove('show');
-      setPreviewOpen(true);
-    }
-  } catch {}
+  // Note: we intentionally do NOT restore a persisted "open" state on load.
+  // Preview visibility is content-driven — the panel only appears once the
+  // current chat has a change to show (see resetPreviewState / openPreviewPanel).
 
   // ── Inline preview cards ────────────────────────────────────────────
   // Cards live inside an AI message's .msg-previews container, grouped by
@@ -3154,10 +3179,30 @@
     groupByBatch: new Map(),   // batch_id -> .preview-group element
     lastFocusedBatch: null,    // batch key we've already auto-focused in the panel
   };
+  // Tell the live preview iframe to re-pull its change list and re-render the
+  // banner, after a change was confirmed/discarded from the chat side (button
+  // click or an agent-driven preview_removed event). Debounced so a bulk
+  // "Alle anwenden" burst collapses into a single reload. The banner ignores
+  // it gracefully if the panel isn't currently showing.
+  let pvNotifyTimer = null;
+  function pvNotifyPreviewIframe() {
+    if (pvNotifyTimer) clearTimeout(pvNotifyTimer);
+    pvNotifyTimer = setTimeout(() => {
+      pvNotifyTimer = null;
+      try { previewIframe?.contentWindow?.postMessage({ __pbReload: true }, '*'); } catch {}
+    }, 60);
+  }
+
   function resetPreviewState() {
     previewState.rowByToken.clear();
     previewState.groupByBatch.clear();
     previewState.lastFocusedBatch = null;
+    // Preview visibility is content-driven: a fresh/empty chat has nothing to
+    // show, so hide the panel here. It comes back on its own when a change
+    // arrives — via the preview SSE event (openPreviewPanel) or, when loading
+    // a chat with outstanding reviews, via pvLoadPendingForChat().
+    currentPreviewUrl = null;
+    closePreviewPanel();
   }
 
   const PV_ACTION_LABEL = {
@@ -3389,6 +3434,7 @@
       pvSetStatus(row, 'err', 'Fehler beim Anwenden.');
       return;
     }
+    pvNotifyPreviewIframe();
     const group = row.closest('.preview-group');
     if (group) pvUpdateGroupHeader(group);
   }
@@ -3410,6 +3456,7 @@
       if (btnD) btnD.disabled = false;
       return;
     }
+    pvNotifyPreviewIframe();
     const group = row.closest('.preview-group');
     if (group) pvUpdateGroupHeader(group);
   }
@@ -3533,6 +3580,7 @@
             pvAppendPreview(ev, aiRow);
           } else if (ev.type === 'preview_removed') {
             pvOnRemoved(ev.token, ev.outcome || 'confirmed');
+            pvNotifyPreviewIframe();
           } else if (ev.type === 'error') {
             errored = true;
             bub.innerHTML = '';

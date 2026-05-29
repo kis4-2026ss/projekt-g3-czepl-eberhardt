@@ -848,19 +848,51 @@ function buildBannerInjection(mcpUrlWithSession: string): string {
     pbFd=document.getElementById('pb-fd');
     if(pbFc)pbFc.onclick=async function(){
       if(!curToken)return;
+      var tk=curToken;
       pbFc.disabled=true;
-      await fetch(MCP+'/confirm/'+curToken,{method:'POST'}).catch(Object);
+      await fetch(MCP+'/confirm/'+tk,{method:'POST'}).catch(Object);
       pbFc.disabled=false;
-      hideFloat();load();
+      hideFloat();load();postRemoved(tk,'confirmed');
     };
     if(pbFd)pbFd.onclick=async function(){
       if(!curToken)return;
+      var tk=curToken;
       pbFd.disabled=true;
-      await fetch(MCP+'/preview/'+curToken,{method:'DELETE'}).catch(Object);
+      await fetch(MCP+'/preview/'+tk,{method:'DELETE'}).catch(Object);
       pbFd.disabled=false;
-      hideFloat();load();
+      hideFloat();load();postRemoved(tk,'discarded');
     };
   }
+
+  /* Report our real URL up to the chat shell so its preview "address bar"
+     stays in sync as the user clicks around inside the (cross-origin) iframe.
+     Fires on first load and on every Astro client-side navigation. */
+  function postLocation(){
+    try{
+      if(window.parent&&window.parent!==window){
+        window.parent.postMessage({__pbNav:true,href:location.href},'*');
+      }
+    }catch(e){}
+  }
+
+  /* Tell the chat shell that a change was confirmed/discarded from inside the
+     live preview, so it can mirror the outcome onto its in-chat card. Keeps
+     both views in sync regardless of where the user acted. */
+  function postRemoved(token,outcome){
+    try{
+      if(window.parent&&window.parent!==window){
+        window.parent.postMessage({__pbRemoved:true,token:token,outcome:outcome},'*');
+      }
+    }catch(e){}
+  }
+
+  /* The reverse direction: the chat shell tells us a change was confirmed/
+     discarded from the chat card, so we re-pull the preview list and re-render
+     the banner + highlights to drop the now-stale entry. */
+  window.addEventListener('message',function(e){
+    var d=e&&e.data;
+    if(d&&d.__pbReload===true)load();
+  });
 
   function cancelHide(){if(pbHideT){clearTimeout(pbHideT);pbHideT=null;}}
   function showFloat(el,token,action){
@@ -1090,10 +1122,18 @@ function buildBannerInjection(mcpUrlWithSession: string): string {
     if(a==='toggle'){open=!open;render();return;}
     if(a==='prev'){navigateHighlights(-1);return;}
     if(a==='next'){navigateHighlights(1);return;}
-    if(a==='confirm-all')await Promise.all(previews.map(function(p){return fetch(MCP+'/confirm/'+p.preview_token,{method:'POST'}).catch(Object);}));
-    else if(a==='discard-all')await Promise.all(previews.map(function(p){return fetch(MCP+'/preview/'+p.preview_token,{method:'DELETE'}).catch(Object);}));
-    else if(a==='confirm-one')await fetch(MCP+'/confirm/'+t,{method:'POST'}).catch(Object);
-    else if(a==='discard-one')await fetch(MCP+'/preview/'+t,{method:'DELETE'}).catch(Object);
+    if(a==='confirm-all'){
+      var ctoks=previews.map(function(p){return p.preview_token;});
+      await Promise.all(ctoks.map(function(x){return fetch(MCP+'/confirm/'+x,{method:'POST'}).catch(Object);}));
+      ctoks.forEach(function(x){postRemoved(x,'confirmed');});
+    }
+    else if(a==='discard-all'){
+      var dtoks=previews.map(function(p){return p.preview_token;});
+      await Promise.all(dtoks.map(function(x){return fetch(MCP+'/preview/'+x,{method:'DELETE'}).catch(Object);}));
+      dtoks.forEach(function(x){postRemoved(x,'discarded');});
+    }
+    else if(a==='confirm-one'){await fetch(MCP+'/confirm/'+t,{method:'POST'}).catch(Object);postRemoved(t,'confirmed');}
+    else if(a==='discard-one'){await fetch(MCP+'/preview/'+t,{method:'DELETE'}).catch(Object);postRemoved(t,'discarded');}
     if(a==='confirm-all'||a==='discard-all')open=false;
     load();
   }
@@ -1129,12 +1169,20 @@ function buildBannerInjection(mcpUrlWithSession: string): string {
 
   getDom();
   load();
+  postLocation();
 
+  /* Astro ViewTransitions: navigation is client-side, so the inline script
+     above doesn't re-run. These persistent document listeners fire on every
+     navigation — report the new URL up so the chat shell's address bar tracks
+     it. after-swap fires once the new URL is committed; page-load fires once
+     the page has settled. Posting on both is cheap and covers both events. */
+  document.addEventListener('astro:after-swap',postLocation);
   document.addEventListener('astro:page-load',function(){
     bound=false;
     pbFocusDone=false;
     getDom();
     load();
+    postLocation();
   });
 })();</script>`;
 }
